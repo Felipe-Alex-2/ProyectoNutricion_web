@@ -1,0 +1,1272 @@
+<div class="dashboard-layout">
+  <!-- Left Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="brand-container">
+        <div class="brand-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+          </svg>
+        </div>
+        <span class="brand-title">NutriSalud</span>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="sidebar-nav">
+        <!-- 1. Menú Principal -->
+        <button 
+          class="nav-item" 
+          [class.active]="activeTab() === 'principal'"
+          (click)="setActiveTab('principal')">
+          <svg class="nav-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            <path d="M9 14l2 2 4-4"></path>
+          </svg>
+          <span>Menú Principal</span>
+        </button>
+
+        <!-- 2. Bitácora -->
+        <button 
+          class="nav-item" 
+          [class.active]="activeTab() === 'bitacora'"
+          (click)="setActiveTab('bitacora')">
+          <svg class="nav-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>Bitácora</span>
+        </button>
+
+        <!-- Acordeón Sprint 1: Solo visible para roles administrativos y especialistas -->
+        @if (canAccessSprint1()) {
+          <div class="sidebar-accordion">
+            <button class="accordion-trigger" (click)="toggleSprint1Accordion()">
+              <div class="accordion-left">
+                <span class="badge-sprint">Sprint 1</span>
+              </div>
+              <svg class="chevron-icon" [class.rotated]="sprint1Expanded()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+
+            @if (sprint1Expanded()) {
+              <div class="accordion-items">
+                @if (isSaasAdmin()) {
+                  <button 
+                    class="nav-item sub-item" 
+                    [class.active]="activeTab() === 'sprint1-tenants'"
+                    (click)="setActiveTab('sprint1-tenants')">
+                    <svg class="sub-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                      <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+                    </svg>
+                    <span>Gestionar Tenants</span>
+                  </button>
+
+                  <button 
+                    class="nav-item sub-item" 
+                    [class.active]="activeTab() === 'sprint1-roles'"
+                    (click)="setActiveTab('sprint1-roles')">
+                    <svg class="sub-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span>Gestión de Roles y Permisos</span>
+                  </button>
+                }
+
+                @if (isSaasAdmin() || isOrgAdmin()) {
+                  <button 
+                    class="nav-item sub-item" 
+                    [class.active]="activeTab() === 'sprint1-usuarios'"
+                    (click)="setActiveTab('sprint1-usuarios')">
+                    <svg class="sub-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span>Gestión de Usuarios de la Organización</span>
+                  </button>
+                }
+
+                @if (isSaasAdmin() || isOrgAdmin() || isNutritionist()) {
+                  <button 
+                    class="nav-item sub-item" 
+                    [class.active]="activeTab() === 'sprint1-vinculacion'"
+                    (click)="setActiveTab('sprint1-vinculacion')">
+                    <svg class="sub-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    <span>Vincular con Clientes</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </nav>
+    </div>
+
+    <!-- Sidebar Bottom: Theme Switcher & User Profile -->
+    <div class="sidebar-bottom">
+      <div class="theme-switcher-box">
+        <div class="theme-label">
+          <span class="theme-mode-text">{{ themeService.isDarkMode() ? 'Modo Oscuro' : 'Modo Claro' }}</span>
+        </div>
+        <button 
+          (click)="toggleTheme()" 
+          class="theme-toggle-btn"
+          [attr.aria-label]="themeService.isDarkMode() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          [title]="themeService.isDarkMode() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+          <span class="theme-icon" [class.active]="!themeService.isDarkMode()">
+            <svg class="theme-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </span>
+          <div class="switch-pill">
+            <div class="switch-thumb" [class.dark]="themeService.isDarkMode()"></div>
+          </div>
+          <span class="theme-icon" [class.active]="themeService.isDarkMode()">
+            <svg class="theme-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <div class="user-card">
+        <div class="user-avatar">
+          {{ authService.currentUser()?.full_name?.charAt(0) || 'U' }}
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ authService.currentUser()?.full_name }}</span>
+          <span class="user-email">{{ authService.currentUser()?.email }}</span>
+          <span class="user-role-badge" [ngClass]="getRoleBadgeClass(authService.currentUser()?.role_id || 'CLIENTE')">
+            {{ getRoleLabel(authService.currentUser()?.role_id) }}
+          </span>
+        </div>
+        <button (click)="logout()" class="btn-logout" title="Cerrar sesión">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <main class="main-workspace">
+    <!-- Feedback Alerts -->
+    @if (updateSuccess()) {
+      <div class="alert alert-success">
+        <span>{{ updateSuccess() }}</span>
+      </div>
+    }
+    @if (updateError()) {
+      <div class="alert alert-error">
+        <span>{{ updateError() }}</span>
+      </div>
+    }
+
+    <!-- Profile Edit Form (if active) -->
+    @if (isEditing()) {
+      <div class="card edit-profile-card">
+        <h2 class="card-title">Editar Información Personal</h2>
+        <form [formGroup]="editForm" (ngSubmit)="onSaveProfile()" class="edit-form">
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" formControlName="full_name" class="input-field" placeholder="Tu nombre" />
+          </div>
+          <div class="form-group">
+            <label>Correo Electrónico</label>
+            <input type="email" formControlName="email" class="input-field" placeholder="correo@ejemplo.com" />
+          </div>
+          <button type="submit" class="btn-primary">Guardar Cambios</button>
+        </form>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB 1: MENÚ PRINCIPAL (Detalles de Cuenta y Bienvenida) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'principal') {
+      <div class="card welcome-banner-card">
+        <div class="welcome-banner-content">
+          <div class="welcome-badge">
+            <svg class="welcome-badge-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>Sesión Activa</span>
+          </div>
+          <h1 class="welcome-title">¡Bienvenido/a, {{ authService.currentUser()?.full_name }}!</h1>
+          <p class="welcome-subtitle">
+            Has ingresado al sistema como <strong>{{ getRoleLabel(authService.currentUser()?.role_id) }}</strong>. Aquí puedes consultar la información y estado actual de tu cuenta.
+          </p>
+        </div>
+        <div class="welcome-banner-action">
+          <button (click)="toggleEdit()" class="btn-outline">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+            <span>{{ isEditing() ? 'Cancelar' : 'Editar Datos' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Account Details Card -->
+      <div class="card account-details-card">
+        <div class="card-header-flex">
+          <div>
+            <h2 class="card-title">Detalles de la Cuenta</h2>
+            <p class="card-subtitle">Parámetros registrados de tu perfil en NutriSalud</p>
+          </div>
+          <span class="badge-status-active">
+            <span class="status-indicator-dot"></span> Cuenta Activa
+          </span>
+        </div>
+
+        <div class="account-grid-details">
+          <div class="account-item">
+            <span class="account-label">Nombre Completo</span>
+            <span class="account-val">{{ authService.currentUser()?.full_name || 'No especificado' }}</span>
+          </div>
+
+          <div class="account-item">
+            <span class="account-label">Correo Electrónico</span>
+            <span class="account-val">{{ authService.currentUser()?.email || 'No especificado' }}</span>
+          </div>
+
+          <div class="account-item">
+            <span class="account-label">Rol del Sistema</span>
+            <div class="mt-1">
+              <span class="user-role-badge" [ngClass]="getRoleBadgeClass(authService.currentUser()?.role_id || 'CLIENTE')">
+                {{ getRoleLabel(authService.currentUser()?.role_id) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="account-item">
+            <span class="account-label">Organización / Clínica</span>
+            <span class="account-val">{{ getTenantName(authService.currentUser()?.tenant_id) }}</span>
+          </div>
+
+          <div class="account-item">
+            <span class="account-label">Teléfono de Contacto</span>
+            <span class="account-val">{{ authService.currentUser()?.phone || '+591 73683564' }}</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB 2: BITÁCORA DEL SISTEMA (Auditoría de Actividades) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'bitacora') {
+      <header class="workspace-header">
+        <div>
+          <h1 class="page-title">Bitácora del Sistema</h1>
+          <p class="page-subtitle">Registro cronológico detallado de inicios de sesión, navegación y eventos</p>
+        </div>
+        <div class="header-actions">
+          <button (click)="loadActivityLogs()" class="btn-outline" title="Recargar eventos">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span>Actualizar</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Logs Table -->
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 170px;">Fecha y Hora</th>
+                <th style="width: 140px;">Acción</th>
+                <th>Descripción del Evento</th>
+                <th style="width: 140px;">IP / Origen</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of activityLogService.logs(); track log.id || $index) {
+                <tr>
+                  <td class="cell-time">
+                    <span class="time-exact">{{ log.created_at | date:'HH:mm:ss' }}</span>
+                    <span class="date-sub">{{ log.created_at | date:'dd/MM/yyyy' }}</span>
+                  </td>
+                  <td>
+                    <span class="act-badge" [ngClass]="getActionBadgeClass(log.action)">
+                      {{ log.action }}
+                    </span>
+                  </td>
+                  <td class="cell-desc">
+                    <strong>{{ log.description }}</strong>
+                  </td>
+                  <td class="cell-ip">
+                    <code>{{ log.ip_address || '127.0.0.1' }}</code>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="empty-state">
+                    <div class="empty-content">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                      <p>No se encontraron registros de eventos en la bitácora.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB 3: GESTIONAR TENANTS (CRUD) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'sprint1-tenants') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Sprint 1 • Multi-Tenancy</div>
+          <h1 class="page-title">Gestionar Tenants (Clínicas y Centros)</h1>
+          <p class="page-subtitle">CRUD completo de organizaciones independientes en la plataforma SaaS</p>
+        </div>
+        <div class="header-actions">
+          <button (click)="openAllRegisteredUsersModal()" class="btn-outline">
+            <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Ver Todos los Registrados</span>
+          </button>
+          <button (click)="openTenantModal()" class="btn-primary">
+            + Nueva Organización
+          </button>
+        </div>
+      </header>
+
+      @if (isLoadingTenants()) {
+        <div class="loading-box">
+          <div class="spinner"></div>
+          <span>Cargando organizaciones...</span>
+        </div>
+      } @else {
+        <div class="tenants-grid">
+          @for (tenant of tenants(); track tenant.id) {
+            <div class="card tenant-card" [class.inactive]="!tenant.is_active">
+              <div class="tenant-card-header">
+                <div class="tenant-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                    <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+                  </svg>
+                </div>
+                <div class="tenant-title-wrap">
+                  <h3 class="tenant-name">{{ tenant.name }}</h3>
+                  <span class="tenant-code-badge">Código: {{ tenant.code }}</span>
+                </div>
+                <span class="status-indicator" [class.active]="tenant.is_active">
+                  {{ tenant.is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+              </div>
+
+              <p class="tenant-desc">{{ tenant.description || 'Sin descripción registrada' }}</p>
+
+              <div class="tenant-meta-list">
+                <div class="meta-item">
+                  <span class="meta-label">Teléfono:</span>
+                  <span class="meta-val">{{ tenant.phone || 'No especificado' }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Correo:</span>
+                  <span class="meta-val">{{ tenant.email || 'No especificado' }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Dirección:</span>
+                  <span class="meta-val">{{ tenant.address || 'No especificada' }}</span>
+                </div>
+                <div class="meta-item meta-clickable" (click)="openTenantUsersModal(tenant)" title="Click para ver usuarios registrados">
+                  <span class="meta-label">Usuarios:</span>
+                  <span class="meta-val font-bold text-primary">{{ tenant.users_count || 0 }} registrados ↗</span>
+                </div>
+              </div>
+
+              <div class="tenant-card-footer">
+                <button 
+                  class="btn-action btn-action-view"
+                  (click)="openTenantUsersModal(tenant)"
+                  title="Ver Usuarios Registrados">
+                  <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                  </svg>
+                  <span>Registrados</span>
+                </button>
+                <button 
+                  class="btn-action btn-action-edit"
+                  (click)="openEditTenantModal(tenant)"
+                  title="Editar Organización">
+                  <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                  </svg>
+                  <span>Editar</span>
+                </button>
+                <button 
+                  class="btn-toggle-status" 
+                  [class.btn-danger]="tenant.is_active"
+                  (click)="onToggleTenant(tenant)">
+                  {{ tenant.is_active ? 'Desactivar' : 'Activar' }}
+                </button>
+                <button 
+                  class="btn-action btn-action-delete"
+                  (click)="onDeleteTenant(tenant)"
+                  title="Eliminar Organización">
+                  <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB 4: GESTIÓN DE ROLES Y PERMISOS (SECCIÓN DEDICADA) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'sprint1-roles') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Sprint 1 • Control de Acceso RBAC</div>
+          <h1 class="page-title">Gestión de Roles y Permisos</h1>
+          <p class="page-subtitle">
+            Permite asignar roles y establecer los permisos de acceso a las diferentes funciones del sistema. Cada usuario accede únicamente a las funcionalidades autorizadas según su rol.
+          </p>
+        </div>
+      </header>
+
+      @if (isLoadingRoles()) {
+        <div class="loading-box">
+          <div class="spinner"></div>
+          <span>Cargando roles y permisos...</span>
+        </div>
+      } @else {
+        <div class="roles-grid">
+          @for (role of roles(); track role.id) {
+            <div class="card role-card">
+              <div class="role-header">
+                <div class="role-badge-lg" [ngClass]="getRoleBadgeClass(role.id)">
+                  @if (role.id === 'ADMIN_SAAS') {
+                    <svg class="role-svg-lg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                  }
+                  @if (role.id === 'ADMIN_ORGANIZATION') {
+                    <svg class="role-svg-lg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+                      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+                      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+                    </svg>
+                  }
+                  @if (role.id === 'NUTRICIONISTA') {
+                    <svg class="role-svg-lg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    </svg>
+                  }
+                  @if (role.id === 'CLIENTE') {
+                    <svg class="role-svg-lg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  }
+                </div>
+                <div class="role-title-meta">
+                  <h3 class="role-name">{{ role.name }}</h3>
+                  <div class="role-platform-tag">
+                    <span>Plataforma: <strong>{{ role.platform }}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="role-body">
+                <h4 class="section-micro-title">Alcance & Poder Autorizado</h4>
+                <p class="role-desc">{{ role.description }}</p>
+
+                <div class="role-perms-header">
+                  <h4 class="section-micro-title">Permisos Asignados ({{ role.permissions.length }})</h4>
+                  <button 
+                    class="btn-config-perms" 
+                    (click)="openRolePermissionsModal(role)"
+                    title="Configurar Permisos de este Rol">
+                    <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Configurar Permisos</span>
+                  </button>
+                </div>
+
+                <div class="perm-tags-wrap">
+                  @for (perm of role.permissions; track perm.id) {
+                    <span class="perm-tag" [title]="perm.description">
+                      ✓ {{ perm.name }}
+                    </span>
+                  }
+                  @if (role.permissions.length === 0) {
+                    <span class="text-muted text-xs">Sin permisos asignados actualmente.</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB 5: GESTIÓN DE USUARIOS DE LA ORGANIZACIÓN (SECCIÓN DEDICADA) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'sprint1-usuarios') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Sprint 1 • Gestión Organizacional</div>
+          <h1 class="page-title">Gestión de Usuarios de la Organización</h1>
+          <p class="page-subtitle">
+            Administra los usuarios pertenecientes a la organización (registro, modificación, activación y desactivación). El administrador gestiona su clínica sin acceder a información de otras organizaciones.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button (click)="openUserModal()" class="btn-primary">
+            + Registrar Usuario
+          </button>
+        </div>
+      </header>
+
+      <!-- Banner de Aislamiento de Organización si es Admin Local -->
+      @if (isOrgAdmin()) {
+        <div class="isolation-notice-banner">
+          <div class="isolation-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
+              <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
+              <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
+            </svg>
+          </div>
+          <div>
+            <strong>Organización Activa: {{ getMyOrgName() }}</strong>
+            <p>Tu vista está aislada estrictamente a los usuarios y especialistas de tu clínica.</p>
+          </div>
+        </div>
+      }
+
+      <!-- Filter Controls -->
+      <div class="filters-bar">
+        @if (isSaasAdmin()) {
+          <div class="filter-field">
+            <label>Organización:</label>
+            <select (change)="onFilterTenantChange($event)" class="select-input">
+              <option value="">Todas las Organizaciones (Modo Global)</option>
+              @for (t of tenants(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="filter-field">
+          <label>Filtrar por Rol:</label>
+          <select (change)="onFilterRoleChange($event)" class="select-input">
+            <option value="">Todos los Roles</option>
+            <option value="ADMIN_SAAS" *ngIf="isSaasAdmin()">Administrador SaaS</option>
+            <option value="ADMIN_ORGANIZATION">Admin Organización</option>
+            <option value="NUTRICIONISTA">Nutricionista</option>
+            <option value="CLIENTE">Cliente (Paciente)</option>
+          </select>
+        </div>
+      </div>
+
+      @if (isLoadingOrgUsers()) {
+        <div class="loading-box">
+          <div class="spinner"></div>
+          <span>Cargando usuarios de la organización...</span>
+        </div>
+      } @else {
+        <div class="card table-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Contacto</th>
+                  <th>Organización</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th class="text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (usr of orgUsers(); track usr.id) {
+                  <tr>
+                    <td>
+                      <div class="user-row-cell">
+                        <div class="user-avatar-sm">{{ usr.full_name.charAt(0) }}</div>
+                        <div>
+                          <div class="usr-name">{{ usr.full_name }}</div>
+                          <div class="usr-sub">{{ usr.email }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ usr.phone || '+591 73683564' }}</td>
+                    <td>{{ getTenantName(usr.tenant_id) }}</td>
+                    <td>
+                      <span class="badge-role" [ngClass]="getRoleBadgeClass(usr.role_id)">
+                        {{ usr.role_id }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="status-dot" [class.active]="usr.is_active">
+                        {{ usr.is_active ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <div class="actions-cell">
+                        <!-- Botón Activar / Desactivar -->
+                        <button 
+                          class="btn-action"
+                          [class.btn-action-activate]="!usr.is_active"
+                          [class.btn-action-deactivate]="usr.is_active"
+                          (click)="onToggleUserStatus(usr)"
+                          [title]="usr.is_active ? 'Desactivar usuario' : 'Activar usuario'">
+                          {{ usr.is_active ? 'Desactivar' : 'Activar' }}
+                        </button>
+                        <!-- Botón Editar -->
+                        <button 
+                          class="btn-action btn-action-edit"
+                          (click)="openEditUserModal(usr)"
+                          title="Modificar Usuario">
+                          <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                          </svg>
+                        </button>
+                        <!-- Botón Eliminar -->
+                        <button 
+                          class="btn-action btn-action-delete"
+                          (click)="onDeleteUser(usr)"
+                          title="Eliminar Usuario">
+                          <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+                @if (orgUsers().length === 0) {
+                  <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                      No se encontraron usuarios registrados en esta organización.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB 6: VINCULAR CON CLIENTES (WhatsApp) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'sprint1-vinculacion') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Sprint 1 • Vinculación Móvil / WhatsApp</div>
+          <h1 class="page-title">Vincular con Clientes</h1>
+          <p class="page-subtitle">Genera códigos de emparejamiento con envío directo al WhatsApp del cliente</p>
+        </div>
+      </header>
+
+      <div class="whatsapp-layout-grid">
+        <div class="card generator-card">
+          <div class="card-header-flex">
+            <div class="wa-badge">
+              <svg class="wa-badge-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>WhatsApp Directo</span>
+            </div>
+          </div>
+
+          <h2 class="card-title mt-2">Generar Nuevo Código de Vinculación</h2>
+          <p class="card-subtitle">
+            Crea un token único alfanumérico para compartir por WhatsApp con el cliente.
+          </p>
+
+          <form [formGroup]="generateLinkForm" (ngSubmit)="onGenerateLink()" class="mt-4">
+            <div class="form-group">
+              <label>Número de WhatsApp del Cliente (Bolivia)</label>
+              <input type="text" formControlName="whatsapp_number" class="input-field" placeholder="Ej: +591 73683564" />
+            </div>
+
+            <div class="form-group">
+              <label>Notas para el Paciente (Opcional)</label>
+              <input type="text" formControlName="notes" class="input-field" placeholder="Ej: Consulta inicial de nutrición clínica" />
+            </div>
+
+            <button type="submit" class="btn-whatsapp mt-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+              </svg>
+              <span>Generar Código & Enlace WhatsApp</span>
+            </button>
+          </form>
+
+          @if (lastGeneratedLink()) {
+            <div class="last-link-box">
+              <div class="code-banner">
+                <span class="code-label">Código de Vinculación:</span>
+                <span class="code-value">{{ lastGeneratedLink()?.pairing_code }}</span>
+              </div>
+              <p class="code-tip">Haz clic abajo para abrir WhatsApp Web o App con el mensaje listo:</p>
+              <button class="btn-open-wa" (click)="openWhatsApp(lastGeneratedLink()!.whatsapp_url)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Abrir WhatsApp</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="card claim-card">
+          <div class="card-header-flex">
+            <span class="badge-tag">Módulo de Paciente</span>
+          </div>
+
+          <h2 class="card-title mt-2">Canjear Código (Simulación Paciente)</h2>
+          <p class="card-subtitle">
+            El paciente introduce el código recibido por WhatsApp para quedar formalmente vinculado en la base de datos con su nutricionista.
+          </p>
+
+          @if (claimSuccess()) {
+            <div class="alert alert-success mt-3">
+              <span>{{ claimSuccess() }}</span>
+            </div>
+          }
+          @if (claimError()) {
+            <div class="alert alert-error mt-3">
+              <span>{{ claimError() }}</span>
+            </div>
+          }
+
+          <form [formGroup]="claimLinkForm" (ngSubmit)="onClaimLink()" class="mt-4">
+            <div class="form-group">
+              <label>Código Recibido (ej: NUTRI-XXXXX)</label>
+              <input type="text" formControlName="pairing_code" class="input-field text-uppercase" placeholder="NUTRI-XXXXX" />
+            </div>
+
+            <button type="submit" class="btn-primary mt-2">
+              Validar y Vincular Cuenta
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card table-card linking-history-card">
+        <div class="card-header-flex">
+          <h3 class="card-title">Historial de Vinculaciones</h3>
+          <span class="badge-tag">{{ patientLinks().length }} registros</span>
+        </div>
+
+        <div class="table-responsive mt-3">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Especialista</th>
+                <th>WhatsApp</th>
+                <th>Paciente Vinculado</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (link of patientLinks(); track link.id) {
+                <tr>
+                  <td>
+                    <span class="code-pill">{{ link.pairing_code }}</span>
+                  </td>
+                  <td>{{ link.nutritionist_name }}</td>
+                  <td>{{ link.whatsapp_number }}</td>
+                  <td>
+                    @if (link.patient_name) {
+                      <span class="font-bold text-success">{{ link.patient_name }}</span>
+                    } @else {
+                      <span class="text-muted">Esperando canje...</span>
+                    }
+                  </td>
+                  <td>
+                    <span class="badge-status-link" [class.linked]="link.status === 'LINKED'">
+                      {{ link.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn-icon-wa" (click)="openWhatsApp(link.whatsapp_url)" title="Reenviar a WhatsApp">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: REGISTRAR / EDITAR TENANT -->
+    <!-- ============================================================= -->
+    @if (tenantModalOpen()) {
+      <div class="modal-backdrop" (click)="closeTenantModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ editingTenant() ? 'Editar Organización / Clínica' : 'Registrar Nueva Organización / Clínica' }}</h3>
+            <button class="modal-close" (click)="closeTenantModal()">✕</button>
+          </div>
+
+          @if (tenantSuccess()) {
+            <div class="alert alert-success">{{ tenantSuccess() }}</div>
+          }
+          @if (tenantError()) {
+            <div class="alert alert-error">{{ tenantError() }}</div>
+          }
+
+          <form [formGroup]="tenantForm" (ngSubmit)="onSaveTenant()" class="modal-form">
+            <div class="form-group">
+              <label>Nombre de la Clínica / Centro *</label>
+              <input type="text" formControlName="name" class="input-field" placeholder="Clínica NutriVida" />
+            </div>
+
+            <div class="form-group">
+              <label>Código Identificador Único *</label>
+              <input type="text" formControlName="code" class="input-field text-uppercase" placeholder="NUTRIVIDA" [attr.disabled]="editingTenant() ? '' : null" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" formControlName="phone" class="input-field" placeholder="+591 73683564" />
+              </div>
+              <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" formControlName="email" class="input-field" placeholder="contacto@clinica.com" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Dirección</label>
+              <input type="text" formControlName="address" class="input-field" placeholder="Av. Principal #123" />
+            </div>
+
+            <div class="form-group">
+              <label>Descripción</label>
+              <textarea formControlName="description" class="input-field textarea-field" rows="2" placeholder="Centro enfocado en nutrición deportiva..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-outline" (click)="closeTenantModal()">Cancelar</button>
+              <button type="submit" class="btn-primary">
+                {{ editingTenant() ? 'Actualizar Organización' : 'Guardar Organización' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: CONFIGURAR PERMISOS DE UN ROL -->
+    <!-- ============================================================= -->
+    @if (rolePermModalOpen() && selectedRoleForPerms()) {
+      <div class="modal-backdrop" (click)="closeRolePermissionsModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <h3>Configurar Permisos de Rol</h3>
+              <span class="modal-sub">Rol: <strong>{{ selectedRoleForPerms()?.name }}</strong></span>
+            </div>
+            <button class="modal-close" (click)="closeRolePermissionsModal()">✕</button>
+          </div>
+
+          @if (roleSuccess()) {
+            <div class="alert alert-success">{{ roleSuccess() }}</div>
+          }
+          @if (roleError()) {
+            <div class="alert alert-error">{{ roleError() }}</div>
+          }
+
+          <p class="role-modal-instruction">
+            Selecciona los permisos que tendrán los usuarios con este rol. Los cambios afectarán de inmediato el acceso a las funciones del sistema.
+          </p>
+
+          <div class="perms-checklist">
+            @for (perm of allPermissions(); track perm.id) {
+              <label class="perm-check-item" [class.checked]="isPermSelected(perm.id)">
+                <input 
+                  type="checkbox" 
+                  [checked]="isPermSelected(perm.id)"
+                  (change)="togglePermSelection(perm.id)" 
+                />
+                <div class="perm-check-info">
+                  <div class="perm-check-header">
+                    <span class="perm-check-name">{{ perm.name }}</span>
+                    <span class="perm-module-tag">{{ perm.module }}</span>
+                  </div>
+                  <span class="perm-check-desc">{{ perm.description }}</span>
+                </div>
+              </label>
+            }
+          </div>
+
+          <div class="modal-actions mt-4">
+            <button type="button" class="btn-outline" (click)="closeRolePermissionsModal()">Cancelar</button>
+            <button type="button" class="btn-primary" (click)="onSaveRolePermissions()">
+              Guardar Permisos del Rol
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: REGISTRAR / EDITAR USUARIO DE ORGANIZACIÓN -->
+    <!-- ============================================================= -->
+    @if (userModalOpen()) {
+      <div class="modal-backdrop" (click)="closeUserModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ editingUser() ? 'Modificar Usuario' : 'Registrar Usuario en Organización' }}</h3>
+            <button class="modal-close" (click)="closeUserModal()">✕</button>
+          </div>
+
+          @if (userSuccess()) {
+            <div class="alert alert-success">{{ userSuccess() }}</div>
+          }
+          @if (userError()) {
+            <div class="alert alert-error">{{ userError() }}</div>
+          }
+
+          <form [formGroup]="orgUserForm" (ngSubmit)="onSaveOrgUser()" class="modal-form">
+            <div class="form-group">
+              <label>Nombre Completo *</label>
+              <input type="text" formControlName="full_name" class="input-field" placeholder="Dr. Carlos Mendoza" />
+            </div>
+
+            <div class="form-group">
+              <label>Correo Electrónico *</label>
+              <input type="email" formControlName="email" class="input-field" placeholder="carlos@vidasana.com" [attr.disabled]="editingUser() ? '' : null" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" formControlName="phone" class="input-field" placeholder="+591 73683564" />
+              </div>
+
+              <!-- Password Field: only editable by ADMIN_SAAS -->
+              <div class="form-group">
+                @if (!editingUser()) {
+                  <label>Contraseña Inicial *</label>
+                  <input type="password" formControlName="password" class="input-field" placeholder="••••••••" />
+                } @else {
+                  @if (isSaasAdmin()) {
+                    <label>
+                      Nueva Contraseña 
+                      <span class="badge-role badge-role-saas ml-1">Admin Global</span>
+                    </label>
+                    <input type="password" formControlName="password" class="input-field" placeholder="Dejar vacío para mantener actual" />
+                  } @else {
+                    <label>Contraseña</label>
+                    <div class="password-restricted-note">
+                      <svg class="btn-svg-inline mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                      Modificación de contraseña exclusiva para el Administrador SaaS Global.
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Organización *</label>
+                @if (isOrgAdmin()) {
+                  <input type="text" [value]="getMyOrgName()" class="input-field" disabled />
+                } @else {
+                  <select formControlName="tenant_id" class="input-field select-input">
+                    @for (t of tenants(); track t.id) {
+                      <option [value]="t.id">{{ t.name }}</option>
+                    }
+                  </select>
+                }
+              </div>
+
+              <div class="form-group">
+                <label>Rol Asignado *</label>
+                <select formControlName="role_id" class="input-field select-input">
+                  <option value="NUTRICIONISTA">Nutricionista (Clínico)</option>
+                  <option value="ADMIN_ORGANIZATION">Admin de Organización</option>
+                  <option value="CLIENTE">Cliente (Paciente)</option>
+                  <option value="ADMIN_SAAS" *ngIf="isSaasAdmin()">Administrador SaaS</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-outline" (click)="closeUserModal()">Cancelar</button>
+              <button type="submit" class="btn-primary">
+                {{ editingUser() ? 'Guardar Cambios' : 'Registrar Usuario' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: USUARIOS REGISTRADOS EN TENANT CON FILTROS AVANZADOS -->
+    <!-- ============================================================= -->
+    @if (tenantUsersModalOpen()) {
+      <div class="modal-backdrop" (click)="closeTenantUsersModal()">
+        <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <div class="modal-tag">Gestión de Tenants • Auditoría de Registrados</div>
+              <h2 class="modal-title">
+                <svg class="modal-title-svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>Usuarios Registrados</span>
+                @if (selectedTenantForUsers()) {
+                  <span>• {{ selectedTenantForUsers()?.name }}</span>
+                } @else {
+                  <span>• Todas las Organizaciones</span>
+                }
+              </h2>
+              <p class="modal-subtitle">
+                @if (selectedTenantForUsers()) {
+                  Código: <strong>{{ selectedTenantForUsers()?.code }}</strong> •
+                }
+                Total: {{ tenantUsersList().length }} usuario(s) registrado(s)
+              </p>
+            </div>
+            <button class="modal-close" (click)="closeTenantUsersModal()">✕</button>
+          </div>
+
+          <!-- Quick Metric Filter Pills -->
+          <div class="tenant-users-stats">
+            <button 
+              type="button"
+              class="stat-pill" 
+              [class.active]="tenantUserRoleFilter() === ''" 
+              (click)="setTenantUserRoleFilter('')">
+              <span class="stat-pill-label">Todos</span>
+              <span class="stat-pill-count">{{ tenantUsersList().length }}</span>
+            </button>
+            <button 
+              type="button"
+              class="stat-pill stat-pill-client" 
+              [class.active]="tenantUserRoleFilter() === 'CLIENTE'" 
+              (click)="setTenantUserRoleFilter('CLIENTE')">
+              <span class="stat-pill-label">Clientes</span>
+              <span class="stat-pill-count">{{ countUsersByRole('CLIENTE') }}</span>
+            </button>
+            <button 
+              type="button"
+              class="stat-pill stat-pill-org" 
+              [class.active]="tenantUserRoleFilter() === 'ADMIN_ORGANIZATION'" 
+              (click)="setTenantUserRoleFilter('ADMIN_ORGANIZATION')">
+              <span class="stat-pill-label">Admins Normales</span>
+              <span class="stat-pill-count">{{ countUsersByRole('ADMIN_ORGANIZATION') }}</span>
+            </button>
+            <button 
+              type="button"
+              class="stat-pill stat-pill-saas" 
+              [class.active]="tenantUserRoleFilter() === 'ADMIN_SAAS'" 
+              (click)="setTenantUserRoleFilter('ADMIN_SAAS')">
+              <span class="stat-pill-label">Admins SaaS</span>
+              <span class="stat-pill-count">{{ countUsersByRole('ADMIN_SAAS') }}</span>
+            </button>
+            <button 
+              type="button"
+              class="stat-pill stat-pill-nutri" 
+              [class.active]="tenantUserRoleFilter() === 'NUTRICIONISTA'" 
+              (click)="setTenantUserRoleFilter('NUTRICIONISTA')">
+              <span class="stat-pill-label">Nutricionistas</span>
+              <span class="stat-pill-count">{{ countUsersByRole('NUTRICIONISTA') }}</span>
+            </button>
+          </div>
+
+          <!-- Search & Filter Controls -->
+          <div class="tenant-users-toolbar">
+            <div class="search-input-wrap">
+              <svg class="search-icon-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Buscar por nombre, correo o teléfono..."
+                [value]="tenantUserSearch()"
+                (input)="onTenantUserSearch($event)"
+              />
+              @if (tenantUserSearch()) {
+                <button class="btn-clear-search" (click)="tenantUserSearch.set('')">✕</button>
+              }
+            </div>
+
+            <div class="filter-select-wrap">
+              <select 
+                class="filter-select"
+                [value]="tenantUserRoleFilter()"
+                (change)="setTenantUserRoleFilter($any($event.target).value)">
+                <option value="">Todos los Roles</option>
+                <option value="CLIENTE">Clientes</option>
+                <option value="ADMIN_ORGANIZATION">Administradores Normales</option>
+                <option value="ADMIN_SAAS">Administradores SaaS</option>
+                <option value="NUTRICIONISTA">Nutricionistas</option>
+              </select>
+            </div>
+
+            @if (tenantUserSearch() || tenantUserRoleFilter()) {
+              <button class="btn-link-reset" (click)="clearTenantUserFilters()">
+                Limpiar filtros
+              </button>
+            }
+          </div>
+
+          <!-- Users List Container -->
+          <div class="tenant-users-content">
+            @if (isLoadingTenantUsers()) {
+              <div class="loading-box py-8">
+                <div class="spinner"></div>
+                <span>Cargando usuarios registrados...</span>
+              </div>
+            } @else if (filteredTenantUsers().length === 0) {
+              <div class="empty-results-box">
+                <div class="empty-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+                <h4>No se encontraron usuarios registrados</h4>
+                <p>No hay coincidencias para los filtros aplicados en esta organización.</p>
+                <button class="btn-outline btn-sm mt-2" (click)="clearTenantUserFilters()">
+                  Restablecer filtros
+                </button>
+              </div>
+            } @else {
+              <div class="tenant-users-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Usuario</th>
+                      <th>Rol</th>
+                      <th>Contacto</th>
+                      <th>Estado</th>
+                      <th>Registrado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (user of filteredTenantUsers(); track user.id) {
+                      <tr>
+                        <td>
+                          <div class="user-cell">
+                            <div class="user-avatar-sm" [ngClass]="getRoleBadgeClass(user.role_id)">
+                              {{ user.full_name ? user.full_name[0].toUpperCase() : 'U' }}
+                            </div>
+                            <div>
+                              <div class="user-cell-name">{{ user.full_name }}</div>
+                              <div class="user-cell-email">{{ user.email }}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span class="badge-role" [ngClass]="getRoleBadgeClass(user.role_id)">
+                            {{ getRoleLabel(user.role_id) }}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="user-cell-phone">
+                            {{ user.phone || 'Sin teléfono' }}
+                          </div>
+                        </td>
+                        <td>
+                          <span class="status-indicator" [class.active]="user.is_active">
+                            {{ user.is_active ? 'Activo' : 'Inactivo' }}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="user-cell-date">
+                            {{ user.created_at | date:'dd/MM/yyyy' }}
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          <div class="modal-actions border-top pt-4">
+            <span class="text-secondary text-sm">
+              Mostrando <strong>{{ filteredTenantUsers().length }}</strong> de <strong>{{ tenantUsersList().length }}</strong> usuarios
+            </span>
+            <button type="button" class="btn-primary" (click)="closeTenantUsersModal()">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </main>
+</div>

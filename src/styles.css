@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* NutriSalud Light Theme */
+  --bg-page: #F4EBD9;
+  --bg-sidebar: #FAF5E8;
+  --bg-card: #FFFFFF;
+  --bg-card-highlight: #EADBB8;
+  --bg-pill-active: #E8DAB4;
+  --bg-pill-hover: rgba(35, 122, 87, 0.08);
+  
+  --color-primary: #206443;
+  --color-primary-hover: #184E34;
+  --color-primary-light: rgba(32, 100, 67, 0.12);
+  --color-accent: #E0873E;
+  --color-danger: #D9534F;
+  --color-success: #206443;
+
+  --text-primary: #172920;
+  --text-secondary: #65756B;
+  --text-muted: #8E9E94;
+  --text-on-primary: #FFFFFF;
+  
+  --border-color: rgba(32, 100, 67, 0.08);
+  --border-card: rgba(0, 0, 0, 0.04);
+  --card-shadow: 0 4px 20px -2px rgba(60, 48, 30, 0.05);
+  
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+  
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark-theme {
+  /* NutriSalud Dark Theme */
+  --bg-page: #0D1310;
+  --bg-sidebar: #090E0C;
+  --bg-card: #18221D;
+  --bg-card-highlight: #214132;
+  --bg-pill-active: #1C382B;
+  --bg-pill-hover: rgba(93, 179, 134, 0.1);
+  
+  --color-primary: #2E7D56;
+  --color-primary-hover: #3AA372;
+  --color-primary-light: rgba(46, 125, 86, 0.25);
+  --color-accent: #E0873E;
+  --color-danger: #EF4444;
+  --color-success: #5DB386;
+
+  --text-primary: #E6F0EA;
+  --text-secondary: #90A398;
+  --text-muted: #5B6F63;
+  --text-on-primary: #FFFFFF;
+  
+  --border-color: rgba(255, 255, 255, 0.07);
+  --border-card: rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.4);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
