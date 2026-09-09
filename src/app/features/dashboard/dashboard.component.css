@@ -2862,5 +2862,21 @@ textarea.form-control {
   }
 }
 
+/* Validation Feedback Styles */
+.input-field.ng-invalid.ng-touched,
+.form-control.ng-invalid.ng-touched,
+.input-invalid {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.02) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.text-danger {
+  color: #ef4444 !important;
+  font-size: 11px;
+  font-weight: 600;
+  display: block;
+}
+
 
 

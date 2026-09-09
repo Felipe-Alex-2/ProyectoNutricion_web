@@ -207,15 +207,21 @@
       <div class="card edit-profile-card">
         <h2 class="card-title">Editar Información Personal</h2>
         <form [formGroup]="editForm" (ngSubmit)="onSaveProfile()" class="edit-form">
-          <div class="form-group">
-            <label>Nombre Completo</label>
-            <input type="text" formControlName="full_name" class="input-field" placeholder="Tu nombre" />
+          <div class="form-group mb-3">
+            <label class="form-label">Nombre Completo *</label>
+            <input type="text" formControlName="full_name" class="input-field form-control" placeholder="Tu nombre" />
+            @if (editForm.get('full_name')?.touched && editForm.get('full_name')?.invalid) {
+              <span class="text-danger text-xs mt-1">El nombre completo es obligatorio (mínimo 2 caracteres).</span>
+            }
           </div>
-          <div class="form-group">
-            <label>Correo Electrónico</label>
-            <input type="email" formControlName="email" class="input-field" placeholder="correo@ejemplo.com" />
+          <div class="form-group mb-3">
+            <label class="form-label">Correo Electrónico *</label>
+            <input type="email" formControlName="email" class="input-field form-control" placeholder="correo@ejemplo.com" />
+            @if (editForm.get('email')?.touched && editForm.get('email')?.invalid) {
+              <span class="text-danger text-xs mt-1">Introduce un correo electrónico válido.</span>
+            }
           </div>
-          <button type="submit" class="btn-primary">Guardar Cambios</button>
+          <button type="submit" class="btn-primary" [disabled]="editForm.invalid">Guardar Cambios</button>
         </form>
       </div>
     }
@@ -1146,6 +1152,9 @@
                 <div class="form-group mb-3">
                   <label class="form-label">Diagnóstico Nutricional *</label>
                   <textarea class="form-control" rows="2" formControlName="diagnosis" placeholder="Ej: Normopeso con necesidad de recomposición y distribución de comidas"></textarea>
+                  @if (clinicalForm.get('diagnosis')?.touched && clinicalForm.get('diagnosis')?.invalid) {
+                    <span class="text-danger text-xs mt-1">El diagnóstico nutricional es obligatorio (mínimo 3 caracteres).</span>
+                  }
                 </div>
 
                 <div class="form-grid mb-3">
@@ -1662,18 +1671,30 @@
                   <div class="form-group">
                     <label class="form-label">Calorías (kcal) *</label>
                     <input type="number" class="form-control" formControlName="calories" min="0" step="1" />
+                    @if (recipeForm.get('calories')?.touched && recipeForm.get('calories')?.invalid) {
+                      <span class="text-danger text-xs">Requerido (≥ 0)</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label class="form-label">Proteínas (g) *</label>
                     <input type="number" class="form-control" formControlName="protein" min="0" step="0.5" />
+                    @if (recipeForm.get('protein')?.touched && recipeForm.get('protein')?.invalid) {
+                      <span class="text-danger text-xs">Requerido</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label class="form-label">Carbohidratos (g) *</label>
                     <input type="number" class="form-control" formControlName="carbohydrates" min="0" step="0.5" />
+                    @if (recipeForm.get('carbohydrates')?.touched && recipeForm.get('carbohydrates')?.invalid) {
+                      <span class="text-danger text-xs">Requerido</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label class="form-label">Grasas Totales (g) *</label>
                     <input type="number" class="form-control" formControlName="fats" min="0" step="0.5" />
+                    @if (recipeForm.get('fats')?.touched && recipeForm.get('fats')?.invalid) {
+                      <span class="text-danger text-xs">Requerido</span>
+                    }
                   </div>
                   <div class="form-group">
                     <label class="form-label">Fibra (g)</label>
@@ -1691,6 +1712,9 @@
                 <div class="form-group">
                   <label class="form-label">Porciones *</label>
                   <input type="number" class="form-control" formControlName="servings" min="1" />
+                  @if (recipeForm.get('servings')?.touched && recipeForm.get('servings')?.invalid) {
+                    <span class="text-danger text-xs">Mínimo 1 porción</span>
+                  }
                 </div>
                 <div class="form-group">
                   <label class="form-label">Preparación (min)</label>
