@@ -974,6 +974,13 @@
                   <p>{{ recipe.ingredients }}</p>
                 </div>
 
+                @if (recipe.assigned_patient_ids && recipe.assigned_patient_ids.length > 0) {
+                  <div class="recipe-assigned-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Asignada a {{ recipe.assigned_patient_ids.length }} paciente(s)</span>
+                  </div>
+                }
+
                 @if (canAccessSprint1()) {
                   <div class="recipe-actions">
                     <button class="btn-sm btn-outline" (click)="openRecipeModal(recipe)">Editar</button>
@@ -1045,47 +1052,74 @@
               @if (clinicalService.currentAnamnesis()) {
                 <div class="anamnesis-grid mt-3">
                   <div class="anamnesis-box alert-box">
-                    <span class="box-lbl">⚠️ Alergias e Intolerancias</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-danger"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      Alergias e Intolerancias
+                    </span>
                     <p class="box-val highlight-alert">{{ clinicalService.currentAnamnesis()?.allergies || 'Ninguna reportada' }}</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">🩺 Antecedentes Patológicos</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-info"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                      Antecedentes Patológicos
+                    </span>
                     <p class="box-val">{{ clinicalService.currentAnamnesis()?.pathologies || 'Sin antecedentes patológicos' }}</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">🎯 Objetivo del Paciente</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-success"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                      Objetivo del Paciente
+                    </span>
                     <p class="box-val font-bold text-success">{{ clinicalService.currentAnamnesis()?.goal }}</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">💊 Medicamentos / Suplementos</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-accent"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+                      Medicamentos / Suplementos
+                    </span>
                     <p class="box-val">{{ clinicalService.currentAnamnesis()?.medications || 'Ninguno' }}</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">💧 Ingesta de Agua</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-blue"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                      Ingesta de Agua
+                    </span>
                     <p class="box-val font-bold">{{ clinicalService.currentAnamnesis()?.water_intake_liters }} Litros / día</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">😴 Horas de Sueño</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-purple"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                      Horas de Sueño
+                    </span>
                     <p class="box-val">{{ clinicalService.currentAnamnesis()?.sleep_hours }} hrs promedio</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">🏃 Actividad Física</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-warning"><path d="m13 2-2 10h5l-4 10 2-10h-5Z"/></svg>
+                      Actividad Física
+                    </span>
                     <p class="box-val">{{ clinicalService.currentAnamnesis()?.physical_activity }}</p>
                   </div>
 
                   <div class="anamnesis-box">
-                    <span class="box-lbl">☕ Hábitos (Café / Alcohol / Fumar)</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-accent"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>
+                      Hábitos (Café / Alcohol / Fumar)
+                    </span>
                     <p class="box-val">{{ clinicalService.currentAnamnesis()?.coffee_cups }} tazas café | Alcohol: {{ clinicalService.currentAnamnesis()?.alcohol_frequency }} | Tabaco: {{ clinicalService.currentAnamnesis()?.smoke_habit }}</p>
                   </div>
 
                   <div class="anamnesis-box full-width">
-                    <span class="box-lbl">🍽️ Preferencias y Aversiones Alimentarias</span>
+                    <span class="box-lbl">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="box-icon icon-success"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                      Preferencias y Aversiones Alimentarias
+                    </span>
                     <p class="box-val">{{ clinicalService.currentAnamnesis()?.food_preferences || 'Sin restricciones declaradas' }}</p>
                   </div>
                 </div>
@@ -1695,6 +1729,39 @@
                 @if (recipeForm.get('instructions')?.touched && recipeForm.get('instructions')?.invalid) {
                   <span class="text-danger text-xs">Las instrucciones son obligatorias.</span>
                 }
+              </div>
+
+              <!-- Asignación de Receta a Clientes/Pacientes vinculados -->
+              <div class="patient-assign-section mb-3">
+                <div class="assign-header">
+                  <div>
+                    <h4 class="text-sm font-bold">Asignar Receta a Pacientes</h4>
+                    <p class="text-xs text-secondary">Selecciona los pacientes a quienes se les mostrará esta receta en el apartado "Plan" de su App Móvil.</p>
+                  </div>
+                  <div class="assign-actions">
+                    <button type="button" class="btn-xs btn-outline" (click)="selectAllPatientsForRecipe(true)">Todos</button>
+                    <button type="button" class="btn-xs btn-outline" (click)="selectAllPatientsForRecipe(false)">Limpiar</button>
+                  </div>
+                </div>
+
+                <div class="patient-assign-list">
+                  @for (user of orgUsers(); track user.id) {
+                    @if (user.role_id === 'CLIENTE') {
+                      <label class="patient-assign-item" [class.selected]="isPatientSelectedForRecipe(user.id)">
+                        <input 
+                          type="checkbox" 
+                          [checked]="isPatientSelectedForRecipe(user.id)" 
+                          (change)="togglePatientForRecipe(user.id)" 
+                          class="patient-checkbox" />
+                        <div class="patient-avatar-sm">{{ user.full_name.charAt(0) }}</div>
+                        <div class="patient-assign-meta">
+                          <span class="patient-assign-name">{{ user.full_name }}</span>
+                          <span class="patient-assign-email">{{ user.email }}</span>
+                        </div>
+                      </label>
+                    }
+                  }
+                </div>
               </div>
             </div>
 

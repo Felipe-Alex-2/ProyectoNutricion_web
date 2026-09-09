@@ -18,6 +18,7 @@ export interface Recipe {
   category: string;
   ingredients: string;
   instructions: string;
+  assigned_patient_ids?: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -40,6 +41,7 @@ export interface RecipeCreate {
   category: string;
   ingredients: string;
   instructions: string;
+  assigned_patient_ids?: string[];
 }
 
 export interface RecipeUpdate extends Partial<RecipeCreate> {

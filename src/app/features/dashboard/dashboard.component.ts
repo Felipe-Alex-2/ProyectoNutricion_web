@@ -97,6 +97,7 @@ export class DashboardComponent implements OnInit {
   recipeSuccess = signal<string | null>(null);
   recipeError = signal<string | null>(null);
   recipeCategoryFilter = signal<string>('');
+  recipeSelectedPatients = signal<string[]>([]);
   recipeForm: FormGroup;
 
   // Historial Clínico y Anamnesis
@@ -915,6 +916,7 @@ export class DashboardComponent implements OnInit {
 
     if (recipe) {
       this.editingRecipe.set(recipe);
+      this.recipeSelectedPatients.set(recipe.assigned_patient_ids || []);
       this.recipeForm.patchValue({
         title: recipe.title,
         description: recipe.description || '',
@@ -935,6 +937,7 @@ export class DashboardComponent implements OnInit {
       });
     } else {
       this.editingRecipe.set(null);
+      this.recipeSelectedPatients.set([]);
       this.recipeForm.reset({
         title: '',
         description: '',
@@ -960,6 +963,31 @@ export class DashboardComponent implements OnInit {
   closeRecipeModal(): void {
     this.recipeModalOpen.set(false);
     this.editingRecipe.set(null);
+    this.recipeSelectedPatients.set([]);
+  }
+
+  togglePatientForRecipe(patientId: string): void {
+    const current = this.recipeSelectedPatients();
+    if (current.includes(patientId)) {
+      this.recipeSelectedPatients.set(current.filter((id) => id !== patientId));
+    } else {
+      this.recipeSelectedPatients.set([...current, patientId]);
+    }
+  }
+
+  isPatientSelectedForRecipe(patientId: string): boolean {
+    return this.recipeSelectedPatients().includes(patientId);
+  }
+
+  selectAllPatientsForRecipe(select: boolean): void {
+    if (select) {
+      const allPatientIds = this.orgUsers()
+        .filter((u) => u.role_id === 'CLIENTE')
+        .map((u) => u.id);
+      this.recipeSelectedPatients.set(allPatientIds);
+    } else {
+      this.recipeSelectedPatients.set([]);
+    }
   }
 
   submitRecipe(): void {
@@ -971,7 +999,10 @@ export class DashboardComponent implements OnInit {
     this.recipeSuccess.set(null);
     this.recipeError.set(null);
 
-    const formData = this.recipeForm.value;
+    const formData = {
+      ...this.recipeForm.value,
+      assigned_patient_ids: this.recipeSelectedPatients(),
+    };
     const editing = this.editingRecipe();
 
     if (editing) {
