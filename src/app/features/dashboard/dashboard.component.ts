@@ -13,6 +13,10 @@ import { Role, Permission } from '../../core/models/rbac.model';
 import { PatientLink } from '../../core/models/patient-link.model';
 import { ActivityLogService } from '../../core/services/activity-log.service';
 import { ActivityLog } from '../../core/models/activity-log.model';
+import { RecipeService } from '../../core/services/recipe.service';
+import { ClinicalService } from '../../core/services/clinical.service';
+import { Recipe } from '../../core/models/recipe.model';
+import { PatientAnamnesis, ClinicalRecord } from '../../core/models/clinical.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -87,6 +91,20 @@ export class DashboardComponent implements OnInit {
   claimSuccess = signal<string | null>(null);
   claimError = signal<string | null>(null);
 
+  // Recetas Nutricionales con Foto y Macros
+  recipeModalOpen = signal<boolean>(false);
+  editingRecipe = signal<Recipe | null>(null);
+  recipeSuccess = signal<string | null>(null);
+  recipeError = signal<string | null>(null);
+  recipeCategoryFilter = signal<string>('');
+  recipeForm: FormGroup;
+
+  // Historial Clínico y Anamnesis
+  selectedPatient = signal<User | null>(null);
+  clinicalSuccess = signal<string | null>(null);
+  clinicalError = signal<string | null>(null);
+  clinicalForm: FormGroup;
+
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
@@ -95,7 +113,9 @@ export class DashboardComponent implements OnInit {
     private rbacService: RBACService,
     private orgUsersService: OrgUsersService,
     private patientLinkService: PatientLinkService,
-    public activityLogService: ActivityLogService
+    public activityLogService: ActivityLogService,
+    public recipeService: RecipeService,
+    public clinicalService: ClinicalService
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2)]],
@@ -129,6 +149,31 @@ export class DashboardComponent implements OnInit {
     this.claimLinkForm = this.fb.group({
       pairing_code: ['', [Validators.required, Validators.minLength(6)]],
     });
+
+    this.recipeForm = this.fb.group({
+      title: ['', [Validators.required, Validators.minLength(2)]],
+      description: [''],
+      image_url: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c'],
+      calories: [450, [Validators.required, Validators.min(0)]],
+      protein: [30, [Validators.required, Validators.min(0)]],
+      carbohydrates: [40, [Validators.required, Validators.min(0)]],
+      fats: [15, [Validators.required, Validators.min(0)]],
+      fiber: [6, [Validators.min(0)]],
+      sodium: [250, [Validators.min(0)]],
+      servings: [1, [Validators.required, Validators.min(1)]],
+      prep_time_minutes: [15, [Validators.required, Validators.min(0)]],
+      cook_time_minutes: [15, [Validators.required, Validators.min(0)]],
+      difficulty: ['Fácil', [Validators.required]],
+      category: ['Almuerzo', [Validators.required]],
+      ingredients: ['', [Validators.required, Validators.minLength(3)]],
+      instructions: ['', [Validators.required, Validators.minLength(5)]],
+    });
+
+    this.clinicalForm = this.fb.group({
+      diagnosis: ['', [Validators.required, Validators.minLength(3)]],
+      evolution_notes: [''],
+      clinical_goals: [''],
+    });
   }
 
   ngOnInit(): void {
@@ -142,6 +187,7 @@ export class DashboardComponent implements OnInit {
     this.loadOrgUsers();
     this.loadPatientLinks();
     this.loadActivityLogs();
+    this.loadRecipes();
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
   }
 
@@ -848,6 +894,169 @@ export class DashboardComponent implements OnInit {
       error: (err) => {
         const msg = err?.error?.detail || 'Error al canjear el código de vinculación';
         this.claimError.set(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      },
+    });
+  }
+
+  // --- MÉTODOS DE RECETAS NUTRICIONALES (WEB) ---
+  loadRecipes(category?: string): void {
+    const cat = category !== undefined ? category : this.recipeCategoryFilter();
+    this.recipeService.loadRecipes(cat || undefined).subscribe();
+  }
+
+  filterRecipesByCategory(cat: string): void {
+    this.recipeCategoryFilter.set(cat);
+    this.loadRecipes(cat);
+  }
+
+  openRecipeModal(recipe?: Recipe): void {
+    this.recipeSuccess.set(null);
+    this.recipeError.set(null);
+
+    if (recipe) {
+      this.editingRecipe.set(recipe);
+      this.recipeForm.patchValue({
+        title: recipe.title,
+        description: recipe.description || '',
+        image_url: recipe.image_url || '',
+        calories: recipe.calories,
+        protein: recipe.protein,
+        carbohydrates: recipe.carbohydrates,
+        fats: recipe.fats,
+        fiber: recipe.fiber,
+        sodium: recipe.sodium || 0,
+        servings: recipe.servings,
+        prep_time_minutes: recipe.prep_time_minutes,
+        cook_time_minutes: recipe.cook_time_minutes,
+        difficulty: recipe.difficulty,
+        category: recipe.category,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+      });
+    } else {
+      this.editingRecipe.set(null);
+      this.recipeForm.reset({
+        title: '',
+        description: '',
+        image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+        calories: 450,
+        protein: 30,
+        carbohydrates: 40,
+        fats: 15,
+        fiber: 6,
+        sodium: 200,
+        servings: 1,
+        prep_time_minutes: 15,
+        cook_time_minutes: 15,
+        difficulty: 'Fácil',
+        category: 'Almuerzo',
+        ingredients: '',
+        instructions: '',
+      });
+    }
+    this.recipeModalOpen.set(true);
+  }
+
+  closeRecipeModal(): void {
+    this.recipeModalOpen.set(false);
+    this.editingRecipe.set(null);
+  }
+
+  submitRecipe(): void {
+    if (this.recipeForm.invalid) {
+      this.recipeForm.markAllAsTouched();
+      return;
+    }
+
+    this.recipeSuccess.set(null);
+    this.recipeError.set(null);
+
+    const formData = this.recipeForm.value;
+    const editing = this.editingRecipe();
+
+    if (editing) {
+      this.recipeService.updateRecipe(editing.id, formData).subscribe({
+        next: () => {
+          this.recipeSuccess.set(`Receta '${formData.title}' actualizada exitosamente.`);
+          this.closeRecipeModal();
+          this.activityLogService.recordActivity('RECETA_MODIFICADA', `Se editó la receta ${formData.title}`, 'CLINICAL');
+        },
+        error: (err) => {
+          this.recipeError.set(err?.error?.detail || 'Error al actualizar receta');
+        },
+      });
+    } else {
+      this.recipeService.createRecipe(formData).subscribe({
+        next: () => {
+          this.recipeSuccess.set(`Receta '${formData.title}' creada con éxito.`);
+          this.closeRecipeModal();
+          this.activityLogService.recordActivity('RECETA_CREADA', `Se creó la receta ${formData.title}`, 'CLINICAL');
+        },
+        error: (err) => {
+          this.recipeError.set(err?.error?.detail || 'Error al crear receta');
+        },
+      });
+    }
+  }
+
+  deleteRecipe(id: string, title: string): void {
+    if (!confirm(`¿Estás seguro de eliminar la receta "${title}"?`)) return;
+
+    this.recipeService.deleteRecipe(id).subscribe({
+      next: () => {
+        this.recipeSuccess.set(`Receta eliminada correctamente.`);
+        this.activityLogService.recordActivity('RECETA_ELIMINADA', `Se eliminó la receta ${title}`, 'CLINICAL');
+      },
+      error: (err) => {
+        this.recipeError.set(err?.error?.detail || 'Error al eliminar receta');
+      },
+    });
+  }
+
+  // --- MÉTODOS DE HISTORIAL CLÍNICO Y ANAMNESIS (WEB) ---
+  selectPatientForClinical(patient: User): void {
+    this.selectedPatient.set(patient);
+    this.clinicalSuccess.set(null);
+    this.clinicalError.set(null);
+    this.clinicalForm.reset({
+      diagnosis: '',
+      evolution_notes: '',
+      clinical_goals: '',
+    });
+
+    // Cargar anamnesis e historial clínico del paciente
+    this.clinicalService.getPatientAnamnesis(patient.id).subscribe();
+    this.clinicalService.getPatientClinicalRecords(patient.id).subscribe();
+  }
+
+  submitClinicalRecord(): void {
+    const patient = this.selectedPatient();
+    if (!patient) return;
+
+    if (this.clinicalForm.invalid) {
+      this.clinicalForm.markAllAsTouched();
+      return;
+    }
+
+    this.clinicalSuccess.set(null);
+    this.clinicalError.set(null);
+
+    this.clinicalService.addClinicalRecord(patient.id, this.clinicalForm.value).subscribe({
+      next: () => {
+        this.clinicalSuccess.set('Registro clínico asentado exitosamente.');
+        this.clinicalForm.reset({
+          diagnosis: '',
+          evolution_notes: '',
+          clinical_goals: '',
+        });
+        this.activityLogService.recordActivity(
+          'HISTORIAL_CLINICO',
+          `Se asentó nota diagnóstica para ${patient.full_name}`,
+          'CLINICAL'
+        );
+      },
+      error: (err) => {
+        this.clinicalError.set(err?.error?.detail || 'Error al guardar registro clínico');
       },
     });
   }

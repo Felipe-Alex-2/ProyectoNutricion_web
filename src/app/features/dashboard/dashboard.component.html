@@ -40,6 +40,34 @@
           <span>Bitácora</span>
         </button>
 
+        <!-- 3. Recetario & Macros (Web) -->
+        <button 
+          class="nav-item" 
+          [class.active]="activeTab() === 'recetas'"
+          (click)="setActiveTab('recetas')">
+          <svg class="nav-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+            <line x1="6" y1="1" x2="6" y2="4"></line>
+            <line x1="10" y1="1" x2="10" y2="4"></line>
+            <line x1="14" y1="1" x2="14" y2="4"></line>
+          </svg>
+          <span>Recetario & Macros</span>
+        </button>
+
+        <!-- 4. Historial Clínico & Anamnesis (Solo Staff: Nutris y Admins) -->
+        @if (canAccessSprint1()) {
+          <button 
+            class="nav-item" 
+            [class.active]="activeTab() === 'historial-clinico'"
+            (click)="setActiveTab('historial-clinico')">
+            <svg class="nav-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+            <span>Historial Clínico</span>
+          </button>
+        }
+
         <!-- Acordeón Sprint 1: Solo visible para roles administrativos y especialistas -->
         @if (canAccessSprint1()) {
           <div class="sidebar-accordion">
@@ -855,6 +883,284 @@
     }
 
     <!-- ============================================================= -->
+    <!-- PESTAÑA: RECETARIO & MACRONUTRIENTES (WEB) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'recetas') {
+      <div class="card header-card">
+        <div class="card-header-flex">
+          <div>
+            <h2 class="card-title">Recetario & Macronutrientes</h2>
+            <p class="card-subtitle">Platillos equilibrados con detalle calórico, distribución de macronutrientes y fotografía</p>
+          </div>
+          @if (canAccessSprint1()) {
+            <button class="btn-primary" (click)="openRecipeModal()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Nueva Receta</span>
+            </button>
+          }
+        </div>
+
+        @if (recipeSuccess()) {
+          <div class="alert alert-success mt-3">{{ recipeSuccess() }}</div>
+        }
+        @if (recipeError()) {
+          <div class="alert alert-error mt-3">{{ recipeError() }}</div>
+        }
+
+        <!-- Filtros de categoría -->
+        <div class="filter-bar mt-3">
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === ''" (click)="filterRecipesByCategory('')">Todas</button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Desayuno'" (click)="filterRecipesByCategory('Desayuno')">Desayunos</button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Almuerzo'" (click)="filterRecipesByCategory('Almuerzo')">Almuerzos</button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Cena'" (click)="filterRecipesByCategory('Cena')">Cenas</button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Snack'" (click)="filterRecipesByCategory('Snack')">Snacks</button>
+        </div>
+      </div>
+
+      <!-- Grid de recetas con foto y macros -->
+      <div class="recipes-grid mt-4">
+        @if (recipeService.isLoading()) {
+          <div class="card text-center p-5">
+            <span class="spinner"></span>
+            <p class="mt-2 text-secondary">Cargando recetas saludables...</p>
+          </div>
+        } @else if (recipeService.recipes().length === 0) {
+          <div class="card text-center p-5">
+            <p class="text-secondary">No se encontraron recetas registradas en esta categoría.</p>
+          </div>
+        } @else {
+          @for (recipe of recipeService.recipes(); track recipe.id) {
+            <div class="recipe-card">
+              <div class="recipe-image-container">
+                <img [src]="recipe.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'" [alt]="recipe.title" class="recipe-image" />
+                <span class="badge-category">{{ recipe.category }}</span>
+                <span class="badge-difficulty">{{ recipe.difficulty }}</span>
+              </div>
+              <div class="recipe-body">
+                <h3 class="recipe-title">{{ recipe.title }}</h3>
+                <p class="recipe-desc">{{ recipe.description || 'Platillo balanceado diseñado por especialistas en nutrición.' }}</p>
+
+                <!-- Desglose de Macronutrientes -->
+                <div class="macros-grid">
+                  <div class="macro-item macro-calories">
+                    <span class="macro-val">{{ recipe.calories }}</span>
+                    <span class="macro-lbl">kcal</span>
+                  </div>
+                  <div class="macro-item macro-protein">
+                    <span class="macro-val">{{ recipe.protein }}g</span>
+                    <span class="macro-lbl">Proteína</span>
+                  </div>
+                  <div class="macro-item macro-carbs">
+                    <span class="macro-val">{{ recipe.carbohydrates }}g</span>
+                    <span class="macro-lbl">Carbs</span>
+                  </div>
+                  <div class="macro-item macro-fats">
+                    <span class="macro-val">{{ recipe.fats }}g</span>
+                    <span class="macro-lbl">Grasas</span>
+                  </div>
+                </div>
+
+                <div class="recipe-meta-row">
+                  <span>⏱️ {{ recipe.prep_time_minutes + recipe.cook_time_minutes }} min</span>
+                  <span>🍽️ {{ recipe.servings }} porción</span>
+                  <span>🌾 {{ recipe.fiber }}g fibra</span>
+                </div>
+
+                <div class="recipe-ingredients-box">
+                  <strong>Ingredientes:</strong>
+                  <p>{{ recipe.ingredients }}</p>
+                </div>
+
+                @if (canAccessSprint1()) {
+                  <div class="recipe-actions">
+                    <button class="btn-sm btn-outline" (click)="openRecipeModal(recipe)">Editar</button>
+                    <button class="btn-sm btn-danger" (click)="deleteRecipe(recipe.id, recipe.title)">Eliminar</button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- PESTAÑA: HISTORIAL CLÍNICO & ANAMNESIS (WEB) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'historial-clinico') {
+      <div class="card header-card">
+        <h2 class="card-title">Historial Clínico & Anamnesis de Pacientes</h2>
+        <p class="card-subtitle">Consulta la ficha de salud completada por el paciente en la App Móvil y asienta notas diagnósticas</p>
+      </div>
+
+      <div class="clinical-layout mt-4">
+        <!-- Columna Izquierda: Lista de Pacientes -->
+        <div class="card patients-sidebar-card">
+          <h3 class="card-title text-sm mb-3">Pacientes de la Clínica</h3>
+          <div class="patients-list">
+            @for (user of orgUsers(); track user.id) {
+              @if (user.role_id === 'CLIENTE') {
+                <button 
+                  class="patient-list-item" 
+                  [class.active]="selectedPatient()?.id === user.id"
+                  (click)="selectPatientForClinical(user)">
+                  <div class="patient-avatar">{{ user.full_name.charAt(0) }}</div>
+                  <div class="patient-info">
+                    <span class="patient-name">{{ user.full_name }}</span>
+                    <span class="patient-email">{{ user.email }}</span>
+                  </div>
+                </button>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Detalle de Anamnesis y Registro Clínico -->
+        <div class="clinical-content">
+          @if (!selectedPatient()) {
+            <div class="card text-center p-5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-secondary mb-3">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <h3 class="font-bold">Selecciona un paciente</h3>
+              <p class="text-secondary text-sm mt-1">Haz clic en un paciente de la lista para ver su ficha de salud y expediente médico.</p>
+            </div>
+          } @else {
+            <!-- Ficha de Anamnesis completada desde Móvil -->
+            <div class="card anamnesis-card mb-4">
+              <div class="card-header-flex">
+                <div>
+                  <span class="badge-tag mb-1">Completado por el Paciente en App Móvil</span>
+                  <h3 class="card-title">{{ selectedPatient()?.full_name }} - Anamnesis Inicial</h3>
+                </div>
+                <span class="text-sm text-secondary">{{ selectedPatient()?.email }}</span>
+              </div>
+
+              @if (clinicalService.currentAnamnesis()) {
+                <div class="anamnesis-grid mt-3">
+                  <div class="anamnesis-box alert-box">
+                    <span class="box-lbl">⚠️ Alergias e Intolerancias</span>
+                    <p class="box-val highlight-alert">{{ clinicalService.currentAnamnesis()?.allergies || 'Ninguna reportada' }}</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">🩺 Antecedentes Patológicos</span>
+                    <p class="box-val">{{ clinicalService.currentAnamnesis()?.pathologies || 'Sin antecedentes patológicos' }}</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">🎯 Objetivo del Paciente</span>
+                    <p class="box-val font-bold text-success">{{ clinicalService.currentAnamnesis()?.goal }}</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">💊 Medicamentos / Suplementos</span>
+                    <p class="box-val">{{ clinicalService.currentAnamnesis()?.medications || 'Ninguno' }}</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">💧 Ingesta de Agua</span>
+                    <p class="box-val font-bold">{{ clinicalService.currentAnamnesis()?.water_intake_liters }} Litros / día</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">😴 Horas de Sueño</span>
+                    <p class="box-val">{{ clinicalService.currentAnamnesis()?.sleep_hours }} hrs promedio</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">🏃 Actividad Física</span>
+                    <p class="box-val">{{ clinicalService.currentAnamnesis()?.physical_activity }}</p>
+                  </div>
+
+                  <div class="anamnesis-box">
+                    <span class="box-lbl">☕ Hábitos (Café / Alcohol / Fumar)</span>
+                    <p class="box-val">{{ clinicalService.currentAnamnesis()?.coffee_cups }} tazas café | Alcohol: {{ clinicalService.currentAnamnesis()?.alcohol_frequency }} | Tabaco: {{ clinicalService.currentAnamnesis()?.smoke_habit }}</p>
+                  </div>
+
+                  <div class="anamnesis-box full-width">
+                    <span class="box-lbl">🍽️ Preferencias y Aversiones Alimentarias</span>
+                    <p class="box-val">{{ clinicalService.currentAnamnesis()?.food_preferences || 'Sin restricciones declaradas' }}</p>
+                  </div>
+                </div>
+              } @else {
+                <div class="p-4 text-center text-secondary">
+                  <p>El paciente aún no ha completado el formulario de anamnesis desde su App Móvil.</p>
+                </div>
+              }
+            </div>
+
+            <!-- Formulario de Evaluación Clínica para el Nutricionista -->
+            <div class="card mb-4">
+              <h3 class="card-title">Asentar Diagnóstico y Nota Clínica (Web)</h3>
+              <p class="card-subtitle mb-3">Registra la evaluación clínica y pautas del paciente</p>
+
+              @if (clinicalSuccess()) {
+                <div class="alert alert-success mb-3">{{ clinicalSuccess() }}</div>
+              }
+              @if (clinicalError()) {
+                <div class="alert alert-error mb-3">{{ clinicalError() }}</div>
+              }
+
+              <form [formGroup]="clinicalForm" (ngSubmit)="submitClinicalRecord()">
+                <div class="form-group mb-3">
+                  <label class="form-label">Diagnóstico Nutricional *</label>
+                  <textarea class="form-control" rows="2" formControlName="diagnosis" placeholder="Ej: Normopeso con necesidad de recomposición y distribución de comidas"></textarea>
+                </div>
+
+                <div class="form-grid mb-3">
+                  <div class="form-group">
+                    <label class="form-label">Notas de Evolución y Consulta</label>
+                    <textarea class="form-control" rows="3" formControlName="evolution_notes" placeholder="Observaciones de la consulta, adherencia y sensaciones"></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Metas Clínicas Acordadas</label>
+                    <textarea class="form-control" rows="3" formControlName="clinical_goals" placeholder="Ej: Aumentar consumo de agua a 2.5L y añadir porción proteica en desayuno"></textarea>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                  <span>Guardar Nota Clínica</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Historial de Registros Clínicos -->
+            <div class="card">
+              <h3 class="card-title mb-3">Historial de Consultas Médicas</h3>
+              @if (clinicalService.clinicalRecords().length === 0) {
+                <p class="text-secondary text-sm">No existen notas clínicas previas para este paciente.</p>
+              } @else {
+                <div class="timeline-records">
+                  @for (record of clinicalService.clinicalRecords(); track record.id) {
+                    <div class="timeline-item">
+                      <div class="timeline-date">{{ record.created_at | date:'dd/MM/yyyy HH:mm' }}</div>
+                      <div class="timeline-body">
+                        <h4 class="font-bold text-primary">{{ record.diagnosis }}</h4>
+                        @if (record.evolution_notes) {
+                          <p class="text-sm mt-1"><strong>Evolución:</strong> {{ record.evolution_notes }}</p>
+                        }
+                        @if (record.clinical_goals) {
+                          <p class="text-sm text-secondary mt-1"><strong>Metas:</strong> {{ record.clinical_goals }}</p>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
     <!-- MODAL: REGISTRAR / EDITAR TENANT -->
     <!-- ============================================================= -->
     @if (tenantModalOpen()) {
@@ -1265,6 +1571,142 @@
               Cerrar
             </button>
           </div>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: REGISTRAR / EDITAR RECETA CON FOTO Y MACROS -->
+    <!-- ============================================================= -->
+    @if (recipeModalOpen()) {
+      <div class="modal-backdrop" (click)="closeRecipeModal()">
+        <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h3>{{ editingRecipe() ? 'Editar Receta Nutricional' : 'Registrar Nueva Receta' }}</h3>
+            <button class="modal-close" (click)="closeRecipeModal()">✕</button>
+          </div>
+
+          <form [formGroup]="recipeForm" (ngSubmit)="submitRecipe()" class="modal-form">
+            <div class="modal-body">
+              <div class="form-grid mb-3">
+                <div class="form-group">
+                  <label class="form-label">Nombre de la Receta *</label>
+                  <input type="text" class="form-control" formControlName="title" placeholder="Ej: Bowl Proteico de Quinoa y Salmón" />
+                  @if (recipeForm.get('title')?.touched && recipeForm.get('title')?.invalid) {
+                    <span class="text-danger text-xs">El nombre es obligatorio (mín. 2 car.)</span>
+                  }
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Momento / Categoría *</label>
+                  <select class="form-control" formControlName="category">
+                    <option value="Desayuno">Desayuno</option>
+                    <option value="Almuerzo">Almuerzo</option>
+                    <option value="Cena">Cena</option>
+                    <option value="Snack">Snack / Merienda</option>
+                    <option value="Bebida">Bebida / Batido</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- URL y Preview de Foto de la Comida -->
+              <div class="form-group mb-3">
+                <label class="form-label">Fotografía de la Comida (URL de imagen) *</label>
+                <input type="url" class="form-control" formControlName="image_url" placeholder="https://images.unsplash.com/..." />
+                @if (recipeForm.get('image_url')?.value) {
+                  <div class="recipe-img-preview mt-2">
+                    <img [src]="recipeForm.get('image_url')?.value" alt="Preview comida" class="img-preview" />
+                    <span class="text-xs text-secondary">Vista previa del platillo</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Grid de Macronutrientes por porción -->
+              <div class="macros-input-card mb-3">
+                <h4 class="text-sm font-bold mb-2">Desglose de Macronutrientes (por porción)</h4>
+                <div class="macros-input-grid">
+                  <div class="form-group">
+                    <label class="form-label">Calorías (kcal) *</label>
+                    <input type="number" class="form-control" formControlName="calories" min="0" step="1" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Proteínas (g) *</label>
+                    <input type="number" class="form-control" formControlName="protein" min="0" step="0.5" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Carbohidratos (g) *</label>
+                    <input type="number" class="form-control" formControlName="carbohydrates" min="0" step="0.5" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Grasas Totales (g) *</label>
+                    <input type="number" class="form-control" formControlName="fats" min="0" step="0.5" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Fibra (g)</label>
+                    <input type="number" class="form-control" formControlName="fiber" min="0" step="0.5" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Sodio (mg)</label>
+                    <input type="number" class="form-control" formControlName="sodium" min="0" step="10" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tiempos, Porciones y Dificultad -->
+              <div class="form-grid mb-3">
+                <div class="form-group">
+                  <label class="form-label">Porciones *</label>
+                  <input type="number" class="form-control" formControlName="servings" min="1" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Preparación (min)</label>
+                  <input type="number" class="form-control" formControlName="prep_time_minutes" min="0" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cocción (min)</label>
+                  <input type="number" class="form-control" formControlName="cook_time_minutes" min="0" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dificultad</label>
+                  <select class="form-control" formControlName="difficulty">
+                    <option value="Fácil">Fácil</option>
+                    <option value="Media">Media</option>
+                    <option value="Difícil">Difícil</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Breve Descripción</label>
+                <input type="text" class="form-control" formControlName="description" placeholder="Resumen o notas especiales de la receta" />
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Ingredientes y Cantidades *</label>
+                <textarea class="form-control" rows="3" formControlName="ingredients" placeholder="150g pechuga de pollo, 1 taza de espinacas frescas, 1 cda aceite de oliva..."></textarea>
+                @if (recipeForm.get('ingredients')?.touched && recipeForm.get('ingredients')?.invalid) {
+                  <span class="text-danger text-xs">Especifica los ingredientes requeridos.</span>
+                }
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label">Instrucciones de Preparación *</label>
+                <textarea class="form-control" rows="3" formControlName="instructions" placeholder="1. Lavar los ingredientes. 2. Cocinar a fuego lento durante 10 minutos. 3. Emplatar y sazonar."></textarea>
+                @if (recipeForm.get('instructions')?.touched && recipeForm.get('instructions')?.invalid) {
+                  <span class="text-danger text-xs">Las instrucciones son obligatorias.</span>
+                }
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn-outline" (click)="closeRecipeModal()">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-primary" [disabled]="recipeService.isLoading()">
+                <span>{{ editingRecipe() ? 'Actualizar Receta' : 'Guardar Receta' }}</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     }
