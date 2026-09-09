@@ -213,6 +213,17 @@ export class DashboardComponent implements OnInit {
     this.updateError.set(null);
   }
 
+  cancelEdit(): void {
+    this.isEditing.set(false);
+    const user = this.authService.currentUser();
+    if (user) {
+      this.populateForm(user);
+    }
+    this.editForm.markAsPristine();
+    this.editForm.markAsUntouched();
+    this.updateError.set(null);
+  }
+
   onSaveProfile(): void {
     if (this.editForm.invalid) {
       this.editForm.markAllAsTouched();

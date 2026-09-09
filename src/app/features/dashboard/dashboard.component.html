@@ -221,10 +221,14 @@
               <span class="text-danger text-xs mt-1">Introduce un correo electrónico válido.</span>
             }
           </div>
-          <button type="submit" class="btn-primary" [disabled]="editForm.invalid">Guardar Cambios</button>
+          <div class="edit-form-actions">
+            <button type="button" class="btn-outline" (click)="cancelEdit()">Cancelar</button>
+            <button type="submit" class="btn-primary" [disabled]="editForm.invalid">Guardar Cambios</button>
+          </div>
         </form>
       </div>
     }
+
 
     <!-- ============================================================= -->
     <!-- TAB 1: MENÚ PRINCIPAL (Detalles de Cuenta y Bienvenida) -->

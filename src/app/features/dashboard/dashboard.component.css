@@ -328,6 +328,19 @@
   margin-top: 16px;
 }
 
+.edit-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.edit-form-actions .btn-outline,
+.edit-form-actions .btn-primary {
+  padding: 11px 20px;
+  height: 44px;
+}
+
+
 .form-group label {
   display: block;
   font-size: 13px;
