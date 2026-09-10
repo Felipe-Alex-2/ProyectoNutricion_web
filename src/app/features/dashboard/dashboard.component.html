@@ -209,9 +209,14 @@
         <form [formGroup]="editForm" (ngSubmit)="onSaveProfile()" class="edit-form">
           <div class="form-group mb-3">
             <label class="form-label">Nombre Completo *</label>
-            <input type="text" formControlName="full_name" class="input-field form-control" placeholder="Tu nombre" />
+            <input type="text" formControlName="full_name" maxlength="250" class="input-field form-control" placeholder="Tu nombre" />
             @if (editForm.get('full_name')?.touched && editForm.get('full_name')?.invalid) {
-              <span class="text-danger text-xs mt-1">El nombre completo es obligatorio (mínimo 2 caracteres).</span>
+              @if (editForm.get('full_name')?.hasError('required') || editForm.get('full_name')?.hasError('minlength')) {
+                <span class="text-danger text-xs mt-1">El nombre completo es obligatorio (mínimo 2 caracteres).</span>
+              }
+              @if (editForm.get('full_name')?.hasError('maxlength')) {
+                <span class="text-danger text-xs mt-1">El nombre no puede superar los 250 caracteres.</span>
+              }
             }
           </div>
           <div class="form-group mb-3">
@@ -1228,7 +1233,15 @@
           <form [formGroup]="tenantForm" (ngSubmit)="onSaveTenant()" class="modal-form">
             <div class="form-group">
               <label>Nombre de la Clínica / Centro *</label>
-              <input type="text" formControlName="name" class="input-field" placeholder="Clínica NutriVida" />
+              <input type="text" formControlName="name" maxlength="250" class="input-field" placeholder="Clínica NutriVida" />
+              @if (tenantForm.get('name')?.touched && tenantForm.get('name')?.invalid) {
+                @if (tenantForm.get('name')?.hasError('required') || tenantForm.get('name')?.hasError('minlength')) {
+                  <span class="text-danger text-xs mt-1">El nombre es obligatorio (mínimo 3 caracteres).</span>
+                }
+                @if (tenantForm.get('name')?.hasError('maxlength')) {
+                  <span class="text-danger text-xs mt-1">El nombre no puede superar los 250 caracteres.</span>
+                }
+              }
             </div>
 
             <div class="form-group">
@@ -1343,7 +1356,15 @@
           <form [formGroup]="orgUserForm" (ngSubmit)="onSaveOrgUser()" class="modal-form">
             <div class="form-group">
               <label>Nombre Completo *</label>
-              <input type="text" formControlName="full_name" class="input-field" placeholder="Dr. Carlos Mendoza" />
+              <input type="text" formControlName="full_name" maxlength="250" class="input-field" placeholder="Dr. Carlos Mendoza" />
+              @if (orgUserForm.get('full_name')?.touched && orgUserForm.get('full_name')?.invalid) {
+                @if (orgUserForm.get('full_name')?.hasError('required') || orgUserForm.get('full_name')?.hasError('minlength')) {
+                  <span class="text-danger text-xs mt-1">El nombre completo es obligatorio (mínimo 2 caracteres).</span>
+                }
+                @if (orgUserForm.get('full_name')?.hasError('maxlength')) {
+                  <span class="text-danger text-xs mt-1">El nombre no puede superar los 250 caracteres.</span>
+                }
+              }
             </div>
 
             <div class="form-group">
@@ -1633,14 +1654,26 @@
             <button class="modal-close" (click)="closeRecipeModal()">✕</button>
           </div>
 
+          @if (recipeSuccess()) {
+            <div class="alert alert-success">{{ recipeSuccess() }}</div>
+          }
+          @if (recipeError()) {
+            <div class="alert alert-error">{{ recipeError() }}</div>
+          }
+
           <form [formGroup]="recipeForm" (ngSubmit)="submitRecipe()" class="modal-form">
             <div class="modal-body">
               <div class="form-grid mb-3">
                 <div class="form-group">
                   <label class="form-label">Nombre de la Receta *</label>
-                  <input type="text" class="form-control" formControlName="title" placeholder="Ej: Bowl Proteico de Quinoa y Salmón" />
+                  <input type="text" class="form-control" formControlName="title" maxlength="250" placeholder="Ej: Bowl Proteico de Quinoa y Salmón" />
                   @if (recipeForm.get('title')?.touched && recipeForm.get('title')?.invalid) {
-                    <span class="text-danger text-xs">El nombre es obligatorio (mín. 2 car.)</span>
+                    @if (recipeForm.get('title')?.hasError('required') || recipeForm.get('title')?.hasError('minlength')) {
+                      <span class="text-danger text-xs">El nombre es obligatorio (mín. 2 car.)</span>
+                    }
+                    @if (recipeForm.get('title')?.hasError('maxlength')) {
+                      <span class="text-danger text-xs">El nombre no puede superar los 250 caracteres.</span>
+                    }
                   }
                 </div>
 

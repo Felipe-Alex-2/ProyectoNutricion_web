@@ -62,12 +62,18 @@
             id="full_name"
             type="text"
             formControlName="full_name"
+            maxlength="250"
             placeholder="Tu nombre completo"
             autocomplete="name"
           />
         </div>
         @if (registerForm.get('full_name')?.invalid && registerForm.get('full_name')?.touched) {
-          <span class="error-text">El nombre es obligatorio (mínimo 2 letras)</span>
+          @if (registerForm.get('full_name')?.hasError('required') || registerForm.get('full_name')?.hasError('minlength')) {
+            <span class="error-text">El nombre es obligatorio (mínimo 2 letras).</span>
+          }
+          @if (registerForm.get('full_name')?.hasError('maxlength')) {
+            <span class="error-text">El nombre no puede superar los 250 caracteres.</span>
+          }
         }
       </div>
 

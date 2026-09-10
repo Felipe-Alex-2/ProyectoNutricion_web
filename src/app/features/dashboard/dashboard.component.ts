@@ -119,12 +119,12 @@ export class DashboardComponent implements OnInit {
     public clinicalService: ClinicalService
   ) {
     this.editForm = this.fb.group({
-      full_name: ['', [Validators.required, Validators.minLength(2)]],
+      full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
     });
 
     this.tenantForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3)]],
+      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(250)]],
       code: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(20)]],
       phone: ['+591 73683564'],
       email: ['', [Validators.email]],
@@ -133,7 +133,7 @@ export class DashboardComponent implements OnInit {
     });
 
     this.orgUserForm = this.fb.group({
-      full_name: ['', [Validators.required, Validators.minLength(2)]],
+      full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
       phone: ['+591 73683564'],
       password: ['Nutri2026!'],
@@ -152,7 +152,7 @@ export class DashboardComponent implements OnInit {
     });
 
     this.recipeForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(2)]],
+      title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       description: [''],
       image_url: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c'],
       calories: [450, [Validators.required, Validators.min(0)]],
@@ -457,7 +457,18 @@ export class DashboardComponent implements OnInit {
     this.tenantSuccess.set(null);
     this.tenantError.set(null);
 
+    const nameVal = this.tenantForm.value.name?.trim().toLowerCase();
     const currentEdit = this.editingTenant();
+    const dupTenant = this.tenants().some(
+      (t) => t.name?.trim().toLowerCase() === nameVal && (!currentEdit || t.id !== currentEdit.id)
+    );
+    if (dupTenant) {
+      this.tenantError.set(
+        `Ya existe una organización con el nombre "${this.tenantForm.value.name?.trim()}". No se puede repetir el mismo nombre.`
+      );
+      return;
+    }
+
     if (currentEdit) {
       this.tenantService.updateTenant(currentEdit.id, this.tenantForm.value).subscribe({
         next: (updated) => {
@@ -745,7 +756,22 @@ export class DashboardComponent implements OnInit {
       });
     }
 
+    const nameVal = this.orgUserForm.value.full_name?.trim().toLowerCase();
     const currentEdit = this.editingUser();
+    const targetTenant = this.orgUserForm.value.tenant_id;
+    const dupUser = this.orgUsers().some(
+      (u) =>
+        u.full_name?.trim().toLowerCase() === nameVal &&
+        u.tenant_id === targetTenant &&
+        (!currentEdit || u.id !== currentEdit.id)
+    );
+    if (dupUser) {
+      this.userError.set(
+        `Ya existe un usuario con el nombre "${this.orgUserForm.value.full_name?.trim()}" en esta organización. No se puede repetir el mismo nombre.`
+      );
+      return;
+    }
+
     if (currentEdit) {
       const payload: any = {
         full_name: this.orgUserForm.value.full_name,
@@ -1010,11 +1036,22 @@ export class DashboardComponent implements OnInit {
     this.recipeSuccess.set(null);
     this.recipeError.set(null);
 
+    const titleVal = this.recipeForm.value.title?.trim().toLowerCase();
+    const editing = this.editingRecipe();
+    const dupRecipe = this.recipeService.recipes().some(
+      (r: Recipe) => r.title?.trim().toLowerCase() === titleVal && (!editing || r.id !== editing.id)
+    );
+    if (dupRecipe) {
+      this.recipeError.set(
+        `Ya existe una receta con el nombre "${this.recipeForm.value.title?.trim()}". No se puede repetir el mismo nombre.`
+      );
+      return;
+    }
+
     const formData = {
       ...this.recipeForm.value,
       assigned_patient_ids: this.recipeSelectedPatients(),
     };
-    const editing = this.editingRecipe();
 
     if (editing) {
       this.recipeService.updateRecipe(editing.id, formData).subscribe({

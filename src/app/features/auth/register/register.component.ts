@@ -50,7 +50,7 @@ export class RegisterComponent {
     private router: Router
   ) {
     this.registerForm = this.fb.group({
-      full_name: ['', [Validators.required, Validators.minLength(2)]],
+      full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, passwordComplexityValidator]],
       confirmPassword: ['', [Validators.required]],
