@@ -58,7 +58,9 @@
             autocomplete="email"
           />
         </div>
-        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+        @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')) {
+          <span class="error-text">Por favor, rellene este campo</span>
+        } @else if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('email')) {
           <span class="error-text">Ingresa un correo electrónico válido</span>
         }
       </div>
@@ -91,8 +93,10 @@
             }
           </button>
         </div>
-        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-          <span class="error-text">La contraseña debe tener al menos 8 caracteres</span>
+        @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')) {
+          <span class="error-text">Por favor, rellene este campo</span>
+        } @else if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('passwordComplexity')) {
+          <span class="error-text">La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial</span>
         }
         <div class="forgot-link-container">
           <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste tu contraseña?</a>

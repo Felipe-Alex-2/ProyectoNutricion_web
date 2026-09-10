@@ -120,8 +120,10 @@
             }
           </button>
         </div>
-        @if (registerForm.get('password')?.invalid && registerForm.get('password')?.touched) {
-          <span class="error-text">La contraseña debe contener al menos 8 caracteres</span>
+        @if (registerForm.get('password')?.touched && registerForm.get('password')?.hasError('required')) {
+          <span class="error-text">Por favor, rellene este campo</span>
+        } @else if (registerForm.get('password')?.touched && registerForm.get('password')?.hasError('passwordComplexity')) {
+          <span class="error-text">La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial</span>
         }
       </div>
 

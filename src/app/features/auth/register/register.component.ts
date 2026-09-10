@@ -1,9 +1,34 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+
+export function passwordComplexityValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value;
+  if (!value) return null;
+
+  const hasMinLength = value.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(value);
+  const hasLowerCase = /[a-z]/.test(value);
+  const hasNumber = /[0-9]/.test(value);
+  const hasSpecial = /[^A-Za-z0-9]/.test(value);
+
+  const isValid = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecial;
+  if (!isValid) {
+    return {
+      passwordComplexity: {
+        hasMinLength,
+        hasUpperCase,
+        hasLowerCase,
+        hasNumber,
+        hasSpecial,
+      },
+    };
+  }
+  return null;
+}
 
 @Component({
   selector: 'app-register',
@@ -27,7 +52,7 @@ export class RegisterComponent {
     this.registerForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required, passwordComplexityValidator]],
       confirmPassword: ['', [Validators.required]],
     }, { validators: this.passwordMatchValidator });
   }
