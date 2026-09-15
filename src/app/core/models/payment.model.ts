@@ -10,6 +10,7 @@ export interface Payment {
   amount: number;
   currency: string;
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+  payment_method?: 'PAYPAL' | 'EFECTIVO' | string;
   paypal_order_id?: string | null;
   paypal_capture_id?: string | null;
   notes?: string | null;
@@ -24,13 +25,15 @@ export interface PaymentCreate {
   concept: string;
   amount: number;
   currency?: string;
+  payment_method?: 'PAYPAL' | 'EFECTIVO' | string;
   notes?: string | null;
 }
 
 export interface PaymentOrderCreated {
   payment_id: string;
-  paypal_order_id: string;
-  approval_url: string;
+  paypal_order_id?: string | null;
+  approval_url?: string | null;
+  payment_method?: string;
   amount: number;
   currency: string;
   concept: string;

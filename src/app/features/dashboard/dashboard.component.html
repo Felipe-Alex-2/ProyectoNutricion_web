@@ -498,60 +498,6 @@
         </div>
       </div>
 
-      <!-- Quick Metrics Summary Cards -->
-      <div class="pos-metrics-grid" style="margin-bottom: 2rem;">
-        <div class="pos-metric-card">
-          <div class="metric-icon green">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
-          </div>
-          <div>
-            <span class="pos-metric-label">Total Recaudado (Sucursal)</span>
-            <h3 class="pos-metric-value">${{ paymentStats()?.total_collected || '0.00' }} <span class="metric-currency">USD</span></h3>
-          </div>
-        </div>
-
-        <div class="pos-metric-card">
-          <div class="metric-icon blue">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <div>
-            <span class="pos-metric-label">Cobros Pagados</span>
-            <h3 class="pos-metric-value">{{ paymentStats()?.completed_count || 0 }}</h3>
-          </div>
-        </div>
-
-        <div class="pos-metric-card">
-          <div class="metric-icon amber">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-          </div>
-          <div>
-            <span class="pos-metric-label">Cobros Pendientes</span>
-            <h3 class="pos-metric-value">{{ paymentStats()?.pending_count || 0 }}</h3>
-          </div>
-        </div>
-
-        <div class="pos-metric-card">
-          <div class="metric-icon gray">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-            </svg>
-          </div>
-          <div>
-            <span class="pos-metric-label">Total Transacciones</span>
-            <h3 class="pos-metric-value">{{ paymentStats()?.total_count || 0 }}</h3>
-          </div>
-        </div>
-      </div>
-
       <!-- Main POS Two-Column Area -->
       <div class="pos-main-grid">
         <!-- Left: POS Charge Terminal (Form) -->
@@ -566,7 +512,7 @@
               </div>
               <div>
                 <h3 class="card-title">Terminal de Cobro</h3>
-                <p class="pos-card-desc">Crea un cobro para el cliente y procede al checkout con PayPal</p>
+                <p class="pos-card-desc">Registra cobros en efectivo o inicia el checkout con PayPal Sandbox</p>
               </div>
             </div>
           </div>
@@ -646,6 +592,46 @@
               }
             </div>
 
+            <!-- Payment Method Selector (Tipo de Cobro: Efectivo / PayPal) -->
+            <div class="form-group">
+              <label class="pos-field-label">Tipo de Cobro <span class="text-danger">*</span></label>
+              <div class="payment-method-selector">
+                <button 
+                  type="button" 
+                  class="method-toggle-btn" 
+                  [class.active]="paymentForm.get('payment_method')?.value === 'EFECTIVO'"
+                  (click)="setPaymentMethod('EFECTIVO')">
+                  <div class="method-btn-icon cash">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                      <circle cx="12" cy="12" r="2"></circle>
+                      <path d="M6 12h.01M18 12h.01"></path>
+                    </svg>
+                  </div>
+                  <div class="method-btn-content">
+                    <span class="method-title">💵 Efectivo</span>
+                    <span class="method-subtitle">Registro inmediato en caja</span>
+                  </div>
+                </button>
+
+                <button 
+                  type="button" 
+                  class="method-toggle-btn" 
+                  [class.active]="paymentForm.get('payment_method')?.value === 'PAYPAL'"
+                  (click)="setPaymentMethod('PAYPAL')">
+                  <div class="method-btn-icon paypal">
+                    <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
+                    </svg>
+                  </div>
+                  <div class="method-btn-content">
+                    <span class="method-title">🅿️ PayPal</span>
+                    <span class="method-subtitle">Checkout Sandbox</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <!-- Notes -->
             <div class="form-group">
               <label class="pos-field-label">Notas Adicionales (Opcional)</label>
@@ -656,47 +642,64 @@
                 placeholder="Detalles de facturación, número de orden interno o comentarios"></textarea>
             </div>
 
-            <!-- Submit Button (PayPal) -->
+            <!-- Submit Button (Conditional: Efectivo vs PayPal) -->
             <div class="pos-submit-wrapper">
-              <button 
-                type="submit" 
-                class="btn-paypal-checkout" 
-                [disabled]="isCreatingPayment()">
-                @if (isCreatingPayment()) {
-                  <span class="btn-spinner"></span>
-                  <span>Generando orden con PayPal...</span>
-                } @else {
-                  <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
-                  </svg>
-                  <span>Pagar con PayPal Sandbox</span>
-                }
-              </button>
-
-              @if (lastCreatedApprovalUrl()) {
-                <div style="margin-top: 10px;">
-                  <button 
-                    type="button" 
-                    (click)="copyPaymentLink()" 
-                    class="btn-outline" 
-                    style="width: 100%; justify-content: center; font-size: 13px; padding: 8px 12px; border-color: #f59e0b; color: #b45309;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              @if (paymentForm.get('payment_method')?.value === 'EFECTIVO') {
+                <button 
+                  type="submit" 
+                  class="btn-cash-checkout" 
+                  [disabled]="isCreatingPayment()">
+                  @if (isCreatingPayment()) {
+                    <span class="btn-spinner"></span>
+                    <span>Registrando cobro en efectivo...</span>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
-                    <span>Copiar Enlace para Ventana de Incógnito</span>
-                  </button>
-                </div>
-              }
+                    <span>Registrar Cobro en Efectivo</span>
+                  }
+                </button>
+              } @else {
+                <button 
+                  type="submit" 
+                  class="btn-paypal-checkout" 
+                  [disabled]="isCreatingPayment()">
+                  @if (isCreatingPayment()) {
+                    <span class="btn-spinner"></span>
+                    <span>Generando orden con PayPal...</span>
+                  } @else {
+                    <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
+                    </svg>
+                    <span>Pagar con PayPal Sandbox</span>
+                  }
+                </button>
 
-              <p class="sandbox-notice">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                Tip Sandbox: Si tienes abierta tu cuenta Business en este navegador, abre el link en una Ventana de Incógnito para pagar con tu cuenta Personal de prueba.
-              </p>
+                @if (lastCreatedApprovalUrl()) {
+                  <div style="margin-top: 10px;">
+                    <button 
+                      type="button" 
+                      (click)="copyPaymentLink()" 
+                      class="btn-outline" 
+                      style="width: 100%; justify-content: center; font-size: 13px; padding: 8px 12px; border-color: #f59e0b; color: #b45309;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <span>Copiar Enlace para Ventana de Incógnito</span>
+                    </button>
+                  </div>
+                }
+
+                <p class="sandbox-notice">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  Tip Sandbox: Si tienes abierta tu cuenta Business en este navegador, abre el link en una Ventana de Incógnito para pagar con tu cuenta Personal de prueba.
+                </p>
+              }
             </div>
           </form>
         </div>
@@ -715,6 +718,13 @@
                 [class.active]="paymentStatusFilter() === ''" 
                 (click)="onPaymentStatusFilterChange('')">
                 Todos
+              </button>
+              <button 
+                type="button" 
+                class="filter-pill" 
+                [class.active]="paymentStatusFilter() === 'EFECTIVO'" 
+                (click)="onPaymentStatusFilterChange('EFECTIVO')">
+                💵 Efectivo
               </button>
               <button 
                 type="button" 
@@ -741,21 +751,22 @@
                   <th>Cliente</th>
                   <th>Concepto</th>
                   <th>Total</th>
+                  <th>Tipo</th>
                   <th>Estado</th>
-                  <th>PayPal ID</th>
+                  <th>Referencia</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 @if (isLoadingPayments()) {
                   <tr>
-                    <td colspan="7" class="empty-table-cell">
+                    <td colspan="8" class="empty-table-cell">
                       Cargando cobros de la sucursal...
                     </td>
                   </tr>
                 } @else if (paymentsList().length === 0) {
                   <tr>
-                    <td colspan="7" class="empty-table-cell">
+                    <td colspan="8" class="empty-table-cell">
                       No hay cobros registrados en esta sucursal todavía.
                     </td>
                   </tr>
@@ -778,12 +789,28 @@
                       ${{ p.amount }} {{ p.currency }}
                     </td>
                     <td>
+                      <span class="pos-method-badge" [ngClass]="getPaymentMethodBadgeClass(p.payment_method)">
+                        @if ((p.payment_method || '').toUpperCase() === 'EFECTIVO') {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                            <circle cx="12" cy="12" r="2"></circle>
+                          </svg>
+                          <span>Efectivo</span>
+                        } @else {
+                          <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
+                          </svg>
+                          <span>PayPal</span>
+                        }
+                      </span>
+                    </td>
+                    <td>
                       <span class="pos-badge" [ngClass]="getPaymentStatusBadgeClass(p.status)">
                         {{ getPaymentStatusBadgeLabel(p.status) }}
                       </span>
                     </td>
                     <td class="font-mono" style="font-size: 0.75rem;">
-                      {{ p.paypal_order_id || '-' }}
+                      {{ p.paypal_order_id || (p.payment_method === 'EFECTIVO' ? 'Caja Local' : '-') }}
                     </td>
                     <td>
                       @if (p.status === 'PENDING') {

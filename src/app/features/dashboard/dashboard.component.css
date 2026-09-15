@@ -3751,3 +3751,126 @@ textarea.form-control {
   background: rgba(239, 68, 68, 0.1);
   border-color: #ef4444;
 }
+
+/* Payment Method Selector (Efectivo vs PayPal) */
+.payment-method-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.method-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-hover, #f9fafb);
+  border: 2px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-sm, 10px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.method-toggle-btn:hover {
+  border-color: var(--color-primary, #2563eb);
+  background: var(--bg-card, #ffffff);
+}
+
+.method-toggle-btn.active {
+  border-color: var(--color-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.06);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.method-btn-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.method-btn-icon.cash {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.method-btn-icon.paypal {
+  background: rgba(0, 48, 135, 0.1);
+  color: #003087;
+}
+
+.method-btn-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.method-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+.method-subtitle {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* Cash Checkout Submit Button */
+.btn-cash-checkout {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s;
+}
+
+.btn-cash-checkout:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+
+.btn-cash-checkout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Method Badges in History Table */
+.pos-method-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pos-method-badge.method-cash {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.pos-method-badge.method-paypal {
+  background: rgba(0, 48, 135, 0.08);
+  color: #003087;
+  border: 1px solid rgba(0, 48, 135, 0.2);
+}
+

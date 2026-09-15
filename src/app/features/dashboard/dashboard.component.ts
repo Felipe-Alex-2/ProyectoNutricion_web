@@ -157,6 +157,7 @@ export class DashboardComponent implements OnInit {
       customer_email: ['', [Validators.email]],
       concept: ['', [Validators.required, Validators.minLength(2)]],
       amount: [null, [Validators.required, Validators.min(0.01)]],
+      payment_method: ['PAYPAL', [Validators.required]],
       notes: [''],
     });
 
@@ -1352,7 +1353,13 @@ export class DashboardComponent implements OnInit {
     // Cargar historial de cobros
     this.paymentService.getPayments(currentTenant, filter).subscribe({
       next: (payments) => {
-        this.paymentsList.set(payments);
+        if (this.paymentStatusFilter() === 'EFECTIVO') {
+          this.paymentsList.set(
+            payments.filter((p) => (p.payment_method || '').toUpperCase() === 'EFECTIVO')
+          );
+        } else {
+          this.paymentsList.set(payments);
+        }
         this.isLoadingPayments.set(false);
       },
       error: (err) => {
@@ -1376,6 +1383,10 @@ export class DashboardComponent implements OnInit {
   onPaymentStatusFilterChange(status: string): void {
     this.paymentStatusFilter.set(status);
     this.loadPaymentData();
+  }
+
+  setPaymentMethod(method: 'PAYPAL' | 'EFECTIVO'): void {
+    this.paymentForm.patchValue({ payment_method: method });
   }
 
   setQuickConcept(concept: string, defaultPrice: number): void {
@@ -1415,6 +1426,7 @@ export class DashboardComponent implements OnInit {
     this.paymentSuccess.set(null);
 
     const formVal = this.paymentForm.value;
+    const paymentMethod = formVal.payment_method || 'PAYPAL';
     const payload = {
       tenant_id: tenantId,
       customer_name: formVal.customer_name ? formVal.customer_name.trim() : '',
@@ -1422,6 +1434,7 @@ export class DashboardComponent implements OnInit {
       concept: formVal.concept ? formVal.concept.trim() : '',
       amount: parseFloat(formVal.amount),
       currency: 'USD',
+      payment_method: paymentMethod,
       notes: formVal.notes ? formVal.notes.trim() : null,
     };
 
@@ -1430,21 +1443,40 @@ export class DashboardComponent implements OnInit {
         this.isCreatingPayment.set(false);
         this.activityLogService.recordActivity(
           'COBRO_CREADO',
-          `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}"`,
+          `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}" (${paymentMethod})`,
           'SISTEMA'
         );
-        this.lastCreatedApprovalUrl.set(res.approval_url);
-        this.paymentSuccess.set(
-          '¡Orden generada! Si estás en el mismo navegador donde abriste tu cuenta Business de PayPal, copia el enlace y ábrelo en una Ventana de Incógnito para pagar con tu cuenta Personal.'
-        );
-        this.loadPaymentData();
-        // Abrir PayPal Checkout Sandbox en una nueva pestaña
-        window.open(res.approval_url, '_blank');
+
+        if (paymentMethod === 'EFECTIVO') {
+          this.lastCreatedApprovalUrl.set(null);
+          this.paymentSuccess.set(
+            `¡Cobro de $${res.amount} USD en Efectivo registrado con éxito para ${res.customer_name}!`
+          );
+          this.paymentForm.patchValue({
+            customer_name: '',
+            customer_email: '',
+            concept: '',
+            amount: null,
+            notes: '',
+          });
+          this.paymentForm.markAsPristine();
+          this.paymentForm.markAsUntouched();
+          this.loadPaymentData();
+        } else {
+          this.lastCreatedApprovalUrl.set(res.approval_url || null);
+          this.paymentSuccess.set(
+            '¡Orden generada! Si estás en el mismo navegador donde abriste tu cuenta Business de PayPal, copia el enlace y ábrelo en una Ventana de Incógnito para pagar con tu cuenta Personal.'
+          );
+          this.loadPaymentData();
+          if (res.approval_url) {
+            window.open(res.approval_url, '_blank');
+          }
+        }
       },
       error: (err) => {
         this.isCreatingPayment.set(false);
         this.paymentError.set(
-          err?.error?.detail || 'Error al generar la orden de cobro con PayPal Sandbox. Verifica tus credenciales o conexión.'
+          err?.error?.detail || 'Error al procesar el cobro. Verifica tus datos o conexión.'
         );
       },
     });
@@ -1511,6 +1543,16 @@ export class DashboardComponent implements OnInit {
       case 'FAILED': return 'Fallido';
       default: return status;
     }
+  }
+
+  getPaymentMethodBadgeClass(method?: string): string {
+    const m = (method || 'PAYPAL').toUpperCase();
+    return m === 'EFECTIVO' ? 'method-cash' : 'method-paypal';
+  }
+
+  getPaymentMethodBadgeLabel(method?: string): string {
+    const m = (method || 'PAYPAL').toUpperCase();
+    return m === 'EFECTIVO' ? 'Efectivo' : 'PayPal';
   }
 }
 
