@@ -4248,4 +4248,218 @@ textarea.form-control {
   margin-top: 16px;
 }
 
+/* =============================================================
+   AGENDA Y DISPONIBILIDAD POR NUTRICIONISTA (BLOQUES 30 MIN)
+   ============================================================= */
+.schedule-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.schedule-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-hover);
+}
+
+.schedule-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.schedule-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 16px 24px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 240px;
+}
+
+.schedule-select, .schedule-date-input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.schedule-kpi-badge {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 6px 14px;
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  border-radius: 8px;
+}
+
+.schedule-kpi-badge .kpi-number {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #059669;
+  line-height: 1.1;
+}
+
+.schedule-kpi-badge .kpi-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.schedule-content-box {
+  padding: 20px 24px;
+}
+
+.schedule-subtitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  gap: 8px;
+}
+
+.confirmed-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.confirmed-slot-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+  border-left: 4px solid #059669;
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.slot-time-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #059669;
+}
+
+.slot-tag-occupied {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border-radius: 4px;
+}
+
+.slot-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+}
+
+.slot-label {
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.slot-value {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.slot-reason {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+/* Matriz horaria de disponibilidad */
+.timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.timeline-slot-cell {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.timeline-slot-cell .cell-time {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cell-status {
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.cell-meta {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-free {
+  background: rgba(5, 150, 105, 0.05);
+  border-color: rgba(5, 150, 105, 0.2);
+}
+
+.slot-free .cell-status-free {
+  color: #059669;
+}
+
+.slot-occupied {
+  background: rgba(220, 38, 38, 0.06);
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.slot-occupied .cell-status-busy {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+
 

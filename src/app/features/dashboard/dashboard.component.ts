@@ -148,6 +148,11 @@ export class DashboardComponent implements OnInit {
   cancelReason = signal<string>('');
   cancellingAppointment = signal<boolean>(false);
 
+  // Agenda y Disponibilidad por Nutricionista
+  nutritionistsList = signal<Nutritionist[]>([]);
+  selectedNutritionistScheduleId = signal<string>('ALL');
+  selectedScheduleDate = signal<string>(new Date().toISOString().split('T')[0]);
+
   // Centro de Notificaciones
   notifications = signal<Notification[]>([]);
   unreadNotificationCount = signal<number>(0);
@@ -1609,11 +1614,99 @@ export class DashboardComponent implements OnInit {
         this.isLoadingAppointments.set(false);
       },
     });
+
+    this.loadNutritionists();
+  }
+
+  loadNutritionists(): void {
+    const tenantId = this.isOrgAdmin()
+      ? this.authService.currentUser()?.tenant_id || undefined
+      : (this.selectedPaymentTenantId() || undefined);
+
+    this.appointmentService.getNutritionists(tenantId).subscribe({
+      next: (data) => {
+        this.nutritionistsList.set(data);
+      },
+      error: () => {},
+    });
   }
 
   setAppointmentStatusFilter(status: string): void {
     this.selectedAppointmentStatus.set(status);
     this.loadAppointments();
+  }
+
+  setNutritionistScheduleFilter(nutriId: string): void {
+    this.selectedNutritionistScheduleId.set(nutriId);
+  }
+
+  setScheduleDate(dateStr: string): void {
+    this.selectedScheduleDate.set(dateStr);
+  }
+
+  get todayIsoDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  // Citas confirmadas con su rango explícito de 30 minutos
+  get confirmedScheduleAppointments(): (Appointment & { timeRange: string; endTime: string })[] {
+    const selectedDate = this.selectedScheduleDate();
+    const selectedNutri = this.selectedNutritionistScheduleId();
+
+    return this.appointments()
+      .filter((a) => {
+        if (a.status !== 'CONFIRMED') return false;
+        if (selectedNutri !== 'ALL' && a.nutritionist_id !== selectedNutri) return false;
+        if (selectedDate) {
+          const aDate = new Date(a.scheduled_at).toISOString().split('T')[0];
+          if (aDate !== selectedDate) return false;
+        }
+        return true;
+      })
+      .map((a) => {
+        const start = new Date(a.scheduled_at);
+        const end = new Date(start.getTime() + 30 * 60 * 1000);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const startStr = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+        const endStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+        return {
+          ...a,
+          timeRange: `${startStr} - ${endStr}`,
+          endTime: endStr,
+        };
+      })
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  }
+
+  // Generador visual de bloques de 30 min (08:00 a 18:00) para disponibilidad
+  get dayScheduleSlots(): { timeSlot: string; isOccupied: boolean; appointment?: Appointment & { timeRange: string } }[] {
+    const confirmed = this.confirmedScheduleAppointments;
+    const slots: { timeSlot: string; isOccupied: boolean; appointment?: Appointment & { timeRange: string } }[] = [];
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    for (let h = 8; h < 18; h++) {
+      for (const m of [0, 30]) {
+        const slotStart = `${pad(h)}:${pad(m)}`;
+        const endM = m === 0 ? 30 : 0;
+        const endH = m === 0 ? h : h + 1;
+        const slotEnd = `${pad(endH)}:${pad(endM)}`;
+        const timeSlot = `${slotStart} - ${slotEnd}`;
+
+        const slotMinutes = h * 60 + m;
+        const matching = confirmed.find((a) => {
+          const d = new Date(a.scheduled_at);
+          const apptMinutes = d.getHours() * 60 + d.getMinutes();
+          return Math.abs(slotMinutes - apptMinutes) < 30;
+        });
+
+        slots.push({
+          timeSlot,
+          isOccupied: !!matching,
+          appointment: matching,
+        });
+      }
+    }
+    return slots;
   }
 
   confirmAppointment(appointment: Appointment): void {
@@ -1623,6 +1716,27 @@ export class DashboardComponent implements OnInit {
     }
     this.appointmentError.set(null);
     this.appointmentSuccess.set(null);
+
+    // Pre-validación en frontend de solapamiento de 30 minutos para el mismo doctor
+    const apptTime = new Date(appointment.scheduled_at).getTime();
+    const conflict = this.appointments().find((a) => {
+      if (a.id === appointment.id || a.status !== 'CONFIRMED' || a.nutritionist_id !== appointment.nutritionist_id) {
+        return false;
+      }
+      const existingTime = new Date(a.scheduled_at).getTime();
+      return Math.abs(existingTime - apptTime) < 30 * 60 * 1000;
+    });
+
+    if (conflict) {
+      const conflictFormatted = this.formatDateTime(conflict.scheduled_at);
+      const doctorName = appointment.nutritionist_name || 'El especialista';
+      this.appointmentError.set(
+        `Conflicto de Horario: ${doctorName} ya tiene una cita confirmada para el ${conflictFormatted}. Cada consulta ocupa un bloque de 30 minutos.`
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     this.appointmentService.confirmAppointment(appointment.id).subscribe({
       next: (updated) => {
         this.appointmentSuccess.set(`¡Cita confirmada con éxito! Se ha notificado a ${updated.patient_name || 'el paciente'}.`);
@@ -1632,7 +1746,10 @@ export class DashboardComponent implements OnInit {
         setTimeout(() => this.appointmentSuccess.set(null), 6000);
       },
       error: (err) => {
-        this.appointmentError.set(err?.error?.detail || 'Error al confirmar la cita.');
+        this.appointmentError.set(
+          err?.error?.detail || 'Error al confirmar la cita. El nutricionista ya se encuentra ocupado en ese horario.'
+        );
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     });
   }

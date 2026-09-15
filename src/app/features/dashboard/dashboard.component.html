@@ -2067,6 +2067,144 @@
           </div>
         }
       </div>
+
+      <!-- ============================================================= -->
+      <!-- SECCIÓN: AGENDA Y DISPONIBILIDAD POR ESPECIALISTA (BLOQUES 30 MIN) -->
+      <!-- ============================================================= -->
+      <div class="card schedule-card" style="margin-top: 1.75rem;">
+        <div class="card-header schedule-header">
+          <div class="schedule-title-group">
+            <div class="metric-icon-circle icon-confirmed" style="width: 38px; height: 38px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div>
+              <h3 class="card-title" style="margin: 0; font-size: 1.15rem;">Agenda y Disponibilidad por Especialista</h3>
+              <p class="pos-card-desc" style="margin: 2px 0 0; font-size: 0.85rem;">
+                Consulta los horarios ocupados (bloques de 30 min) y huecos disponibles de cada nutricionista
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtros de Agenda: Especialista y Fecha -->
+        <div class="schedule-filters-bar">
+          <div class="schedule-filter-item">
+            <label class="pos-field-label">Especialista / Nutricionista:</label>
+            <select 
+              class="form-control schedule-select"
+              [value]="selectedNutritionistScheduleId()"
+              (change)="setNutritionistScheduleFilter($any($event.target).value)">
+              <option value="ALL">Todos los nutricionistas</option>
+              @for (n of nutritionistsList(); track n.id) {
+                <option [value]="n.id">{{ n.full_name }} ({{ n.email }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="schedule-filter-item">
+            <label class="pos-field-label">Fecha a Consultar:</label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input 
+                type="date" 
+                class="form-control schedule-date-input"
+                [value]="selectedScheduleDate()"
+                (change)="setScheduleDate($any($event.target).value)">
+              <button 
+                type="button" 
+                class="btn-outline" 
+                style="padding: 7px 12px; font-size: 0.82rem;"
+                (click)="setScheduleDate(todayIsoDate)">
+                Hoy
+              </button>
+            </div>
+          </div>
+
+          <div class="schedule-kpi-badge">
+            <span class="kpi-number">{{ confirmedScheduleAppointments.length }}</span>
+            <span class="kpi-desc">Citas confirmadas para este día</span>
+          </div>
+        </div>
+
+        <!-- Contenedor de Disponibilidad y Citas -->
+        <div class="schedule-content-box">
+          <h4 class="schedule-subtitle">
+            Citas Confirmadas en el Día (Rangos de 30 Minutos)
+          </h4>
+
+          @if (confirmedScheduleAppointments.length === 0) {
+            <div class="schedule-empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <p>No hay citas confirmadas para el especialista y fecha seleccionados. Todo el horario se encuentra disponible para nuevas consultas.</p>
+            </div>
+          } @else {
+            <div class="confirmed-slots-grid">
+              @for (slot of confirmedScheduleAppointments; track slot.id) {
+                <div class="confirmed-slot-card">
+                  <div class="slot-time-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <strong>{{ slot.timeRange }}</strong>
+                    <span class="slot-tag-occupied">OCUPADO (30 min)</span>
+                  </div>
+                  <div class="slot-details">
+                    <div class="slot-patient">
+                      <span class="slot-label">Paciente:</span>
+                      <span class="slot-value">{{ slot.patient_name || 'Paciente' }}</span>
+                    </div>
+                    <div class="slot-nutri">
+                      <span class="slot-label">Especialista:</span>
+                      <span class="slot-value">{{ slot.nutritionist_name || 'Nutricionista' }}</span>
+                    </div>
+                    @if (slot.reason) {
+                      <div class="slot-reason">
+                        <span class="slot-label">Motivo:</span>
+                        <span class="slot-value">{{ slot.reason }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Visualizador de bloques horarios (08:00 a 18:00) -->
+          <h4 class="schedule-subtitle" style="margin-top: 1.75rem;">
+            Matriz Horaria de Disponibilidad (Bloques de 30 min)
+          </h4>
+          <div class="timeline-grid">
+            @for (slot of dayScheduleSlots; track slot.timeSlot) {
+              <div 
+                class="timeline-slot-cell"
+                [class.slot-occupied]="slot.isOccupied"
+                [class.slot-free]="!slot.isOccupied"
+                [title]="slot.isOccupied ? 'Ocupado: ' + (slot.appointment?.patient_name || 'Cita confirmada') : 'Horario Libre / Disponible'">
+                <div class="cell-time">{{ slot.timeSlot }}</div>
+                @if (slot.isOccupied) {
+                  <span class="cell-status cell-status-busy">
+                    ● Ocupado
+                  </span>
+                  <span class="cell-meta">
+                    {{ slot.appointment?.patient_name || 'Cita' }}
+                  </span>
+                } @else {
+                  <span class="cell-status cell-status-free">
+                    ✓ Disponible
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
     }
 
     <!-- ============================================================= -->
