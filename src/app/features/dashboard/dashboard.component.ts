@@ -16,9 +16,11 @@ import { ActivityLog } from '../../core/models/activity-log.model';
 import { RecipeService } from '../../core/services/recipe.service';
 import { ClinicalService } from '../../core/services/clinical.service';
 import { SubscriptionService } from '../../core/services/subscription.service';
+import { PaymentService } from '../../core/services/payment.service';
 import { Recipe } from '../../core/models/recipe.model';
 import { PatientAnamnesis, ClinicalRecord } from '../../core/models/clinical.model';
 import { SubscriptionPlan, Subscription, SubscriptionHistory } from '../../core/models/subscription.model';
+import { Payment, PaymentStats } from '../../core/models/payment.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -119,6 +121,17 @@ export class DashboardComponent implements OnInit {
   subscriptionSuccess = signal<string | null>(null);
   subscriptionError = signal<string | null>(null);
 
+  // POS / Caja de Sucursal (Pagos y Cobros a Clientes con PayPal Sandbox)
+  selectedPaymentTenantId = signal<string>('');
+  paymentsList = signal<Payment[]>([]);
+  paymentStats = signal<PaymentStats | null>(null);
+  isLoadingPayments = signal<boolean>(false);
+  isCreatingPayment = signal<boolean>(false);
+  paymentError = signal<string | null>(null);
+  paymentSuccess = signal<string | null>(null);
+  paymentStatusFilter = signal<string>('');
+  paymentForm: FormGroup;
+
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
@@ -130,11 +143,20 @@ export class DashboardComponent implements OnInit {
     public activityLogService: ActivityLogService,
     public recipeService: RecipeService,
     public clinicalService: ClinicalService,
-    private subscriptionService: SubscriptionService
+    private subscriptionService: SubscriptionService,
+    private paymentService: PaymentService
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
+    });
+
+    this.paymentForm = this.fb.group({
+      customer_name: ['', [Validators.required, Validators.minLength(2)]],
+      customer_email: ['', [Validators.email]],
+      concept: ['', [Validators.required, Validators.minLength(2)]],
+      amount: [null, [Validators.required, Validators.min(0.01)]],
+      notes: [''],
     });
 
     this.tenantForm = this.fb.group({
@@ -322,6 +344,7 @@ export class DashboardComponent implements OnInit {
       this.loadPatientLinks();
     }
     if (tab === 'suscripcion') {
+      this.loadPaymentData();
       this.loadSubscriptionData();
     }
     this.activityLogService.recordActivity('NAVEGACION', `Navegación a la vista: ${this.getTabLabel(tab)}`, 'SISTEMA');
@@ -1294,4 +1317,154 @@ export class DashboardComponent implements OnInit {
   activeTenantName(): string {
     return this.getMyOrgName();
   }
+
+  // =========================================================================
+  // POS: Caja y Cobros a Clientes en Sucursal con PayPal Sandbox
+  // =========================================================================
+
+  loadPaymentData(): void {
+    this.isLoadingPayments.set(true);
+    this.paymentError.set(null);
+
+    // Asegurar que tengamos las sucursales cargadas
+    if (this.tenants().length === 0) {
+      this.loadTenants();
+    }
+
+    // Resolver sucursal seleccionada
+    let tenantId = this.selectedPaymentTenantId();
+    if (!tenantId) {
+      const userTenant = this.authService.currentUser()?.tenant_id;
+      if (userTenant) {
+        tenantId = userTenant;
+      } else if (this.tenants().length > 0) {
+        tenantId = this.tenants()[0].id;
+      }
+      if (tenantId) {
+        this.selectedPaymentTenantId.set(tenantId);
+      }
+    }
+
+    const currentTenant = this.selectedPaymentTenantId() || undefined;
+    const filter = this.paymentStatusFilter() || undefined;
+
+    // Cargar historial de cobros
+    this.paymentService.getPayments(currentTenant, filter).subscribe({
+      next: (payments) => {
+        this.paymentsList.set(payments);
+        this.isLoadingPayments.set(false);
+      },
+      error: (err) => {
+        this.isLoadingPayments.set(false);
+        this.paymentError.set(err?.error?.detail || 'Error al cargar cobros de la sucursal');
+      },
+    });
+
+    // Cargar métricas de caja
+    this.paymentService.getStats(currentTenant).subscribe({
+      next: (stats) => this.paymentStats.set(stats),
+      error: () => {},
+    });
+  }
+
+  onPaymentTenantChange(tenantId: string): void {
+    this.selectedPaymentTenantId.set(tenantId);
+    this.loadPaymentData();
+  }
+
+  onPaymentStatusFilterChange(status: string): void {
+    this.paymentStatusFilter.set(status);
+    this.loadPaymentData();
+  }
+
+  setQuickConcept(concept: string, defaultPrice: number): void {
+    this.paymentForm.patchValue({
+      concept: concept,
+      amount: defaultPrice,
+    });
+  }
+
+  onSubmitPayment(): void {
+    if (this.paymentForm.invalid) {
+      this.paymentForm.markAllAsTouched();
+      return;
+    }
+
+    const tenantId = this.selectedPaymentTenantId();
+    if (!tenantId) {
+      this.paymentError.set('Por favor selecciona una sucursal para registrar el cobro.');
+      return;
+    }
+
+    this.isCreatingPayment.set(true);
+    this.paymentError.set(null);
+    this.paymentSuccess.set(null);
+
+    const formVal = this.paymentForm.value;
+    const payload = {
+      tenant_id: tenantId,
+      customer_name: formVal.customer_name.trim(),
+      customer_email: formVal.customer_email ? formVal.customer_email.trim() : null,
+      concept: formVal.concept.trim(),
+      amount: parseFloat(formVal.amount),
+      currency: 'USD',
+      notes: formVal.notes ? formVal.notes.trim() : null,
+    };
+
+    this.paymentService.createPayment(payload).subscribe({
+      next: (res) => {
+        this.isCreatingPayment.set(false);
+        this.activityLogService.recordActivity(
+          'COBRO_CREADO',
+          `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}"`,
+          'SISTEMA'
+        );
+        // Redirigir a PayPal Checkout Sandbox
+        window.location.href = res.approval_url;
+      },
+      error: (err) => {
+        this.isCreatingPayment.set(false);
+        this.paymentError.set(
+          err?.error?.detail || 'Error al generar la orden de cobro con PayPal Sandbox.'
+        );
+      },
+    });
+  }
+
+  onCancelPaymentOrder(paymentId: string): void {
+    if (!confirm('¿Deseas cancelar esta orden de cobro pendiente?')) {
+      return;
+    }
+
+    this.paymentService.cancelPayment(paymentId).subscribe({
+      next: () => {
+        this.paymentSuccess.set('Cobro cancelado correctamente.');
+        this.loadPaymentData();
+      },
+      error: (err) => {
+        this.paymentError.set(err?.error?.detail || 'Error al cancelar el cobro.');
+      },
+    });
+  }
+
+  getPaymentStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'COMPLETED': return 'badge-completed';
+      case 'PENDING': return 'badge-pending';
+      case 'CANCELLED': return 'badge-cancelled';
+      case 'FAILED': return 'badge-failed';
+      default: return '';
+    }
+  }
+
+  getPaymentStatusBadgeLabel(status: string): string {
+    switch (status) {
+      case 'COMPLETED': return 'Pagado';
+      case 'PENDING': return 'Pendiente';
+      case 'CANCELLED': return 'Cancelado';
+      case 'FAILED': return 'Fallido';
+      default: return status;
+    }
+  }
 }
+

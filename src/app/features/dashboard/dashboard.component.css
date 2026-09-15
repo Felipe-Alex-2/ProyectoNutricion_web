@@ -3272,3 +3272,443 @@ textarea.form-control {
   color: var(--text-muted, #9ca3af);
   text-align: center;
 }
+
+/* ==========================================================================
+   Point-of-Sale (POS) & Branch Cashier Styles (PayPal Sandbox)
+   ========================================================================== */
+
+.pos-branch-bar {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.pos-branch-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pos-branch-select-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.pos-branch-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-primary, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pos-tenant-select {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #111827);
+  background: var(--bg-hover, #f9fafb);
+  border: 1px solid var(--border-color, #d1d5db);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  min-width: 260px;
+}
+
+.pos-branch-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pos-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulse 2s infinite;
+}
+
+.pos-cashier-text {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* POS Metrics Cards */
+.pos-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .pos-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pos-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-metric-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-md, 12px);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.metric-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metric-icon.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.metric-icon.blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.metric-icon.amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.metric-icon.gray {
+  background: rgba(107, 114, 128, 0.12);
+  color: #4b5563;
+}
+
+.pos-metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #6b7280);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.pos-metric-value {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary, #111827);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.metric-currency {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+}
+
+/* POS Main Grid: Terminal + History */
+.pos-main-grid {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .pos-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-charge-card,
+.pos-history-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-md, 12px);
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+}
+
+.pos-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pos-terminal-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #ffc439;
+  color: #003087;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pos-card-desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.pos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.pos-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary, #4b5563);
+  display: block;
+}
+
+/* Quick Concept Chips */
+.quick-chips-label {
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.quick-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.quick-chip {
+  background: var(--bg-hover, #f3f4f6);
+  border: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-primary, #374151);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-chip:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--color-primary, #2563eb);
+  color: var(--color-primary, #2563eb);
+}
+
+/* Amount Input with Currency */
+.amount-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-symbol {
+  position: absolute;
+  left: 14px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary, #111827);
+  pointer-events: none;
+}
+
+.amount-input {
+  padding-left: 32px !important;
+  padding-right: 56px !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary, #111827) !important;
+  height: 48px;
+}
+
+.currency-code {
+  position: absolute;
+  right: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #6b7280);
+  pointer-events: none;
+}
+
+/* POS Submit Button */
+.pos-submit-wrapper {
+  margin-top: 8px;
+}
+
+.btn-paypal-checkout {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background: #ffc439;
+  color: #003087;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(255, 196, 57, 0.35);
+  transition: all 0.2s;
+}
+
+.btn-paypal-checkout:hover:not(:disabled) {
+  background: #f2ba36;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 196, 57, 0.45);
+}
+
+.btn-paypal-checkout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #003087;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.sandbox-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary, #6b7280);
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+/* History Filters and Badges */
+.pos-status-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-pill {
+  padding: 4px 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-hover, #f9fafb);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-pill.active {
+  background: var(--color-primary, #2563eb);
+  color: #ffffff;
+  border-color: var(--color-primary, #2563eb);
+}
+
+.concept-badge {
+  display: inline-block;
+  background: var(--bg-hover, #f3f4f6);
+  color: var(--text-primary, #374151);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pos-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-failed {
+  background: rgba(107, 114, 128, 0.12);
+  color: #4b5563;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.btn-icon-cancel {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon-cancel:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}

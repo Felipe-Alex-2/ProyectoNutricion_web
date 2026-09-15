@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PaymentService } from '../../core/services/payment.service';
 import { SubscriptionService } from '../../core/services/subscription.service';
 
 @Component({
@@ -17,7 +18,7 @@ import { SubscriptionService } from '../../core/services/subscription.service';
             </svg>
           </div>
           <h2>Procesando tu pago...</h2>
-          <p class="text-secondary">Estamos confirmando tu pago con PayPal. Por favor espera un momento.</p>
+          <p class="text-secondary">Estamos confirmando la transacción con PayPal Sandbox. Por favor espera un momento.</p>
         }
         @if (success()) {
           <div class="return-icon success-icon">
@@ -26,8 +27,9 @@ import { SubscriptionService } from '../../core/services/subscription.service';
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           </div>
-          <h2>¡Pago exitoso!</h2>
-          <p class="text-secondary">Tu suscripción ha sido activada. Serás redirigido al panel en unos segundos...</p>
+          <h2>¡Cobro Exitoso!</h2>
+          <p class="text-secondary">{{ successDetail() || 'El pago fue procesado y registrado en la caja de la sucursal.' }}</p>
+          <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;">Serás redirigido al panel en unos segundos...</p>
         }
         @if (errorMsg()) {
           <div class="return-icon error-icon">
@@ -37,9 +39,9 @@ import { SubscriptionService } from '../../core/services/subscription.service';
               <line x1="9" y1="9" x2="15" y2="15"/>
             </svg>
           </div>
-          <h2>Error en el pago</h2>
+          <h2>Error al capturar el pago</h2>
           <p class="text-secondary">{{ errorMsg() }}</p>
-          <button class="btn-return" (click)="goToDashboard()">Volver al Panel</button>
+          <button class="btn-return" (click)="goToDashboard()">Volver a la Caja</button>
         }
       </div>
     </div>
@@ -65,7 +67,7 @@ import { SubscriptionService } from '../../core/services/subscription.service';
     .return-icon {
       margin-bottom: 1.5rem;
     }
-    .loading-icon { color: var(--color-primary, #6366f1); }
+    .loading-icon { color: var(--color-primary, #2563eb); }
     .success-icon { color: #10b981; }
     .error-icon { color: #ef4444; }
     h2 {
@@ -84,7 +86,7 @@ import { SubscriptionService } from '../../core/services/subscription.service';
       padding: 0.75rem 2rem;
       border: none;
       border-radius: 8px;
-      background: var(--color-primary, #6366f1);
+      background: var(--color-primary, #2563eb);
       color: #fff;
       font-weight: 600;
       cursor: pointer;
@@ -104,11 +106,13 @@ import { SubscriptionService } from '../../core/services/subscription.service';
 export class PaypalReturnComponent implements OnInit {
   loading = signal(true);
   success = signal(false);
+  successDetail = signal<string | null>(null);
   errorMsg = signal<string | null>(null);
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private paymentService: PaymentService,
     private subscriptionService: SubscriptionService
   ) {}
 
@@ -122,20 +126,36 @@ export class PaypalReturnComponent implements OnInit {
       return;
     }
 
-    this.subscriptionService.captureOrder(orderId).subscribe({
-      next: () => {
+    // Try capturing client POS payment first
+    this.paymentService.capturePayment(orderId).subscribe({
+      next: (payment) => {
         this.loading.set(false);
         this.success.set(true);
-        // Redirect to dashboard after 3 seconds
+        this.successDetail.set(
+          `Cobro de $${payment.amount} ${payment.currency} por "${payment.concept}" (${payment.customer_name}) confirmado exitosamente.`
+        );
         setTimeout(() => {
           this.router.navigate(['/dashboard']);
         }, 3000);
       },
-      error: (err) => {
-        this.loading.set(false);
-        this.errorMsg.set(
-          err?.error?.detail || 'Ocurrió un error al procesar tu pago. Intenta de nuevo.'
-        );
+      error: () => {
+        // Fallback to subscription service in case it was a subscription
+        this.subscriptionService.captureOrder(orderId).subscribe({
+          next: () => {
+            this.loading.set(false);
+            this.success.set(true);
+            this.successDetail.set('Suscripción activada exitosamente.');
+            setTimeout(() => {
+              this.router.navigate(['/dashboard']);
+            }, 3000);
+          },
+          error: (subErr) => {
+            this.loading.set(false);
+            this.errorMsg.set(
+              subErr?.error?.detail || 'Ocurrió un error al procesar el pago con PayPal.'
+            );
+          },
+        });
       },
     });
   }
@@ -144,3 +164,4 @@ export class PaypalReturnComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 }
+

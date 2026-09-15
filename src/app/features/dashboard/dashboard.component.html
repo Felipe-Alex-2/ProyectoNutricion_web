@@ -40,7 +40,7 @@
           <span>Bitácora</span>
         </button>
 
-        <!-- 3. Gestión de Suscripción -->
+        <!-- 3. Caja y Cobros (PayPal) -->
         <button 
           class="nav-item" 
           [class.active]="activeTab() === 'suscripcion'"
@@ -49,7 +49,7 @@
             <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
             <line x1="1" y1="10" x2="23" y2="10"></line>
           </svg>
-          <span>Gestión de Suscripción</span>
+          <span>Caja y Cobros (PayPal)</span>
         </button>
 
         <!-- 4. Notificaciones -->
@@ -426,242 +426,368 @@
     @if (activeTab() === 'suscripcion') {
       <header class="workspace-header">
         <div>
-          <div class="header-tag">Suscripción • Facturación SaaS</div>
-          <h1 class="page-title">Gestión de Suscripción</h1>
-          <p class="page-subtitle">Planes de suscripción y facturación mediante PayPal Sandbox</p>
+          <div class="header-tag">Caja • Punto de Venta (POS) PayPal Sandbox</div>
+          <h1 class="page-title">Caja y Cobros a Clientes</h1>
+          <p class="page-subtitle">Selecciona una sucursal, genera la orden de cobro para el paciente y cobra con PayPal Sandbox</p>
         </div>
         <div class="header-actions">
-          <button (click)="loadSubscriptionData()" class="btn-outline" [disabled]="isLoadingSubscription()">
+          <button (click)="loadPaymentData()" class="btn-outline" [disabled]="isLoadingPayments()">
             <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M23 4v6h-6"></path>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
             </svg>
-            <span>Actualizar Estado</span>
+            <span>Actualizar Caja</span>
           </button>
         </div>
       </header>
 
       <!-- Feedback Messages -->
-      @if (subscriptionSuccess()) {
+      @if (paymentSuccess()) {
         <div class="alert alert-success" style="margin-bottom: 1.5rem;">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
-          <span>{{ subscriptionSuccess() }}</span>
+          <span>{{ paymentSuccess() }}</span>
         </div>
       }
 
-      @if (subscriptionError()) {
+      @if (paymentError()) {
         <div class="alert alert-danger" style="margin-bottom: 1.5rem;">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="15" y1="9" x2="9" y2="15"></line>
             <line x1="9" y1="9" x2="15" y2="15"></line>
           </svg>
-          <span>{{ subscriptionError() }}</span>
+          <span>{{ paymentError() }}</span>
         </div>
       }
 
-      <!-- Current Subscription Status Card -->
-      <div class="card subscription-status-card" style="margin-bottom: 2rem;">
-        <div class="sub-status-header">
-          <div class="sub-status-title-group">
-            <div class="sub-icon-badge">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                <line x1="1" y1="10" x2="23" y2="10"></line>
+      <!-- Top Branch / Organization Selector Bar -->
+      <div class="card pos-branch-bar" style="margin-bottom: 1.5rem; padding: 18px 24px;">
+        <div class="pos-branch-inner">
+          <div class="pos-branch-select-group">
+            <div class="pos-branch-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
               </svg>
             </div>
             <div>
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Estado de la Suscripción</h3>
-              <p style="margin: 0.2rem 0 0 0; color: var(--text-secondary, #6b7280); font-size: 0.875rem;">
-                Organización vinculada: <strong>{{ activeTenantName() }}</strong>
-              </p>
+              <label class="pos-field-label" style="margin-bottom: 2px;">Sucursal / Organización de Cobro</label>
+              <select 
+                class="form-control pos-tenant-select" 
+                [value]="selectedPaymentTenantId()" 
+                (change)="onPaymentTenantChange($any($event.target).value)">
+                @for (t of tenants(); track t.id) {
+                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+                }
+              </select>
             </div>
           </div>
-          @if (currentSubscription()) {
-            <span class="sub-badge" [ngClass]="getSubscriptionStatusClass(currentSubscription()!.status)">
-              {{ getSubscriptionStatusLabel(currentSubscription()!.status) }}
+
+          <div class="pos-branch-info">
+            <span class="pos-status-pill">
+              <span class="pill-dot"></span>
+              Caja Abierta • Entorno Sandbox PayPal
             </span>
-          } @else {
-            <span class="sub-badge sub-status-none">Sin Plan Activo</span>
-          }
+            <span class="pos-cashier-text">
+              Cajero: <strong>{{ authService.currentUser()?.full_name || 'Usuario' }}</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Summary Cards -->
+      <div class="pos-metrics-grid" style="margin-bottom: 2rem;">
+        <div class="pos-metric-card">
+          <div class="metric-icon green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div>
+            <span class="pos-metric-label">Total Recaudado (Sucursal)</span>
+            <h3 class="pos-metric-value">${{ paymentStats()?.total_collected || '0.00' }} <span class="metric-currency">USD</span></h3>
+          </div>
         </div>
 
-        @if (currentSubscription()) {
-          <div class="sub-details-grid">
-            <div class="sub-detail-item">
-              <span class="sub-detail-label">Plan Actual</span>
-              <span class="sub-detail-val" style="color: var(--primary, #2563eb); font-weight: 700;">
-                {{ getPlanDisplayName(currentSubscription()!.plan_name) }}
-              </span>
-            </div>
-            <div class="sub-detail-item">
-              <span class="sub-detail-label">Monto</span>
-              <span class="sub-detail-val">${{ currentSubscription()!.amount }} {{ currentSubscription()!.currency }}</span>
-            </div>
-            <div class="sub-detail-item">
-              <span class="sub-detail-label">Fecha de Inicio</span>
-              <span class="sub-detail-val">{{ currentSubscription()!.started_at | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
-            <div class="sub-detail-item">
-              <span class="sub-detail-label">Fecha de Vencimiento</span>
-              <span class="sub-detail-val">
-                {{ currentSubscription()!.expires_at ? (currentSubscription()!.expires_at | date:'dd/MM/yyyy') : 'Indefinido' }}
-              </span>
-            </div>
-            <div class="sub-detail-item">
-              <span class="sub-detail-label">PayPal Order ID</span>
-              <span class="sub-detail-val font-mono" style="font-size: 0.8rem;">
-                {{ currentSubscription()!.paypal_order_id || 'N/A' }}
-              </span>
-            </div>
+        <div class="pos-metric-card">
+          <div class="metric-icon blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
           </div>
+          <div>
+            <span class="pos-metric-label">Cobros Pagados</span>
+            <h3 class="pos-metric-value">{{ paymentStats()?.completed_count || 0 }}</h3>
+          </div>
+        </div>
 
-          @if (currentSubscription()!.status === 'ACTIVE' && isAdmin()) {
-            <div class="sub-actions-row">
-              <button (click)="onCancelSubscription()" class="btn-cancel-sub" [disabled]="isLoadingSubscription()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="15" y1="9" x2="9" y2="15"></line>
-                  <line x1="9" y1="9" x2="15" y2="15"></line>
+        <div class="pos-metric-card">
+          <div class="metric-icon amber">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div>
+            <span class="pos-metric-label">Cobros Pendientes</span>
+            <h3 class="pos-metric-value">{{ paymentStats()?.pending_count || 0 }}</h3>
+          </div>
+        </div>
+
+        <div class="pos-metric-card">
+          <div class="metric-icon gray">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+          </div>
+          <div>
+            <span class="pos-metric-label">Total Transacciones</span>
+            <h3 class="pos-metric-value">{{ paymentStats()?.total_count || 0 }}</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main POS Two-Column Area -->
+      <div class="pos-main-grid">
+        <!-- Left: POS Charge Terminal (Form) -->
+        <div class="card pos-charge-card">
+          <div class="card-header">
+            <div class="pos-card-title-group">
+              <div class="pos-terminal-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
                 </svg>
-                <span>Cancelar Suscripción</span>
-              </button>
-            </div>
-          }
-        } @else {
-          <div class="sub-empty-state">
-            <p>Actualmente tu clínica u organización no cuenta con un plan activo. Selecciona un plan a continuación para activar los módulos profesionales mediante PayPal Sandbox.</p>
-          </div>
-        }
-      </div>
-
-      <!-- Pricing Plans Grid -->
-      <div class="pricing-section-title">
-        <h2>Planes Disponibles</h2>
-        <p>Entorno Sandbox de Pruebas • Pagos simulados con cuenta personal de prueba</p>
-      </div>
-
-      <div class="pricing-cards-grid">
-        @for (plan of subscriptionPlans(); track plan.name) {
-          <div class="pricing-card" [class.popular]="plan.name === 'PROFESIONAL'" [class.active-plan]="currentSubscription()?.plan_name === plan.name && currentSubscription()?.status === 'ACTIVE'">
-            @if (plan.name === 'PROFESIONAL') {
-              <div class="popular-tag">Más Recomendado</div>
-            }
-
-            <div class="pricing-header">
-              <h3 class="plan-name">{{ plan.display_name }}</h3>
-              <div class="plan-price">
-                <span class="price-currency">$</span>
-                <span class="price-amount">{{ plan.price }}</span>
-                <span class="price-period">/ {{ plan.period }}</span>
               </div>
-              <p class="plan-patients">
-                @if (plan.max_patients) {
-                  Hasta <strong>{{ plan.max_patients }}</strong> pacientes
-                } @else {
-                  Pacientes <strong>Ilimitados</strong>
-                }
-              </p>
+              <div>
+                <h3 class="card-title">Terminal de Cobro</h3>
+                <p class="pos-card-desc">Crea un cobro para el cliente y procede al checkout con PayPal</p>
+              </div>
+            </div>
+          </div>
+
+          <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" class="pos-form">
+            <!-- Customer info -->
+            <div class="form-group">
+              <label class="pos-field-label">Nombre del Cliente / Paciente <span class="text-danger">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="customer_name" 
+                placeholder="Ej. María Gonzales López">
+              @if (paymentForm.get('customer_name')?.touched && paymentForm.get('customer_name')?.invalid) {
+                <small class="text-danger">El nombre del cliente es obligatorio (mínimo 2 caracteres).</small>
+              }
             </div>
 
-            <div class="plan-divider"></div>
-
-            <ul class="plan-features">
-              @for (feat of plan.features; track feat.text) {
-                <li class="plan-feature-item" [class.included]="feat.included" [class.not-included]="!feat.included">
-                  @if (feat.included) {
-                    <svg class="feat-icon check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  } @else {
-                    <svg class="feat-icon cross" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  }
-                  <span>{{ feat.text }}</span>
-                </li>
+            <div class="form-group">
+              <label class="pos-field-label">Correo Electrónico del Cliente (Opcional)</label>
+              <input 
+                type="email" 
+                class="form-control" 
+                formControlName="customer_email" 
+                placeholder="cliente@ejemplo.com">
+              @if (paymentForm.get('customer_email')?.touched && paymentForm.get('customer_email')?.invalid) {
+                <small class="text-danger">Ingresa un correo electrónico válido.</small>
               }
-            </ul>
+            </div>
 
-            <div class="plan-footer">
-              @if (currentSubscription()?.plan_name === plan.name && currentSubscription()?.status === 'ACTIVE') {
-                <button class="btn-plan current" disabled>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                  <span>Plan Actual</span>
+            <!-- Concept + Quick Chips -->
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="pos-field-label" style="margin: 0;">Concepto / Detalle del Cobro <span class="text-danger">*</span></label>
+                <span class="quick-chips-label">Plantillas rápidas:</span>
+              </div>
+              <div class="quick-chips-row">
+                <button type="button" class="quick-chip" (click)="setQuickConcept('Consulta Nutricional Inicial', 25)">
+                  Consulta Inicial ($25)
                 </button>
-              } @else {
-                <button 
-                  (click)="onSubscribe(plan.name)" 
-                  class="btn-plan subscribe" 
-                  [class.popular-btn]="plan.name === 'PROFESIONAL'"
-                  [disabled]="isLoadingSubscription() || !isAdmin()">
-                  <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <button type="button" class="quick-chip" (click)="setQuickConcept('Control de Seguimiento Mensual', 15)">
+                  Control ($15)
+                </button>
+                <button type="button" class="quick-chip" (click)="setQuickConcept('Plan de Alimentación Personalizado', 35)">
+                  Plan ($35)
+                </button>
+                <button type="button" class="quick-chip" (click)="setQuickConcept('Paquete Integral + Macros', 50)">
+                  Paquete ($50)
+                </button>
+              </div>
+              <input 
+                type="text" 
+                class="form-control" 
+                formControlName="concept" 
+                placeholder="Ej. Consulta Nutricional, Suplementos, Control">
+              @if (paymentForm.get('concept')?.touched && paymentForm.get('concept')?.invalid) {
+                <small class="text-danger">El concepto es obligatorio (mínimo 2 caracteres).</small>
+              }
+            </div>
+
+            <!-- Amount / Total -->
+            <div class="form-group">
+              <label class="pos-field-label">Total a Cobrar (USD) <span class="text-danger">*</span></label>
+              <div class="amount-input-wrapper">
+                <span class="currency-symbol">$</span>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0.01" 
+                  class="form-control amount-input" 
+                  formControlName="amount" 
+                  placeholder="0.00">
+                <span class="currency-code">USD</span>
+              </div>
+              @if (paymentForm.get('amount')?.touched && paymentForm.get('amount')?.invalid) {
+                <small class="text-danger">Ingresa un monto válido mayor a 0.</small>
+              }
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group">
+              <label class="pos-field-label">Notas Adicionales (Opcional)</label>
+              <textarea 
+                class="form-control" 
+                rows="2" 
+                formControlName="notes" 
+                placeholder="Detalles de facturación, número de orden interno o comentarios"></textarea>
+            </div>
+
+            <!-- Submit Button (PayPal) -->
+            <div class="pos-submit-wrapper">
+              <button 
+                type="submit" 
+                class="btn-paypal-checkout" 
+                [disabled]="isCreatingPayment() || paymentForm.invalid">
+                @if (isCreatingPayment()) {
+                  <span class="btn-spinner"></span>
+                  <span>Generando orden con PayPal...</span>
+                } @else {
+                  <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
                   </svg>
-                  <span>Suscribirse con PayPal</span>
-                </button>
-              }
-              @if (!isAdmin()) {
-                <p class="admin-only-notice">Solo administradores de clínica pueden cambiar el plan.</p>
-              }
+                  <span>Pagar con PayPal Sandbox</span>
+                }
+              </button>
+              <p class="sandbox-notice">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Entorno Sandbox de Pruebas: Simula el cobro usando tu cuenta personal de prueba.
+              </p>
             </div>
-          </div>
-        }
-      </div>
-
-      <!-- Payment History Table -->
-      <div class="card" style="margin-top: 2.5rem;">
-        <div class="card-header">
-          <div>
-            <h3 class="card-title">Historial de Pagos y Suscripciones</h3>
-            <p style="margin: 0.25rem 0 0; color: var(--text-secondary, #6b7280); font-size: 0.85rem;">
-              Registro de todas las transacciones generadas en la plataforma
-            </p>
-          </div>
+          </form>
         </div>
 
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Plan</th>
-                <th>Monto</th>
-                <th>Estado</th>
-                <th>Fecha Inicio</th>
-                <th>Fecha Fin</th>
-                <th>PayPal Order ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              @if (subscriptionHistory().length === 0) {
+        <!-- Right: Recent Payments in this Branch -->
+        <div class="card pos-history-card">
+          <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+            <div>
+              <h3 class="card-title">Historial de Cobros en Sucursal</h3>
+              <p class="pos-card-desc">Transacciones procesadas en la sucursal seleccionada</p>
+            </div>
+            <div class="pos-status-filters">
+              <button 
+                type="button" 
+                class="filter-pill" 
+                [class.active]="paymentStatusFilter() === ''" 
+                (click)="onPaymentStatusFilterChange('')">
+                Todos
+              </button>
+              <button 
+                type="button" 
+                class="filter-pill" 
+                [class.active]="paymentStatusFilter() === 'COMPLETED'" 
+                (click)="onPaymentStatusFilterChange('COMPLETED')">
+                Pagados
+              </button>
+              <button 
+                type="button" 
+                class="filter-pill" 
+                [class.active]="paymentStatusFilter() === 'PENDING'" 
+                (click)="onPaymentStatusFilterChange('PENDING')">
+                Pendientes
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td colspan="6" class="empty-table-cell">
-                    No se han registrado transacciones ni pagos todavía.
-                  </td>
+                  <th>Fecha</th>
+                  <th>Cliente</th>
+                  <th>Concepto</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>PayPal ID</th>
+                  <th>Acción</th>
                 </tr>
-              }
-              @for (item of subscriptionHistory(); track item.id) {
-                <tr>
-                  <td style="font-weight: 600;">{{ getPlanDisplayName(item.plan_name) }}</td>
-                  <td>${{ item.amount }} {{ item.currency }}</td>
-                  <td>
-                    <span class="sub-badge" [ngClass]="getSubscriptionStatusClass(item.status)">
-                      {{ getSubscriptionStatusLabel(item.status) }}
-                    </span>
-                  </td>
-                  <td>{{ item.started_at | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td>{{ item.expires_at ? (item.expires_at | date:'dd/MM/yyyy') : '-' }}</td>
-                  <td class="font-mono" style="font-size: 0.8rem;">{{ item.paypal_order_id || '-' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @if (isLoadingPayments()) {
+                  <tr>
+                    <td colspan="7" class="empty-table-cell">
+                      Cargando cobros de la sucursal...
+                    </td>
+                  </tr>
+                } @else if (paymentsList().length === 0) {
+                  <tr>
+                    <td colspan="7" class="empty-table-cell">
+                      No hay cobros registrados en esta sucursal todavía.
+                    </td>
+                  </tr>
+                }
+                @for (p of paymentsList(); track p.id) {
+                  <tr>
+                    <td style="white-space: nowrap; font-size: 0.85rem;">
+                      {{ p.created_at | date:'dd/MM/yyyy HH:mm' }}
+                    </td>
+                    <td>
+                      <div style="font-weight: 600; color: var(--text-primary);">{{ p.customer_name }}</div>
+                      @if (p.customer_email) {
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ p.customer_email }}</div>
+                      }
+                    </td>
+                    <td>
+                      <span class="concept-badge">{{ p.concept }}</span>
+                    </td>
+                    <td style="font-weight: 700; font-size: 0.95rem; white-space: nowrap;">
+                      ${{ p.amount }} {{ p.currency }}
+                    </td>
+                    <td>
+                      <span class="pos-badge" [ngClass]="getPaymentStatusBadgeClass(p.status)">
+                        {{ getPaymentStatusBadgeLabel(p.status) }}
+                      </span>
+                    </td>
+                    <td class="font-mono" style="font-size: 0.75rem;">
+                      {{ p.paypal_order_id || '-' }}
+                    </td>
+                    <td>
+                      @if (p.status === 'PENDING') {
+                        <button 
+                          (click)="onCancelPaymentOrder(p.id)" 
+                          class="btn-icon-cancel" 
+                          title="Cancelar orden de cobro">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                        </button>
+                      } @else {
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     }
