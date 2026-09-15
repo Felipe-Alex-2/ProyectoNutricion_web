@@ -67,12 +67,12 @@
           }
         </button>
 
-        <!-- Acordeón Sprint 1: Solo visible para roles administrativos y especialistas -->
+        <!-- Acordeón Módulo 1: Solo visible para roles administrativos y especialistas -->
         @if (canAccessSprint1()) {
           <div class="sidebar-accordion">
             <button class="accordion-trigger" (click)="toggleSprint1Accordion()">
               <div class="accordion-left">
-                <span class="badge-sprint">Sprint 1</span>
+                <span class="badge-sprint">Módulo 1</span>
               </div>
               <svg class="chevron-icon" [class.rotated]="sprint1Expanded()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -138,12 +138,15 @@
           </div>
         }
 
-        <!-- Acordeón Sprint 2: Recetario, Macros e Historial Clínico -->
+        <!-- Acordeón Módulo 2: Plan Nutricional, Evaluación y Gestión de Citas -->
         @if (canAccessSprint2()) {
           <div class="sidebar-accordion">
             <button class="accordion-trigger" (click)="toggleSprint2Accordion()">
-              <div class="accordion-left">
-                <span class="badge-sprint badge-sprint-2">Sprint 2</span>
+              <div class="accordion-left" style="display: flex; align-items: center; gap: 6px;">
+                <span class="badge-sprint badge-sprint-2">Módulo 2</span>
+                @if (pendingAppointmentsCount > 0) {
+                  <span class="badge-accordion-pending" title="Hay citas pendientes por atender">{{ pendingAppointmentsCount }}</span>
+                }
               </div>
               <svg class="chevron-icon" [class.rotated]="sprint2Expanded()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -163,7 +166,7 @@
                     <line x1="10" y1="1" x2="10" y2="4"></line>
                     <line x1="14" y1="1" x2="14" y2="4"></line>
                   </svg>
-                  <span>Recetario & Macros</span>
+                  <span>Plan Nutricional</span>
                 </button>
 
                 <button 
@@ -173,7 +176,7 @@
                   <svg class="sub-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
                   </svg>
-                  <span>Historial Clínico</span>
+                  <span>Evaluación Nutricional</span>
                 </button>
 
                 <button 
@@ -186,7 +189,10 @@
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                   </svg>
-                  <span>Gestión de Citas</span>
+                  <span style="flex: 1; text-align: left;">Gestión de Citas</span>
+                  @if (pendingAppointmentsCount > 0) {
+                    <span class="badge-pending-alert" title="Citas pendientes por atender">{{ pendingAppointmentsCount }}</span>
+                  }
                 </button>
               </div>
             }
@@ -244,6 +250,19 @@
 
   <!-- Main Workspace -->
   <main class="main-workspace">
+    <!-- Floating Alert: Nueva cita por atender -->
+    @if (newAppointmentAlert()) {
+      <div class="floating-alert-banner">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span style="font-weight: 500;">{{ newAppointmentAlert() }}</span>
+        <button class="btn-banner-action" (click)="setActiveTab('citas')">Atender Citas</button>
+        <button class="btn-banner-close" (click)="newAppointmentAlert.set(null)">✕</button>
+      </div>
+    }
+
     <!-- Feedback Alerts -->
     @if (updateSuccess()) {
       <div class="alert alert-success">
@@ -1003,7 +1022,7 @@
     @if (activeTab() === 'sprint1-tenants') {
       <header class="workspace-header">
         <div>
-          <div class="header-tag">Sprint 1 • Multi-Tenancy</div>
+          <div class="header-tag">Módulo 1 • Multi-Tenancy</div>
           <h1 class="page-title">Gestionar Tenants (Clínicas y Centros)</h1>
           <p class="page-subtitle">CRUD completo de organizaciones independientes en la plataforma SaaS</p>
         </div>
@@ -1120,7 +1139,7 @@
     @if (activeTab() === 'sprint1-roles') {
       <header class="workspace-header">
         <div>
-          <div class="header-tag">Sprint 1 • Control de Acceso RBAC</div>
+          <div class="header-tag">Módulo 1 • Control de Acceso RBAC</div>
           <h1 class="page-title">Gestión de Roles y Permisos</h1>
           <p class="page-subtitle">
             Permite asignar roles y establecer los permisos de acceso a las diferentes funciones del sistema. Cada usuario accede únicamente a las funcionalidades autorizadas según su rol.
@@ -1213,7 +1232,7 @@
     @if (activeTab() === 'sprint1-usuarios') {
       <header class="workspace-header">
         <div>
-          <div class="header-tag">Sprint 1 • Gestión Organizacional</div>
+          <div class="header-tag">Módulo 1 • Gestión Organizacional</div>
           <h1 class="page-title">Gestión de Usuarios de la Organización</h1>
           <p class="page-subtitle">
             Administra los usuarios pertenecientes a la organización (registro, modificación, activación y desactivación). El administrador gestiona su clínica sin acceder a información de otras organizaciones.
@@ -1367,7 +1386,7 @@
     @if (activeTab() === 'sprint1-vinculacion') {
       <header class="workspace-header">
         <div>
-          <div class="header-tag">Sprint 1 • Vinculación Móvil / WhatsApp</div>
+          <div class="header-tag">Módulo 1 • Vinculación Móvil / WhatsApp</div>
           <h1 class="page-title">Vincular con Clientes</h1>
           <p class="page-subtitle">Genera códigos de emparejamiento con envío directo al WhatsApp del cliente</p>
         </div>
@@ -1513,14 +1532,15 @@
     }
 
     <!-- ============================================================= -->
-    <!-- PESTAÑA: RECETARIO & MACRONUTRIENTES (WEB) -->
+    <!-- PESTAÑA: PLAN NUTRICIONAL & RECETARIO (WEB) -->
     <!-- ============================================================= -->
     @if (activeTab() === 'recetas') {
       <div class="card header-card">
+        <div class="header-tag">Módulo 2 • Plan Nutricional & Recetas</div>
         <div class="card-header-flex">
           <div>
-            <h2 class="card-title">Recetario & Macronutrientes</h2>
-            <p class="card-subtitle">Platillos equilibrados con detalle calórico, distribución de macronutrientes y fotografía</p>
+            <h2 class="card-title">Plan Nutricional</h2>
+            <p class="card-subtitle">Platillos equilibrados con detalle calórico, distribución de macronutrientes y planes personalizados</p>
           </div>
           @if (canAccessSprint1()) {
             <button class="btn-primary" (click)="openRecipeModal()">
@@ -1542,11 +1562,21 @@
 
         <!-- Filtros de categoría -->
         <div class="filter-bar mt-3">
-          <button class="filter-chip" [class.active]="recipeCategoryFilter() === ''" (click)="filterRecipesByCategory('')">Todas</button>
-          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Desayuno'" (click)="filterRecipesByCategory('Desayuno')">Desayunos</button>
-          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Almuerzo'" (click)="filterRecipesByCategory('Almuerzo')">Almuerzos</button>
-          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Cena'" (click)="filterRecipesByCategory('Cena')">Cenas</button>
-          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Snack'" (click)="filterRecipesByCategory('Snack')">Snacks</button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === ''" (click)="filterRecipesByCategory('')">
+            Todas
+          </button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Desayuno'" (click)="filterRecipesByCategory('Desayuno')">
+            🍳 Desayunos
+          </button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Almuerzo'" (click)="filterRecipesByCategory('Almuerzo')">
+            🥗 Almuerzos
+          </button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Cena'" (click)="filterRecipesByCategory('Cena')">
+            🍲 Cenas
+          </button>
+          <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Snack'" (click)="filterRecipesByCategory('Snack')">
+            🍎 Snacks
+          </button>
         </div>
       </div>
 
@@ -1613,8 +1643,20 @@
 
                 @if (canAccessSprint1()) {
                   <div class="recipe-actions">
-                    <button class="btn-sm btn-outline" (click)="openRecipeModal(recipe)">Editar</button>
-                    <button class="btn-sm btn-danger" (click)="deleteRecipe(recipe.id, recipe.title)">Eliminar</button>
+                    <button class="btn-action-edit" (click)="openRecipeModal(recipe)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                      <span>Editar</span>
+                    </button>
+                    <button class="btn-action-delete" (click)="deleteRecipe(recipe.id, recipe.title)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                      <span>Eliminar</span>
+                    </button>
                   </div>
                 }
               </div>
@@ -1625,11 +1667,12 @@
     }
 
     <!-- ============================================================= -->
-    <!-- PESTAÑA: HISTORIAL CLÍNICO & ANAMNESIS (WEB) -->
+    <!-- PESTAÑA: EVALUACIÓN NUTRICIONAL & ANAMNESIS (WEB) -->
     <!-- ============================================================= -->
     @if (activeTab() === 'historial-clinico') {
       <div class="card header-card">
-        <h2 class="card-title">Historial Clínico & Anamnesis de Pacientes</h2>
+        <div class="header-tag">Módulo 2 • Evaluación Nutricional</div>
+        <h2 class="card-title">Evaluación Nutricional & Anamnesis de Pacientes</h2>
         <p class="card-subtitle">Consulta la ficha de salud completada por el paciente en la App Móvil y asienta notas diagnósticas</p>
       </div>
 
@@ -1828,12 +1871,12 @@
     }
 
     <!-- ============================================================= -->
-    <!-- TAB: GESTIÓN DE CITAS (SPRINT 2) -->
+    <!-- TAB: GESTIÓN DE CITAS (MÓDULO 2) -->
     <!-- ============================================================= -->
     @if (activeTab() === 'citas') {
       <header class="workspace-header">
         <div>
-          <div class="header-tag">Sprint 2 • Consultas & Agenda</div>
+          <div class="header-tag">Módulo 2 • Consultas & Agenda</div>
           <h1 class="page-title">Gestión de Citas</h1>
           <p class="page-subtitle">Monitorea, confirma o cancela las citas médicas y nutricionales solicitadas por clientes</p>
         </div>

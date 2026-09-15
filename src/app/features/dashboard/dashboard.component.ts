@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, signal } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -33,7 +33,7 @@ import { NotificationService } from '../../core/services/notification.service';
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   isEditing = signal<boolean>(false);
   editForm: FormGroup;
   updateSuccess = signal<string | null>(null);
@@ -157,6 +157,8 @@ export class DashboardComponent implements OnInit {
   notifications = signal<Notification[]>([]);
   unreadNotificationCount = signal<number>(0);
   isLoadingNotifications = signal<boolean>(false);
+  newAppointmentAlert = signal<string | null>(null);
+  private pollingTimer: any = null;
 
   constructor(
     private fb: FormBuilder,
@@ -257,6 +259,18 @@ export class DashboardComponent implements OnInit {
     this.loadNotificationCount();
     this.loadAppointments();
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
+
+    // Polling en tiempo real para citas pendientes y notificaciones (cada 12s)
+    this.pollingTimer = setInterval(() => {
+      this.pollPendingAppointmentsAndNotifications();
+    }, 12000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+    }
   }
 
   populateForm(user: User): void {
@@ -463,9 +477,9 @@ export class DashboardComponent implements OnInit {
       case 'sprint1-vinculacion':
         return 'Vincular con Clientes';
       case 'recetas':
-        return 'Recetario & Macros';
+        return 'Plan Nutricional';
       case 'historial-clinico':
-        return 'Historial Clínico';
+        return 'Evaluación Nutricional';
       case 'citas':
         return 'Gestión de Citas';
       default:
@@ -1180,11 +1194,14 @@ export class DashboardComponent implements OnInit {
 
     this.recipeService.deleteRecipe(id).subscribe({
       next: () => {
-        this.recipeSuccess.set(`Receta eliminada correctamente.`);
+        this.recipeSuccess.set(`Receta "${title}" eliminada correctamente.`);
+        this.loadRecipes();
         this.activityLogService.recordActivity('RECETA_ELIMINADA', `Se eliminó la receta ${title}`, 'CLINICAL');
+        setTimeout(() => this.recipeSuccess.set(null), 4000);
       },
       error: (err) => {
         this.recipeError.set(err?.error?.detail || 'Error al eliminar receta');
+        setTimeout(() => this.recipeError.set(null), 5000);
       },
     });
   }
@@ -1889,6 +1906,28 @@ export class DashboardComponent implements OnInit {
           list.map((n) => ({ ...n, is_read: true }))
         );
         this.unreadNotificationCount.set(0);
+      },
+      error: () => {},
+    });
+  }
+
+  pollPendingAppointmentsAndNotifications(): void {
+    this.loadNotificationCount();
+    const tenantId = this.isOrgAdmin()
+      ? this.authService.currentUser()?.tenant_id || undefined
+      : (this.selectedPaymentTenantId() || undefined);
+
+    this.appointmentService.getAppointments(this.selectedAppointmentStatus(), tenantId).subscribe({
+      next: (data) => {
+        const prevPending = this.pendingAppointmentsCount;
+        this.appointments.set(data);
+        const currentPending = this.pendingAppointmentsCount;
+        if (currentPending > prevPending && prevPending >= 0) {
+          this.newAppointmentAlert.set(
+            `¡Tienes ${currentPending} cita(s) pendiente(s) por atender!`
+          );
+          setTimeout(() => this.newAppointmentAlert.set(null), 8000);
+        }
       },
       error: () => {},
     });
