@@ -130,6 +130,7 @@ export class DashboardComponent implements OnInit {
   paymentError = signal<string | null>(null);
   paymentSuccess = signal<string | null>(null);
   paymentStatusFilter = signal<string>('');
+  lastCreatedApprovalUrl = signal<string | null>(null);
   paymentForm: FormGroup;
 
   constructor(
@@ -1432,8 +1433,9 @@ export class DashboardComponent implements OnInit {
           `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}"`,
           'SISTEMA'
         );
+        this.lastCreatedApprovalUrl.set(res.approval_url);
         this.paymentSuccess.set(
-          '¡Orden generada! Se abrió PayPal Sandbox en una nueva pestaña. Una vez completado el pago, actualiza esta pantalla.'
+          '¡Orden generada! Si estás en el mismo navegador donde abriste tu cuenta Business de PayPal, copia el enlace y ábrelo en una Ventana de Incógnito para pagar con tu cuenta Personal.'
         );
         this.loadPaymentData();
         // Abrir PayPal Checkout Sandbox en una nueva pestaña
@@ -1445,6 +1447,21 @@ export class DashboardComponent implements OnInit {
           err?.error?.detail || 'Error al generar la orden de cobro con PayPal Sandbox. Verifica tus credenciales o conexión.'
         );
       },
+    });
+  }
+
+  copyPaymentLink(paypalOrderId?: string | null): void {
+    const url = paypalOrderId
+      ? `https://www.sandbox.paypal.com/checkoutnow?token=${paypalOrderId}`
+      : this.lastCreatedApprovalUrl();
+    if (!url) {
+      alert('No hay enlace de pago disponible.');
+      return;
+    }
+    navigator.clipboard.writeText(url).then(() => {
+      this.paymentSuccess.set(
+        '¡Enlace de pago copiado! Pégalo en una Ventana de Incógnito para iniciar sesión con tu cuenta Personal de prueba.'
+      );
     });
   }
 
