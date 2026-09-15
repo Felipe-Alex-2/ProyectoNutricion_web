@@ -797,6 +797,10 @@
   color: #ffffff;
 }
 
+.badge-sprint-2 {
+  background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+}
+
 .accordion-label {
   font-size: 13.5px;
   font-weight: 700;

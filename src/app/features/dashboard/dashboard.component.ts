@@ -42,6 +42,9 @@ export class DashboardComponent implements OnInit {
   // Acordeón Sprint 1
   sprint1Expanded = signal<boolean>(true);
 
+  // Acordeón Sprint 2
+  sprint2Expanded = signal<boolean>(false);
+
   // Sprint 1: Tenants (CRUD)
   tenants = signal<Tenant[]>([]);
   isLoadingTenants = signal<boolean>(false);
@@ -314,6 +317,14 @@ export class DashboardComponent implements OnInit {
     this.sprint1Expanded.update((v) => !v);
   }
 
+  toggleSprint2Accordion(): void {
+    this.sprint2Expanded.update((v) => !v);
+  }
+
+  canAccessSprint2(): boolean {
+    return !this.isClient();
+  }
+
   // --- Métodos de la Bitácora ---
   loadActivityLogs(): void {
     this.activityLogService.fetchLogs(this.activityCategoryFilter() || undefined).subscribe();
@@ -363,6 +374,10 @@ export class DashboardComponent implements OnInit {
         return 'Menú Principal';
       case 'bitacora':
         return 'Bitácora';
+      case 'suscripcion':
+        return 'Gestión de Suscripción';
+      case 'notificaciones':
+        return 'Notificaciones';
       case 'sprint1-tenants':
         return 'Gestionar Tenants';
       case 'sprint1-roles':
@@ -371,6 +386,10 @@ export class DashboardComponent implements OnInit {
         return 'Usuarios de Organización';
       case 'sprint1-vinculacion':
         return 'Vincular con Clientes';
+      case 'recetas':
+        return 'Recetario & Macros';
+      case 'historial-clinico':
+        return 'Historial Clínico';
       default:
         return tab;
     }
