@@ -770,15 +770,25 @@
                     </td>
                     <td>
                       @if (p.status === 'PENDING') {
-                        <button 
-                          (click)="onCancelPaymentOrder(p.id)" 
-                          class="btn-icon-cancel" 
-                          title="Cancelar orden de cobro">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                          </svg>
-                        </button>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <button 
+                            (click)="onResumePayment(p)" 
+                            class="btn-icon-pay" 
+                            title="Continuar / Pagar con PayPal Sandbox">
+                            <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
+                            </svg>
+                          </button>
+                          <button 
+                            (click)="onCancelPaymentOrder(p.id)" 
+                            class="btn-icon-cancel" 
+                            title="Cancelar orden de cobro">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          </button>
+                        </div>
                       } @else {
                         <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
                       }

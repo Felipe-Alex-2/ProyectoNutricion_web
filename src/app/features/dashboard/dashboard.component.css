@@ -3694,6 +3694,25 @@ textarea.form-control {
   border: 1px solid rgba(107, 114, 128, 0.3);
 }
 
+.btn-icon-pay {
+  background: #ffc439;
+  border: 1px solid #e0ab2f;
+  color: #003087;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon-pay:hover {
+  background: #f2ba36;
+  transform: scale(1.05);
+}
+
 .btn-icon-cancel {
   background: transparent;
   border: 1px solid rgba(239, 68, 68, 0.3);

@@ -1246,8 +1246,8 @@ export class DashboardComponent implements OnInit {
     this.subscriptionService.createOrder(planName).subscribe({
       next: (response) => {
         this.isLoadingSubscription.set(false);
-        // Redirect to PayPal checkout
-        window.location.href = response.approval_url;
+        // Abrir PayPal checkout en una nueva pestaña
+        window.open(response.approval_url, '_blank');
       },
       error: (err) => {
         this.isLoadingSubscription.set(false);
@@ -1432,8 +1432,12 @@ export class DashboardComponent implements OnInit {
           `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}"`,
           'SISTEMA'
         );
-        // Redirigir a PayPal Checkout Sandbox
-        window.location.href = res.approval_url;
+        this.paymentSuccess.set(
+          '¡Orden generada! Se abrió PayPal Sandbox en una nueva pestaña. Una vez completado el pago, actualiza esta pantalla.'
+        );
+        this.loadPaymentData();
+        // Abrir PayPal Checkout Sandbox en una nueva pestaña
+        window.open(res.approval_url, '_blank');
       },
       error: (err) => {
         this.isCreatingPayment.set(false);
@@ -1458,6 +1462,18 @@ export class DashboardComponent implements OnInit {
         this.paymentError.set(err?.error?.detail || 'Error al cancelar el cobro.');
       },
     });
+  }
+
+  onResumePayment(payment: Payment): void {
+    if (!payment.paypal_order_id) {
+      alert('Esta orden no cuenta con un identificador de PayPal asociado.');
+      return;
+    }
+    // Abrir PayPal Checkout Sandbox en una nueva pestaña para continuar la transacción
+    window.open(
+      `https://www.sandbox.paypal.com/checkoutnow?token=${payment.paypal_order_id}`,
+      '_blank'
+    );
   }
 
   getPaymentStatusBadgeClass(status: string): string {
