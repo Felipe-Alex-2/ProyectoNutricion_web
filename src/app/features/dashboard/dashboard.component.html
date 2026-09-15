@@ -661,7 +661,7 @@
               <button 
                 type="submit" 
                 class="btn-paypal-checkout" 
-                [disabled]="isCreatingPayment() || paymentForm.invalid">
+                [disabled]="isCreatingPayment()">
                 @if (isCreatingPayment()) {
                   <span class="btn-spinner"></span>
                   <span>Generando orden con PayPal...</span>

@@ -1387,13 +1387,26 @@ export class DashboardComponent implements OnInit {
   onSubmitPayment(): void {
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
+      this.paymentError.set(
+        'Por favor completa los campos requeridos arriba: Nombre del Cliente, Concepto del Servicio y Total a cobrar.'
+      );
       return;
     }
 
-    const tenantId = this.selectedPaymentTenantId();
+    let tenantId = this.selectedPaymentTenantId();
     if (!tenantId) {
-      this.paymentError.set('Por favor selecciona una sucursal para registrar el cobro.');
-      return;
+      const userTenant = this.authService.currentUser()?.tenant_id;
+      if (userTenant) {
+        tenantId = userTenant;
+      } else if (this.tenants().length > 0) {
+        tenantId = this.tenants()[0].id;
+      }
+      if (tenantId) {
+        this.selectedPaymentTenantId.set(tenantId);
+      } else {
+        this.paymentError.set('Por favor selecciona una sucursal para registrar el cobro.');
+        return;
+      }
     }
 
     this.isCreatingPayment.set(true);
@@ -1403,9 +1416,9 @@ export class DashboardComponent implements OnInit {
     const formVal = this.paymentForm.value;
     const payload = {
       tenant_id: tenantId,
-      customer_name: formVal.customer_name.trim(),
+      customer_name: formVal.customer_name ? formVal.customer_name.trim() : '',
       customer_email: formVal.customer_email ? formVal.customer_email.trim() : null,
-      concept: formVal.concept.trim(),
+      concept: formVal.concept ? formVal.concept.trim() : '',
       amount: parseFloat(formVal.amount),
       currency: 'USD',
       notes: formVal.notes ? formVal.notes.trim() : null,
@@ -1425,7 +1438,7 @@ export class DashboardComponent implements OnInit {
       error: (err) => {
         this.isCreatingPayment.set(false);
         this.paymentError.set(
-          err?.error?.detail || 'Error al generar la orden de cobro con PayPal Sandbox.'
+          err?.error?.detail || 'Error al generar la orden de cobro con PayPal Sandbox. Verifica tus credenciales o conexión.'
         );
       },
     });
