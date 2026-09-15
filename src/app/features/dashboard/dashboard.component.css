@@ -2895,5 +2895,380 @@ textarea.form-control {
   display: block;
 }
 
+/* ==========================================================================
+   Subscription Management & Pricing Styles (PayPal Sandbox)
+   ========================================================================== */
 
+.subscription-status-card {
+  padding: 24px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
 
+.sub-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sub-status-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sub-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-primary, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sub-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.sub-status-active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.sub-status-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.sub-status-cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.sub-status-expired,
+.sub-status-replaced {
+  background: rgba(107, 114, 128, 0.12);
+  color: #4b5563;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.sub-status-none {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.sub-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 18px;
+  background: var(--bg-hover, #f9fafb);
+  border-radius: var(--radius-sm, 8px);
+  margin-bottom: 16px;
+}
+
+.sub-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sub-detail-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 600;
+}
+
+.sub-detail-val {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.sub-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.btn-cancel-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-sub:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: #dc2626;
+}
+
+.btn-cancel-sub:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sub-empty-state {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg-hover, #f9fafb);
+  border-radius: var(--radius-sm, 8px);
+}
+
+/* Pricing Grid Section */
+.pricing-section-title {
+  margin: 36px 0 20px 0;
+}
+
+.pricing-section-title h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  color: var(--text-primary, #111827);
+}
+
+.pricing-section-title p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.pricing-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .pricing-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pricing-card {
+  position: relative;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 16px;
+  padding: 32px 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08);
+}
+
+.pricing-card.popular {
+  border: 2px solid var(--color-primary, #2563eb);
+  box-shadow: 0 8px 20px -2px rgba(37, 99, 235, 0.15);
+}
+
+.pricing-card.active-plan {
+  border: 2px solid #059669;
+}
+
+.popular-tag {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary, #2563eb);
+  color: #ffffff;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.pricing-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.plan-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--text-primary, #111827);
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.price-currency {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+.price-amount {
+  font-size: 2.75rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text-primary, #111827);
+  letter-spacing: -1px;
+}
+
+.price-period {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #6b7280);
+  margin-left: 4px;
+}
+
+.plan-patients {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.plan-divider {
+  height: 1px;
+  background: var(--border-color, #e5e7eb);
+  margin: 0 0 20px 0;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.plan-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+
+.plan-feature-item.included {
+  color: var(--text-primary, #1f2937);
+}
+
+.plan-feature-item.not-included {
+  color: var(--text-muted, #9ca3af);
+  text-decoration: line-through;
+}
+
+.feat-icon {
+  flex-shrink: 0;
+}
+
+.feat-icon.check {
+  color: #059669;
+}
+
+.feat-icon.cross {
+  color: #d1d5db;
+}
+
+.plan-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-plan {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-plan.subscribe {
+  background: #ffc439;
+  color: #003087;
+  box-shadow: 0 2px 4px rgba(255, 196, 57, 0.3);
+}
+
+.btn-plan.subscribe:hover:not(:disabled) {
+  background: #f2ba36;
+  transform: translateY(-1px);
+}
+
+.btn-plan.popular-btn {
+  background: #0070ba;
+  color: #ffffff;
+  box-shadow: 0 4px 8px rgba(0, 112, 186, 0.3);
+}
+
+.btn-plan.popular-btn:hover:not(:disabled) {
+  background: #005ea6;
+}
+
+.btn-plan.current {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  cursor: default;
+}
+
+.btn-plan:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.paypal-logo-svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.admin-only-notice {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted, #9ca3af);
+  text-align: center;
+}

@@ -421,6 +421,278 @@
     }
 
     <!-- ============================================================= -->
+    <!-- TAB: GESTIÓN DE SUSCRIPCIÓN (PAYPAL SANDBOX) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'suscripcion') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Suscripción • Facturación SaaS</div>
+          <h1 class="page-title">Gestión de Suscripción</h1>
+          <p class="page-subtitle">Planes de suscripción y facturación mediante PayPal Sandbox</p>
+        </div>
+        <div class="header-actions">
+          <button (click)="loadSubscriptionData()" class="btn-outline" [disabled]="isLoadingSubscription()">
+            <svg class="btn-svg-inline" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 4v6h-6"></path>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            <span>Actualizar Estado</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Feedback Messages -->
+      @if (subscriptionSuccess()) {
+        <div class="alert alert-success" style="margin-bottom: 1.5rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <span>{{ subscriptionSuccess() }}</span>
+        </div>
+      }
+
+      @if (subscriptionError()) {
+        <div class="alert alert-danger" style="margin-bottom: 1.5rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+          <span>{{ subscriptionError() }}</span>
+        </div>
+      }
+
+      <!-- Current Subscription Status Card -->
+      <div class="card subscription-status-card" style="margin-bottom: 2rem;">
+        <div class="sub-status-header">
+          <div class="sub-status-title-group">
+            <div class="sub-icon-badge">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+            </div>
+            <div>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Estado de la Suscripción</h3>
+              <p style="margin: 0.2rem 0 0 0; color: var(--text-secondary, #6b7280); font-size: 0.875rem;">
+                Organización vinculada: <strong>{{ activeTenantName() }}</strong>
+              </p>
+            </div>
+          </div>
+          @if (currentSubscription()) {
+            <span class="sub-badge" [ngClass]="getSubscriptionStatusClass(currentSubscription()!.status)">
+              {{ getSubscriptionStatusLabel(currentSubscription()!.status) }}
+            </span>
+          } @else {
+            <span class="sub-badge sub-status-none">Sin Plan Activo</span>
+          }
+        </div>
+
+        @if (currentSubscription()) {
+          <div class="sub-details-grid">
+            <div class="sub-detail-item">
+              <span class="sub-detail-label">Plan Actual</span>
+              <span class="sub-detail-val" style="color: var(--primary, #2563eb); font-weight: 700;">
+                {{ getPlanDisplayName(currentSubscription()!.plan_name) }}
+              </span>
+            </div>
+            <div class="sub-detail-item">
+              <span class="sub-detail-label">Monto</span>
+              <span class="sub-detail-val">${{ currentSubscription()!.amount }} {{ currentSubscription()!.currency }}</span>
+            </div>
+            <div class="sub-detail-item">
+              <span class="sub-detail-label">Fecha de Inicio</span>
+              <span class="sub-detail-val">{{ currentSubscription()!.started_at | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="sub-detail-item">
+              <span class="sub-detail-label">Fecha de Vencimiento</span>
+              <span class="sub-detail-val">
+                {{ currentSubscription()!.expires_at ? (currentSubscription()!.expires_at | date:'dd/MM/yyyy') : 'Indefinido' }}
+              </span>
+            </div>
+            <div class="sub-detail-item">
+              <span class="sub-detail-label">PayPal Order ID</span>
+              <span class="sub-detail-val font-mono" style="font-size: 0.8rem;">
+                {{ currentSubscription()!.paypal_order_id || 'N/A' }}
+              </span>
+            </div>
+          </div>
+
+          @if (currentSubscription()!.status === 'ACTIVE' && isAdmin()) {
+            <div class="sub-actions-row">
+              <button (click)="onCancelSubscription()" class="btn-cancel-sub" [disabled]="isLoadingSubscription()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>Cancelar Suscripción</span>
+              </button>
+            </div>
+          }
+        } @else {
+          <div class="sub-empty-state">
+            <p>Actualmente tu clínica u organización no cuenta con un plan activo. Selecciona un plan a continuación para activar los módulos profesionales mediante PayPal Sandbox.</p>
+          </div>
+        }
+      </div>
+
+      <!-- Pricing Plans Grid -->
+      <div class="pricing-section-title">
+        <h2>Planes Disponibles</h2>
+        <p>Entorno Sandbox de Pruebas • Pagos simulados con cuenta personal de prueba</p>
+      </div>
+
+      <div class="pricing-cards-grid">
+        @for (plan of subscriptionPlans(); track plan.name) {
+          <div class="pricing-card" [class.popular]="plan.name === 'PROFESIONAL'" [class.active-plan]="currentSubscription()?.plan_name === plan.name && currentSubscription()?.status === 'ACTIVE'">
+            @if (plan.name === 'PROFESIONAL') {
+              <div class="popular-tag">Más Recomendado</div>
+            }
+
+            <div class="pricing-header">
+              <h3 class="plan-name">{{ plan.display_name }}</h3>
+              <div class="plan-price">
+                <span class="price-currency">$</span>
+                <span class="price-amount">{{ plan.price }}</span>
+                <span class="price-period">/ {{ plan.period }}</span>
+              </div>
+              <p class="plan-patients">
+                @if (plan.max_patients) {
+                  Hasta <strong>{{ plan.max_patients }}</strong> pacientes
+                } @else {
+                  Pacientes <strong>Ilimitados</strong>
+                }
+              </p>
+            </div>
+
+            <div class="plan-divider"></div>
+
+            <ul class="plan-features">
+              @for (feat of plan.features; track feat.text) {
+                <li class="plan-feature-item" [class.included]="feat.included" [class.not-included]="!feat.included">
+                  @if (feat.included) {
+                    <svg class="feat-icon check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  } @else {
+                    <svg class="feat-icon cross" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  }
+                  <span>{{ feat.text }}</span>
+                </li>
+              }
+            </ul>
+
+            <div class="plan-footer">
+              @if (currentSubscription()?.plan_name === plan.name && currentSubscription()?.status === 'ACTIVE') {
+                <button class="btn-plan current" disabled>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Plan Actual</span>
+                </button>
+              } @else {
+                <button 
+                  (click)="onSubscribe(plan.name)" 
+                  class="btn-plan subscribe" 
+                  [class.popular-btn]="plan.name === 'PROFESIONAL'"
+                  [disabled]="isLoadingSubscription() || !isAdmin()">
+                  <svg class="paypal-logo-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.972.382-1.054.9l-1.116 7.106zm14.146-14.42c-.03-.178-.07-.35-.12-.516C20.31 3.518 18.253 2.5 14.88 2.5H7.784a.641.641 0 0 0-.633.74l-2.02 12.87-.29 1.848a.641.641 0 0 0 .633.74h3.693l.926-5.895c.082-.518.53-.9 1.054-.9h1.79c3.74 0 6.666-1.52 7.521-5.914.34-1.745.244-3.143-.236-4.148z"/>
+                  </svg>
+                  <span>Suscribirse con PayPal</span>
+                </button>
+              }
+              @if (!isAdmin()) {
+                <p class="admin-only-notice">Solo administradores de clínica pueden cambiar el plan.</p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Payment History Table -->
+      <div class="card" style="margin-top: 2.5rem;">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Historial de Pagos y Suscripciones</h3>
+            <p style="margin: 0.25rem 0 0; color: var(--text-secondary, #6b7280); font-size: 0.85rem;">
+              Registro de todas las transacciones generadas en la plataforma
+            </p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Plan</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Fin</th>
+                <th>PayPal Order ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (subscriptionHistory().length === 0) {
+                <tr>
+                  <td colspan="6" class="empty-table-cell">
+                    No se han registrado transacciones ni pagos todavía.
+                  </td>
+                </tr>
+              }
+              @for (item of subscriptionHistory(); track item.id) {
+                <tr>
+                  <td style="font-weight: 600;">{{ getPlanDisplayName(item.plan_name) }}</td>
+                  <td>${{ item.amount }} {{ item.currency }}</td>
+                  <td>
+                    <span class="sub-badge" [ngClass]="getSubscriptionStatusClass(item.status)">
+                      {{ getSubscriptionStatusLabel(item.status) }}
+                    </span>
+                  </td>
+                  <td>{{ item.started_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>{{ item.expires_at ? (item.expires_at | date:'dd/MM/yyyy') : '-' }}</td>
+                  <td class="font-mono" style="font-size: 0.8rem;">{{ item.paypal_order_id || '-' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB: NOTIFICACIONES -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'notificaciones') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Comunicación • Sistema</div>
+          <h1 class="page-title">Centro de Notificaciones</h1>
+          <p class="page-subtitle">Alertas del sistema, recordatorios y notificaciones de pacientes</p>
+        </div>
+      </header>
+
+      <div class="card" style="padding: 3rem; text-align: center;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-hover, #f3f4f6); margin-bottom: 1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary, #2563eb);">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </div>
+        <h3 style="margin: 0 0 0.5rem; font-size: 1.25rem;">Bandeja de Notificaciones al día</h3>
+        <p style="margin: 0; color: var(--text-secondary, #6b7280); max-width: 450px; margin: 0 auto;">
+          No tienes notificaciones pendientes en este momento. Las alertas automáticas de citas, recetas y cambios de suscripción aparecerán aquí.
+        </p>
+      </div>
+    }
+
+    <!-- ============================================================= -->
     <!-- TAB 3: GESTIONAR TENANTS (CRUD) -->
     <!-- ============================================================= -->
     @if (activeTab() === 'sprint1-tenants') {

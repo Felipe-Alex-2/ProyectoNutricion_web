@@ -42,6 +42,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'paypal-return',
+    loadComponent: () =>
+      import('./features/paypal-return/paypal-return.component').then((m) => m.PaypalReturnComponent),
+    canActivate: [authGuard],
+  },
+  {
     path: '**',
     redirectTo: 'login',
   },

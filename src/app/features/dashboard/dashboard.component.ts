@@ -15,8 +15,10 @@ import { ActivityLogService } from '../../core/services/activity-log.service';
 import { ActivityLog } from '../../core/models/activity-log.model';
 import { RecipeService } from '../../core/services/recipe.service';
 import { ClinicalService } from '../../core/services/clinical.service';
+import { SubscriptionService } from '../../core/services/subscription.service';
 import { Recipe } from '../../core/models/recipe.model';
 import { PatientAnamnesis, ClinicalRecord } from '../../core/models/clinical.model';
+import { SubscriptionPlan, Subscription, SubscriptionHistory } from '../../core/models/subscription.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -109,6 +111,14 @@ export class DashboardComponent implements OnInit {
   clinicalError = signal<string | null>(null);
   clinicalForm: FormGroup;
 
+  // Suscripción PayPal
+  subscriptionPlans = signal<SubscriptionPlan[]>([]);
+  currentSubscription = signal<Subscription | null>(null);
+  subscriptionHistory = signal<SubscriptionHistory[]>([]);
+  isLoadingSubscription = signal<boolean>(false);
+  subscriptionSuccess = signal<string | null>(null);
+  subscriptionError = signal<string | null>(null);
+
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
@@ -119,7 +129,8 @@ export class DashboardComponent implements OnInit {
     private patientLinkService: PatientLinkService,
     public activityLogService: ActivityLogService,
     public recipeService: RecipeService,
-    public clinicalService: ClinicalService
+    public clinicalService: ClinicalService,
+    private subscriptionService: SubscriptionService
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
@@ -309,6 +320,9 @@ export class DashboardComponent implements OnInit {
     }
     if (tab === 'sprint1-vinculacion') {
       this.loadPatientLinks();
+    }
+    if (tab === 'suscripcion') {
+      this.loadSubscriptionData();
     }
     this.activityLogService.recordActivity('NAVEGACION', `Navegación a la vista: ${this.getTabLabel(tab)}`, 'SISTEMA');
   }
@@ -1170,5 +1184,114 @@ export class DashboardComponent implements OnInit {
   logout(): void {
     this.activityLogService.clearLocalLogs();
     this.authService.logout();
+  }
+
+  // --- MÉTODOS DE SUSCRIPCIÓN PAYPAL ---
+
+  loadSubscriptionData(): void {
+    this.isLoadingSubscription.set(true);
+    this.subscriptionSuccess.set(null);
+    this.subscriptionError.set(null);
+
+    // Load plans
+    this.subscriptionService.getPlans().subscribe({
+      next: (plans) => this.subscriptionPlans.set(plans),
+      error: () => {},
+    });
+
+    // Load current subscription
+    this.subscriptionService.getCurrentSubscription().subscribe({
+      next: (sub) => this.currentSubscription.set(sub),
+      error: () => {},
+    });
+
+    // Load history
+    this.subscriptionService.getHistory().subscribe({
+      next: (history) => {
+        this.subscriptionHistory.set(history);
+        this.isLoadingSubscription.set(false);
+      },
+      error: () => this.isLoadingSubscription.set(false),
+    });
+  }
+
+  onSubscribe(planName: string): void {
+    this.subscriptionError.set(null);
+    this.subscriptionSuccess.set(null);
+    this.isLoadingSubscription.set(true);
+
+    this.subscriptionService.createOrder(planName).subscribe({
+      next: (response) => {
+        this.isLoadingSubscription.set(false);
+        // Redirect to PayPal checkout
+        window.location.href = response.approval_url;
+      },
+      error: (err) => {
+        this.isLoadingSubscription.set(false);
+        this.subscriptionError.set(
+          err?.error?.detail || 'Error al crear la orden de PayPal. Intenta de nuevo.'
+        );
+      },
+    });
+  }
+
+  onCancelSubscription(): void {
+    if (!confirm('¿Estás seguro de cancelar tu suscripción activa? Perderás acceso a las funcionalidades premium.')) {
+      return;
+    }
+
+    this.isLoadingSubscription.set(true);
+    this.subscriptionService.cancelSubscription().subscribe({
+      next: (sub) => {
+        this.currentSubscription.set(null);
+        this.subscriptionSuccess.set('Suscripción cancelada exitosamente.');
+        this.activityLogService.recordActivity('SUSCRIPCION_CANCELADA', `Se canceló la suscripción plan ${sub.plan_name}`, 'SISTEMA');
+        this.loadSubscriptionData();
+      },
+      error: (err) => {
+        this.isLoadingSubscription.set(false);
+        this.subscriptionError.set(err?.error?.detail || 'Error al cancelar la suscripción.');
+      },
+    });
+  }
+
+  getSubscriptionStatusClass(status: string): string {
+    switch (status) {
+      case 'ACTIVE': return 'sub-status-active';
+      case 'PENDING': return 'sub-status-pending';
+      case 'CANCELLED': return 'sub-status-cancelled';
+      case 'EXPIRED': return 'sub-status-expired';
+      case 'REPLACED': return 'sub-status-replaced';
+      default: return 'sub-status-default';
+    }
+  }
+
+  getSubscriptionStatusLabel(status: string): string {
+    switch (status) {
+      case 'ACTIVE': return 'Activa';
+      case 'PENDING': return 'Pendiente';
+      case 'CANCELLED': return 'Cancelada';
+      case 'EXPIRED': return 'Expirada';
+      case 'REPLACED': return 'Reemplazada';
+      case 'FAILED': return 'Fallida';
+      default: return status;
+    }
+  }
+
+  getPlanDisplayName(name: string): string {
+    switch (name) {
+      case 'BASICO': return 'Básico';
+      case 'PROFESIONAL': return 'Profesional';
+      case 'PREMIUM': return 'Premium';
+      default: return name;
+    }
+  }
+
+  isAdmin(): boolean {
+    return this.isSaasAdmin() || this.isOrgAdmin();
+  }
+
+  activeTenantName(): string {
+    return this.getMyOrgName();
   }
 }
