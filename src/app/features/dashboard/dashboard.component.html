@@ -61,7 +61,10 @@
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
-          <span>Notificaciones</span>
+          <span style="flex: 1; text-align: left;">Notificaciones</span>
+          @if (unreadNotificationCount() > 0) {
+            <span class="nav-notification-badge">{{ unreadNotificationCount() }}</span>
+          }
         </button>
 
         <!-- Acordeón Sprint 1: Solo visible para roles administrativos y especialistas -->
@@ -171,6 +174,19 @@
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
                   </svg>
                   <span>Historial Clínico</span>
+                </button>
+
+                <button 
+                  class="nav-item sub-item" 
+                  [class.active]="activeTab() === 'citas'"
+                  (click)="setActiveTab('citas')">
+                  <svg class="sub-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span>Gestión de Citas</span>
                 </button>
               </div>
             }
@@ -809,8 +825,10 @@
                         {{ getPaymentStatusBadgeLabel(p.status) }}
                       </span>
                     </td>
-                    <td class="font-mono" style="font-size: 0.75rem;">
-                      {{ p.paypal_order_id || (p.payment_method === 'EFECTIVO' ? 'Caja Local' : '-') }}
+                    <td>
+                      <div class="pos-ref-cell" [title]="p.paypal_order_id || (p.payment_method === 'EFECTIVO' ? 'Caja Local' : '')">
+                        {{ p.paypal_order_id || (p.payment_method === 'EFECTIVO' ? 'Caja Local' : '-') }}
+                      </div>
                     </td>
                     <td>
                       @if (p.status === 'PENDING') {
@@ -862,23 +880,121 @@
       <header class="workspace-header">
         <div>
           <div class="header-tag">Comunicación • Sistema</div>
-          <h1 class="page-title">Centro de Notificaciones</h1>
-          <p class="page-subtitle">Alertas del sistema, recordatorios y notificaciones de pacientes</p>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <h1 class="page-title">Centro de Notificaciones</h1>
+            @if (unreadNotificationCount() > 0) {
+              <span class="badge-count-header">{{ unreadNotificationCount() }} pendientes</span>
+            }
+          </div>
+          <p class="page-subtitle">Alertas en tiempo real de citas programadas, confirmaciones y actualizaciones</p>
+        </div>
+        <div class="header-actions">
+          @if (unreadNotificationCount() > 0) {
+            <button (click)="markAllNotificationsAsRead()" class="btn-outline">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Marcar todas como leídas</span>
+            </button>
+          }
+          <button (click)="loadNotifications()" class="btn-outline" title="Recargar notificaciones">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l6 6"/>
+            </svg>
+            <span>Actualizar</span>
+          </button>
         </div>
       </header>
 
-      <div class="card" style="padding: 3rem; text-align: center;">
-        <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-hover, #f3f4f6); margin-bottom: 1rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary, #2563eb);">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
+      @if (isLoadingNotifications()) {
+        <div class="card" style="padding: 3rem; text-align: center;">
+          <div class="spinner"></div>
+          <p style="margin-top: 1rem; color: var(--text-secondary);">Cargando notificaciones...</p>
         </div>
-        <h3 style="margin: 0 0 0.5rem; font-size: 1.25rem;">Bandeja de Notificaciones al día</h3>
-        <p style="margin: 0; color: var(--text-secondary, #6b7280); max-width: 450px; margin: 0 auto;">
-          No tienes notificaciones pendientes en este momento. Las alertas automáticas de citas, recetas y cambios de suscripción aparecerán aquí.
-        </p>
-      </div>
+      } @else if (notifications().length === 0) {
+        <div class="card" style="padding: 3.5rem; text-align: center;">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-hover, #f3f4f6); margin-bottom: 1rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary, #2563eb);">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </div>
+          <h3 style="margin: 0 0 0.5rem; font-size: 1.25rem;">Bandeja de Notificaciones al día</h3>
+          <p style="margin: 0; color: var(--text-secondary, #6b7280); max-width: 450px; margin: 0 auto;">
+            No tienes notificaciones en este momento. Las solicitudes de citas agendadas por clientes en el móvil aparecerán aquí inmediatamente.
+          </p>
+        </div>
+      } @else {
+        <div class="notifications-list">
+          @for (notif of notifications(); track notif.id) {
+            <div class="notification-card" [class.unread]="!notif.is_read">
+              <div class="notif-icon-col">
+                @if (notif.type === 'CITA_CREADA') {
+                  <div class="notif-badge-icon notif-badge-pending">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                } @else if (notif.type === 'CITA_CONFIRMADA') {
+                  <div class="notif-badge-icon notif-badge-confirmed">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </div>
+                } @else if (notif.type === 'CITA_CANCELADA') {
+                  <div class="notif-badge-icon notif-badge-cancelled">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                  </div>
+                } @else {
+                  <div class="notif-badge-icon notif-badge-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                  </div>
+                }
+              </div>
+
+              <div class="notif-content-col">
+                <div class="notif-header-line">
+                  <span class="notif-title">{{ notif.title }}</span>
+                  @if (!notif.is_read) {
+                    <span class="unread-dot-badge">Nueva</span>
+                  }
+                  <span class="notif-time">{{ formatDateTime(notif.created_at) }}</span>
+                </div>
+                <p class="notif-message">{{ notif.message }}</p>
+              </div>
+
+              <div class="notif-action-col">
+                @if (!notif.is_read) {
+                  <button (click)="markNotificationAsRead(notif)" class="btn-read" title="Marcar como leída">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>Leída</span>
+                  </button>
+                } @else {
+                  <span class="read-check-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Vista
+                  </span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
     }
 
     <!-- ============================================================= -->
@@ -1705,6 +1821,310 @@
                   }
                 </div>
               }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- TAB: GESTIÓN DE CITAS (SPRINT 2) -->
+    <!-- ============================================================= -->
+    @if (activeTab() === 'citas') {
+      <header class="workspace-header">
+        <div>
+          <div class="header-tag">Sprint 2 • Consultas & Agenda</div>
+          <h1 class="page-title">Gestión de Citas</h1>
+          <p class="page-subtitle">Monitorea, confirma o cancela las citas médicas y nutricionales solicitadas por clientes</p>
+        </div>
+        <div class="header-actions">
+          <button (click)="loadAppointments()" class="btn-outline" title="Actualizar listado de citas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l6 6"/>
+            </svg>
+            <span>Actualizar</span>
+          </button>
+        </div>
+      </header>
+
+      @if (appointmentSuccess()) {
+        <div class="alert alert-success mb-4">{{ appointmentSuccess() }}</div>
+      }
+      @if (appointmentError()) {
+        <div class="alert alert-error mb-4">{{ appointmentError() }}</div>
+      }
+
+      <!-- Métricas de Citas -->
+      <div class="metrics-grid mb-4">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Total Citas</span>
+            <div class="metric-icon-circle icon-total">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value">{{ totalAppointmentsCount }}</div>
+          <div class="metric-hint">Registradas en el sistema</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Pendientes</span>
+            <div class="metric-icon-circle icon-pending">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" style="color: #d97706;">{{ pendingAppointmentsCount }}</div>
+          <div class="metric-hint">Requieren confirmación</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Confirmadas</span>
+            <div class="metric-icon-circle icon-confirmed">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" style="color: #059669;">{{ confirmedAppointmentsCount }}</div>
+          <div class="metric-hint">Agendadas formalmente</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Canceladas</span>
+            <div class="metric-icon-circle icon-cancelled">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+            </div>
+          </div>
+          <div class="metric-value" style="color: #dc2626;">{{ cancelledAppointmentsCount }}</div>
+          <div class="metric-hint">Canceladas con motivo</div>
+        </div>
+      </div>
+
+      <!-- Filtros de Estado -->
+      <div class="pos-filters-bar mb-3">
+        <button 
+          class="filter-pill" 
+          [class.active]="selectedAppointmentStatus() === 'ALL'"
+          (click)="setAppointmentStatusFilter('ALL')">
+          Todas ({{ totalAppointmentsCount }})
+        </button>
+        <button 
+          class="filter-pill pill-pending" 
+          [class.active]="selectedAppointmentStatus() === 'PENDING'"
+          (click)="setAppointmentStatusFilter('PENDING')">
+          Pendientes ({{ pendingAppointmentsCount }})
+        </button>
+        <button 
+          class="filter-pill pill-confirmed" 
+          [class.active]="selectedAppointmentStatus() === 'CONFIRMED'"
+          (click)="setAppointmentStatusFilter('CONFIRMED')">
+          Confirmadas ({{ confirmedAppointmentsCount }})
+        </button>
+        <button 
+          class="filter-pill pill-cancelled" 
+          [class.active]="selectedAppointmentStatus() === 'CANCELLED'"
+          (click)="setAppointmentStatusFilter('CANCELLED')">
+          Canceladas ({{ cancelledAppointmentsCount }})
+        </button>
+      </div>
+
+      <!-- Tabla de Citas -->
+      <div class="card p-0 overflow-hidden">
+        @if (isLoadingAppointments()) {
+          <div style="padding: 3rem; text-align: center;">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: var(--text-secondary);">Cargando citas programadas...</p>
+          </div>
+        } @else if (appointments().length === 0) {
+          <div style="padding: 3.5rem; text-align: center;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-hover, #f3f4f6); margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <h3 style="margin: 0 0 0.5rem; font-size: 1.25rem;">No hay citas registradas</h3>
+            <p style="margin: 0; color: var(--text-secondary); max-width: 420px; margin: 0 auto;">
+              No se encontraron citas con el filtro seleccionado. Cuando los pacientes soliciten una cita desde su teléfono móvil aparecerán en este panel.
+            </p>
+          </div>
+        } @else {
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha y Hora</th>
+                  <th>Paciente</th>
+                  <th>Especialista</th>
+                  <th>Motivo de Consulta</th>
+                  <th>Estado</th>
+                  <th style="text-align: right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (appt of appointments(); track appt.id) {
+                  <tr>
+                    <td>
+                      <div class="date-cell">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7;">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span class="font-medium">{{ formatDateTime(appt.scheduled_at) }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="customer-cell">
+                        <span class="customer-name">{{ appt.patient_name || 'Paciente anónimo' }}</span>
+                        @if (appt.patient_email) {
+                          <span class="customer-email">{{ appt.patient_email }}</span>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      <div class="specialist-cell">
+                        <span class="font-medium">{{ appt.nutritionist_name || 'Sin asignar' }}</span>
+                        @if (appt.tenant_name) {
+                          <span class="text-xs text-secondary">{{ appt.tenant_name }}</span>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      <div class="reason-cell">
+                        <span>{{ appt.reason || 'Consulta general' }}</span>
+                        @if (appt.status === 'CANCELLED' && appt.cancellation_reason) {
+                          <div class="cancellation-note">
+                            <strong>Motivo cancelación:</strong> {{ appt.cancellation_reason }}
+                          </div>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getAppointmentBadgeClass(appt.status)">
+                        {{ getAppointmentBadgeLabel(appt.status) }}
+                      </span>
+                    </td>
+                    <td style="text-align: right;">
+                      <div class="action-buttons-group">
+                        @if (appt.status === 'PENDING') {
+                          <button 
+                            (click)="confirmAppointment(appt)" 
+                            class="btn-action-confirm"
+                            title="Confirmar cita y notificar al paciente">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Confirmar
+                          </button>
+                          <button 
+                            (click)="openCancelAppointmentModal(appt)" 
+                            class="btn-action-cancel"
+                            title="Cancelar cita con motivo">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            Cancelar
+                          </button>
+                        } @else if (appt.status === 'CONFIRMED') {
+                          <button 
+                            (click)="openCancelAppointmentModal(appt)" 
+                            class="btn-action-cancel"
+                            title="Cancelar cita previamente confirmada">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            Cancelar
+                          </button>
+                        } @else {
+                          <span class="text-xs text-secondary">Sin acciones</span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: CANCELAR CITA CON MOTIVO -->
+    <!-- ============================================================= -->
+    @if (cancelModalOpen()) {
+      <div class="modal-backdrop" (click)="closeCancelAppointmentModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 520px;">
+          <div class="modal-header">
+            <h3>Cancelar Cita Programada</h3>
+            <button class="modal-close" (click)="closeCancelAppointmentModal()">✕</button>
+          </div>
+
+          @if (appointmentToCancel()) {
+            <div class="modal-body-cancellation">
+              <div class="cancellation-info-box mb-3">
+                <div class="info-row">
+                  <span class="info-label">Paciente:</span>
+                  <span class="info-val font-bold">{{ appointmentToCancel()?.patient_name || 'Paciente' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Fecha y Hora:</span>
+                  <span class="info-val">{{ formatDateTime(appointmentToCancel()!.scheduled_at) }}</span>
+                </div>
+                @if (appointmentToCancel()?.reason) {
+                  <div class="info-row">
+                    <span class="info-label">Motivo Inicial:</span>
+                    <span class="info-val">{{ appointmentToCancel()?.reason }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label" style="font-weight: 600;">Motivo de la Cancelación *</label>
+                <textarea 
+                  class="form-control" 
+                  rows="3" 
+                  [value]="cancelReason()"
+                  (input)="onCancelReasonChange($event)"
+                  placeholder="Explica el motivo por el cual no es posible atender la cita en este horario (ej. Inconveniente de fuerza mayor, reprogramación solicitada, etc.)">
+                </textarea>
+                <span class="text-xs text-secondary mt-1 d-block">
+                  Esta explicación se enviará como notificación directa al teléfono móvil del paciente.
+                </span>
+              </div>
+
+              <div class="modal-actions-flex">
+                <button (click)="closeCancelAppointmentModal()" class="btn-outline" [disabled]="cancellingAppointment()">
+                  Volver
+                </button>
+                <button (click)="submitCancelAppointment()" class="btn-danger" [disabled]="cancellingAppointment()">
+                  @if (cancellingAppointment()) {
+                    <span>Cancelando...</span>
+                  } @else {
+                    <span>Confirmar Cancelación</span>
+                  }
+                </button>
+              </div>
             </div>
           }
         </div>

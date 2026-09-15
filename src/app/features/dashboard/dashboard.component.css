@@ -241,9 +241,11 @@
 /* Main Workspace */
 .main-workspace {
   flex: 1;
-  padding: 36px 40px;
+  padding: 32px 36px;
   overflow-y: auto;
-  max-width: 1400px;
+  width: 100%;
+  max-width: 1800px;
+  box-sizing: border-box;
 }
 
 .workspace-header {
@@ -3445,14 +3447,16 @@ textarea.form-control {
 /* POS Main Grid: Terminal + History */
 .pos-main-grid {
   display: grid;
-  grid-template-columns: 420px 1fr;
+  grid-template-columns: 360px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+  width: 100%;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1240px) {
   .pos-main-grid {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
 }
 
@@ -3463,6 +3467,55 @@ textarea.form-control {
   border-radius: var(--radius-md, 12px);
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.pos-history-card {
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.pos-history-card .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+  margin-top: 8px;
+}
+
+.pos-history-card .data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pos-history-card .data-table th {
+  padding: 12px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  background: var(--bg-pill-hover);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.pos-history-card .data-table td {
+  padding: 12px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.pos-ref-cell {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace, monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
 }
 
 .pos-card-title-group {
@@ -3873,4 +3926,326 @@ textarea.form-control {
   color: #003087;
   border: 1px solid rgba(0, 48, 135, 0.2);
 }
+
+/* =============================================================
+   NOTIFICACIONES: BADGES, LISTADO Y TARJETAS INTERACTIVAS
+   ============================================================= */
+.nav-notification-badge {
+  background-color: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+  animation: pulse-soft 2s infinite ease-in-out;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.badge-count-header {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.notification-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.notification-card.unread {
+  background-color: rgba(37, 99, 235, 0.03);
+  border-left: 4px solid var(--primary);
+}
+
+.notif-icon-col {
+  flex-shrink: 0;
+}
+
+.notif-badge-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-badge-pending {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+}
+
+.notif-badge-confirmed {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+}
+
+.notif-badge-cancelled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.notif-badge-info {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.notif-content-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-header-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.notif-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.unread-dot-badge {
+  background: #2563eb;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.notif-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.notif-message {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.notif-action-col {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.btn-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background-color: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-read:hover {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.read-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+/* =============================================================
+   GESTIÓN DE CITAS: MÉTRICAS, ESTADOS Y ACCIONES
+   ============================================================= */
+.icon-total {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.icon-pending {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+}
+
+.icon-confirmed {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+}
+
+.icon-cancelled {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.filter-pill.pill-pending.active {
+  background-color: #d97706;
+  border-color: #d97706;
+  color: white;
+}
+
+.filter-pill.pill-confirmed.active {
+  background-color: #059669;
+  border-color: #059669;
+  color: white;
+}
+
+.filter-pill.pill-cancelled.active {
+  background-color: #dc2626;
+  border-color: #dc2626;
+  color: white;
+}
+
+.badge-appt-pending {
+  background: rgba(217, 119, 6, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+.badge-appt-confirmed {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+}
+
+.badge-appt-cancelled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.btn-action-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background-color: #059669;
+  color: white;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action-confirm:hover {
+  background-color: #047857;
+  transform: translateY(-1px);
+}
+
+.btn-action-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action-cancel:hover {
+  background-color: rgba(220, 38, 38, 0.08);
+  border-color: #dc2626;
+}
+
+.action-buttons-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancellation-note {
+  font-size: 11px;
+  color: #dc2626;
+  margin-top: 4px;
+  padding: 3px 6px;
+  background: rgba(220, 38, 38, 0.06);
+  border-radius: 4px;
+}
+
+.cancellation-info-box {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  color: var(--text-secondary);
+}
+
+.info-val {
+  color: var(--text-primary);
+}
+
+.modal-actions-flex {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 

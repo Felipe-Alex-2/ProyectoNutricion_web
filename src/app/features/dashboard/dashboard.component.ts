@@ -21,6 +21,10 @@ import { Recipe } from '../../core/models/recipe.model';
 import { PatientAnamnesis, ClinicalRecord } from '../../core/models/clinical.model';
 import { SubscriptionPlan, Subscription, SubscriptionHistory } from '../../core/models/subscription.model';
 import { Payment, PaymentStats } from '../../core/models/payment.model';
+import { Appointment, AppointmentCreate, AppointmentCancel, Nutritionist } from '../../core/models/appointment.model';
+import { AppointmentService } from '../../core/services/appointment.service';
+import { Notification } from '../../core/models/notification.model';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -133,6 +137,22 @@ export class DashboardComponent implements OnInit {
   lastCreatedApprovalUrl = signal<string | null>(null);
   paymentForm: FormGroup;
 
+  // Citas Médicas y Nutricionales
+  appointments = signal<Appointment[]>([]);
+  selectedAppointmentStatus = signal<string>('ALL');
+  isLoadingAppointments = signal<boolean>(false);
+  appointmentSuccess = signal<string | null>(null);
+  appointmentError = signal<string | null>(null);
+  cancelModalOpen = signal<boolean>(false);
+  appointmentToCancel = signal<Appointment | null>(null);
+  cancelReason = signal<string>('');
+  cancellingAppointment = signal<boolean>(false);
+
+  // Centro de Notificaciones
+  notifications = signal<Notification[]>([]);
+  unreadNotificationCount = signal<number>(0);
+  isLoadingNotifications = signal<boolean>(false);
+
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
@@ -145,7 +165,9 @@ export class DashboardComponent implements OnInit {
     public recipeService: RecipeService,
     public clinicalService: ClinicalService,
     private subscriptionService: SubscriptionService,
-    private paymentService: PaymentService
+    private paymentService: PaymentService,
+    private appointmentService: AppointmentService,
+    private notificationService: NotificationService
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
@@ -227,6 +249,8 @@ export class DashboardComponent implements OnInit {
     this.loadPatientLinks();
     this.loadActivityLogs();
     this.loadRecipes();
+    this.loadNotificationCount();
+    this.loadAppointments();
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
   }
 
@@ -307,6 +331,7 @@ export class DashboardComponent implements OnInit {
     this.closeTenantModal();
     this.closeRolePermissionsModal();
     this.closeUserModal();
+    this.closeCancelAppointmentModal();
   }
 
   setActiveTab(tab: string): void {
@@ -348,6 +373,13 @@ export class DashboardComponent implements OnInit {
     if (tab === 'suscripcion') {
       this.loadPaymentData();
       this.loadSubscriptionData();
+    }
+    if (tab === 'citas') {
+      this.loadAppointments();
+    }
+    if (tab === 'notificaciones') {
+      this.loadNotifications();
+      this.loadNotificationCount();
     }
     this.activityLogService.recordActivity('NAVEGACION', `Navegación a la vista: ${this.getTabLabel(tab)}`, 'SISTEMA');
   }
@@ -429,6 +461,8 @@ export class DashboardComponent implements OnInit {
         return 'Recetario & Macros';
       case 'historial-clinico':
         return 'Historial Clínico';
+      case 'citas':
+        return 'Gestión de Citas';
       default:
         return tab;
     }
@@ -1553,6 +1587,194 @@ export class DashboardComponent implements OnInit {
   getPaymentMethodBadgeLabel(method?: string): string {
     const m = (method || 'PAYPAL').toUpperCase();
     return m === 'EFECTIVO' ? 'Efectivo' : 'PayPal';
+  }
+
+  // ==========================================
+  // MÉTODOS DE CITAS MÉDICAS / NUTRICIONALES
+  // ==========================================
+  loadAppointments(): void {
+    this.isLoadingAppointments.set(true);
+    this.appointmentError.set(null);
+    const tenantId = this.isOrgAdmin()
+      ? this.authService.currentUser()?.tenant_id || undefined
+      : (this.selectedPaymentTenantId() || undefined);
+
+    this.appointmentService.getAppointments(this.selectedAppointmentStatus(), tenantId).subscribe({
+      next: (data) => {
+        this.appointments.set(data);
+        this.isLoadingAppointments.set(false);
+      },
+      error: (err) => {
+        this.appointmentError.set(err?.error?.detail || 'Error al cargar las citas.');
+        this.isLoadingAppointments.set(false);
+      },
+    });
+  }
+
+  setAppointmentStatusFilter(status: string): void {
+    this.selectedAppointmentStatus.set(status);
+    this.loadAppointments();
+  }
+
+  confirmAppointment(appointment: Appointment): void {
+    const timeFormatted = this.formatDateTime(appointment.scheduled_at);
+    if (!confirm(`¿Deseas confirmar la cita con ${appointment.patient_name || 'el paciente'} para el ${timeFormatted}?`)) {
+      return;
+    }
+    this.appointmentError.set(null);
+    this.appointmentSuccess.set(null);
+    this.appointmentService.confirmAppointment(appointment.id).subscribe({
+      next: (updated) => {
+        this.appointmentSuccess.set(`¡Cita confirmada con éxito! Se ha notificado a ${updated.patient_name || 'el paciente'}.`);
+        this.loadAppointments();
+        this.loadNotificationCount();
+        this.activityLogService.recordActivity('CONFIRMAR_CITA', `Cita confirmada para ${updated.patient_name}`, 'SISTEMA');
+        setTimeout(() => this.appointmentSuccess.set(null), 6000);
+      },
+      error: (err) => {
+        this.appointmentError.set(err?.error?.detail || 'Error al confirmar la cita.');
+      },
+    });
+  }
+
+  openCancelAppointmentModal(appointment: Appointment): void {
+    this.appointmentToCancel.set(appointment);
+    this.cancelReason.set('');
+    this.cancelModalOpen.set(true);
+  }
+
+  closeCancelAppointmentModal(): void {
+    this.cancelModalOpen.set(false);
+    this.appointmentToCancel.set(null);
+    this.cancelReason.set('');
+  }
+
+  onCancelReasonChange(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.cancelReason.set(target.value);
+  }
+
+  submitCancelAppointment(): void {
+    const appt = this.appointmentToCancel();
+    if (!appt) return;
+
+    this.cancellingAppointment.set(true);
+    this.appointmentError.set(null);
+    this.appointmentSuccess.set(null);
+
+    const reason = this.cancelReason().trim() || 'Cancelada por el administrador/nutricionista';
+    this.appointmentService.cancelAppointment(appt.id, reason).subscribe({
+      next: (cancelled) => {
+        this.cancellingAppointment.set(false);
+        this.closeCancelAppointmentModal();
+        this.appointmentSuccess.set(`La cita ha sido cancelada. Se ha enviado notificación a ${cancelled.patient_name || 'el paciente'} con el motivo especificado.`);
+        this.loadAppointments();
+        this.loadNotificationCount();
+        this.activityLogService.recordActivity('CANCELAR_CITA', `Cita cancelada para ${cancelled.patient_name}`, 'SISTEMA');
+        setTimeout(() => this.appointmentSuccess.set(null), 6000);
+      },
+      error: (err) => {
+        this.cancellingAppointment.set(false);
+        this.appointmentError.set(err?.error?.detail || 'Error al cancelar la cita.');
+      },
+    });
+  }
+
+  get totalAppointmentsCount(): number {
+    return this.appointments().length;
+  }
+
+  get pendingAppointmentsCount(): number {
+    return this.appointments().filter((a) => a.status === 'PENDING').length;
+  }
+
+  get confirmedAppointmentsCount(): number {
+    return this.appointments().filter((a) => a.status === 'CONFIRMED').length;
+  }
+
+  get cancelledAppointmentsCount(): number {
+    return this.appointments().filter((a) => a.status === 'CANCELLED').length;
+  }
+
+  getAppointmentBadgeClass(status: string): string {
+    switch (status) {
+      case 'PENDING': return 'badge-appt-pending';
+      case 'CONFIRMED': return 'badge-appt-confirmed';
+      case 'CANCELLED': return 'badge-appt-cancelled';
+      default: return '';
+    }
+  }
+
+  getAppointmentBadgeLabel(status: string): string {
+    switch (status) {
+      case 'PENDING': return 'Pendiente';
+      case 'CONFIRMED': return 'Confirmada';
+      case 'CANCELLED': return 'Cancelada';
+      default: return status;
+    }
+  }
+
+  formatDateTime(dateStr: string): string {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  // ==========================================
+  // MÉTODOS DE NOTIFICACIONES Y ALERTAS
+  // ==========================================
+  loadNotificationCount(): void {
+    this.notificationService.getUnreadCount().subscribe({
+      next: (res) => {
+        this.unreadNotificationCount.set(res.unread_count);
+      },
+      error: () => {},
+    });
+  }
+
+  loadNotifications(): void {
+    this.isLoadingNotifications.set(true);
+    this.notificationService.getMyNotifications(50).subscribe({
+      next: (list) => {
+        this.notifications.set(list);
+        this.isLoadingNotifications.set(false);
+        this.loadNotificationCount();
+      },
+      error: () => {
+        this.isLoadingNotifications.set(false);
+      },
+    });
+  }
+
+  markNotificationAsRead(notif: Notification): void {
+    if (notif.is_read) return;
+    this.notificationService.markAsRead(notif.id).subscribe({
+      next: () => {
+        notif.is_read = true;
+        this.notifications.update((list) => [...list]);
+        this.unreadNotificationCount.update((c) => Math.max(0, c - 1));
+      },
+      error: () => {},
+    });
+  }
+
+  markAllNotificationsAsRead(): void {
+    this.notificationService.markAllAsRead().subscribe({
+      next: () => {
+        this.notifications.update((list) =>
+          list.map((n) => ({ ...n, is_read: true }))
+        );
+        this.unreadNotificationCount.set(0);
+      },
+      error: () => {},
+    });
   }
 }
 
