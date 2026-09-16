@@ -419,8 +419,8 @@
               @for (log of activityLogService.logs(); track log.id || $index) {
                 <tr>
                   <td class="cell-time">
-                    <span class="time-exact">{{ log.created_at | date:'HH:mm:ss' }}</span>
-                    <span class="date-sub">{{ log.created_at | date:'dd/MM/yyyy' }}</span>
+                    <span class="time-exact">{{ log.created_at | date:'HH:mm:ss':'-0400' }}</span>
+                    <span class="date-sub">{{ log.created_at | date:'dd/MM/yyyy':'-0400' }}</span>
                   </td>
                   <td>
                     <span class="act-badge" [ngClass]="getActionBadgeClass(log.action)">
