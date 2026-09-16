@@ -124,5 +124,12 @@ export class AuthService {
       })
     );
   }
+
+  verifyDeveloperKey(developerKey: string): Observable<{ valid: boolean; message: string }> {
+    return this.http.post<{ valid: boolean; message: string }>(
+      `${this.baseUrl}/auth/verify-developer-key`,
+      { developer_key: developerKey }
+    );
+  }
 }
 

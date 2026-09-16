@@ -65,4 +65,17 @@ export class ClinicalService {
       })
     );
   }
+
+  getAiRecommendations(patientId: string): Observable<any> {
+    this.isLoading.set(true);
+    return this.http.get<any>(`${this.apiUrl}/patients/${patientId}/ai-recommendations`).pipe(
+      tap({
+        next: () => this.isLoading.set(false),
+        error: (err) => {
+          this.errorMessage.set(err?.error?.detail || 'Error al obtener recomendaciones de IA');
+          this.isLoading.set(false);
+        }
+      })
+    );
+  }
 }

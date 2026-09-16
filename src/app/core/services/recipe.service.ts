@@ -86,4 +86,8 @@ export class RecipeService {
       })
     );
   }
+
+  assignRecipe(recipeId: string, patientId: string): Observable<Recipe> {
+    return this.http.post<Recipe>(`${this.apiUrl}/${recipeId}/assign/${patientId}`, {});
+  }
 }

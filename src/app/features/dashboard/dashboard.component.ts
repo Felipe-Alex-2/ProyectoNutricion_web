@@ -25,6 +25,14 @@ import { Appointment, AppointmentCreate, AppointmentCancel, Nutritionist } from 
 import { AppointmentService } from '../../core/services/appointment.service';
 import { Notification } from '../../core/models/notification.model';
 import { NotificationService } from '../../core/services/notification.service';
+import { PatientService } from '../../core/services/patient.service';
+import { BackupService } from '../../core/services/backup.service';
+import { ReportService } from '../../core/services/report.service';
+import { PatientListItem, UserUpdate } from '../../core/models/user.model';
+import { BackupSetting, BackupLog } from '../../core/models/backup.model';
+import { ReportEntityMeta, ReportQueryResponse } from '../../core/models/report.model';
+import { AIRecommendationResponse } from '../../core/models/ai-recommendation.model';
+
 
 @Component({
   selector: 'app-dashboard',
@@ -43,9 +51,53 @@ export class DashboardComponent implements OnInit, OnDestroy {
   activeTab = signal<string>('principal');
   waterIntake = signal<number>(1200);
 
-  // Bitácora de Actividades (Auditoría)
+  // Bitácora de Actividades (Auditoría) con Llave de Seguridad Confidencial
   activitySearch = signal<string>('');
   activityCategoryFilter = signal<string>('');
+  bitacoraUnlocked = signal<boolean>(false);
+  bitacoraKeyInput = signal<string>('');
+  bitacoraKeyError = signal<string | null>(null);
+  isVerifyingBitacoraKey = signal<boolean>(false);
+
+  // Módulo de Clientes (Pacientes)
+  patientForm: FormGroup;
+  editingPatient = signal<PatientListItem | null>(null);
+  patientEditModalOpen = signal<boolean>(false);
+  deletingPatient = signal<PatientListItem | null>(null);
+  patientDeleteModalOpen = signal<boolean>(false);
+  patientSearch = signal<string>('');
+  patientStatusFilter = signal<string>('');
+  patientSuccess = signal<string | null>(null);
+  patientError = signal<string | null>(null);
+
+  // Módulo Asistente Inteligente IA (Recomendación Nutricional)
+  aiModalOpen = signal<boolean>(false);
+  selectedPatientForAi = signal<PatientListItem | null>(null);
+  aiRecommendations = signal<AIRecommendationResponse | null>(null);
+  isLoadingAi = signal<boolean>(false);
+  aiError = signal<string | null>(null);
+  aiAssignSuccess = signal<string | null>(null);
+
+  // Módulo de Reportes Dinámicos
+  selectedReportEntity = signal<string>('patients');
+  selectedReportColumns = signal<string[]>([]);
+  reportStartDate = signal<string>('');
+  reportEndDate = signal<string>('');
+  reportStatusFilter = signal<string>('');
+  reportSearch = signal<string>('');
+  reportPreviewData = signal<ReportQueryResponse | null>(null);
+  isLoadingReport = signal<boolean>(false);
+  isExportingReport = signal<boolean>(false);
+  reportMessage = signal<string | null>(null);
+  reportError = signal<string | null>(null);
+
+  // Módulo de Copias de Seguridad (Backup)
+  backupForm: FormGroup;
+  backupSuccess = signal<string | null>(null);
+  backupError = signal<string | null>(null);
+  selectedRestoreFile: File | null = null;
+  restoreModalOpen = signal<boolean>(false);
+  isRestoringBackup = signal<boolean>(false);
 
   // Acordeón Sprint 1
   sprint1Expanded = signal<boolean>(true);
@@ -174,11 +226,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private subscriptionService: SubscriptionService,
     private paymentService: PaymentService,
     private appointmentService: AppointmentService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    public patientService: PatientService,
+    public backupService: BackupService,
+    public reportService: ReportService
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
+      phone: [''],
+      developer_key: [''],
+    });
+
+    this.patientForm = this.fb.group({
+      full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
+      email: ['', [Validators.required, Validators.email]],
+      phone: [''],
+      is_active: [true],
+    });
+
+    this.backupForm = this.fb.group({
+      auto_backup_enabled: [false],
+      frequency_hours: [24, [Validators.required, Validators.min(1)]],
+      retention_days: [30, [Validators.required, Validators.min(1)]],
     });
 
     this.paymentForm = this.fb.group({
@@ -277,6 +347,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.editForm.patchValue({
       full_name: user.full_name,
       email: user.email,
+      phone: user.phone || '',
+      developer_key: '',
     });
   }
 
@@ -314,11 +386,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.updateSuccess.set(null);
     this.updateError.set(null);
 
-    this.authService.updateProfile(this.editForm.value).subscribe({
+    const formVal = this.editForm.value;
+    const payload: UserUpdate = {
+      full_name: formVal.full_name,
+      email: formVal.email,
+      phone: formVal.phone,
+    };
+    if (formVal.developer_key && formVal.developer_key.trim()) {
+      payload.developer_key = formVal.developer_key.trim();
+    }
+
+    this.authService.updateProfile(payload).subscribe({
       next: () => {
         this.updateSuccess.set('¡Perfil actualizado correctamente!');
         this.isEditing.set(false);
-        this.activityLogService.recordActivity('ACTUALIZAR_PERFIL', 'Actualización de datos personales', 'AUTH');
+        this.activityLogService.recordActivity('ACTUALIZAR_PERFIL', 'Actualización de datos personales y configuración de seguridad', 'AUTH');
       },
       error: (err) => {
         const detail = err?.error?.detail;
@@ -351,6 +433,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeRolePermissionsModal();
     this.closeUserModal();
     this.closeCancelAppointmentModal();
+    this.closeEditPatient();
+    this.closeDeletePatient();
+    this.closeAiAssistant();
+    this.closeRestoreModal();
   }
 
   setActiveTab(tab: string): void {
@@ -376,7 +462,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.activeTab.set(tab);
-    if (tab === 'bitacora') this.loadActivityLogs();
+    if (tab === 'bitacora') {
+      if (this.bitacoraUnlocked()) {
+        this.loadActivityLogs();
+      }
+    }
+    if (tab === 'clientes') this.loadPatients();
+    if (tab === 'reportes') this.loadReportConfig();
+    if (tab === 'backup') this.loadBackupData();
     if (tab === 'sprint1-tenants') this.loadTenants();
     if (tab === 'sprint1-roles') {
       this.loadRoles();
@@ -1932,5 +2025,364 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: () => {},
     });
   }
+
+  // ==========================================
+  // BITÁCORA: LLAVE DE SEGURIDAD CONFIDENCIAL
+  // ==========================================
+  verifyAndUnlockBitacora(): void {
+    const key = this.bitacoraKeyInput().trim();
+    if (!key) {
+      this.bitacoraKeyError.set('Ingresa la contraseña de tu cuenta o tu llave personalizada.');
+      return;
+    }
+    this.isVerifyingBitacoraKey.set(true);
+    this.bitacoraKeyError.set(null);
+
+    this.authService.verifyDeveloperKey(key).subscribe({
+      next: (res) => {
+        this.isVerifyingBitacoraKey.set(false);
+        if (res.valid) {
+          this.bitacoraUnlocked.set(true);
+          this.bitacoraKeyInput.set('');
+          this.loadActivityLogs();
+        } else {
+          this.bitacoraKeyError.set(res.message || 'La llave o contraseña de administrador es incorrecta.');
+        }
+      },
+      error: (err: any) => {
+        this.isVerifyingBitacoraKey.set(false);
+        this.bitacoraKeyError.set(err?.error?.detail || 'Error al validar la llave de seguridad.');
+      },
+    });
+  }
+
+  lockBitacora(): void {
+    this.bitacoraUnlocked.set(false);
+    this.bitacoraKeyInput.set('');
+    this.bitacoraKeyError.set(null);
+  }
+
+  // ==========================================
+  // MÓDULO DE CLIENTES / PACIENTES
+  // ==========================================
+  loadPatients(): void {
+    const filterActive = this.patientStatusFilter() === '' ? undefined : this.patientStatusFilter() === 'true';
+    this.patientService.getPatients(this.patientSearch(), filterActive).subscribe();
+  }
+
+  openEditPatient(patient: PatientListItem): void {
+    this.editingPatient.set(patient);
+    this.patientForm.patchValue({
+      full_name: patient.full_name,
+      email: patient.email,
+      phone: patient.phone || '',
+      is_active: patient.is_active,
+    });
+    this.patientEditModalOpen.set(true);
+  }
+
+  closeEditPatient(): void {
+    this.patientEditModalOpen.set(false);
+    this.editingPatient.set(null);
+  }
+
+  saveEditPatient(): void {
+    if (this.patientForm.invalid || !this.editingPatient()) return;
+    const p = this.editingPatient()!;
+    const val = this.patientForm.value;
+    this.patientService.updatePatient(p.id, val).subscribe({
+      next: () => {
+        this.patientSuccess.set('Datos del cliente actualizados exitosamente.');
+        setTimeout(() => this.patientSuccess.set(null), 3500);
+        this.closeEditPatient();
+      },
+      error: (err: any) => {
+        this.patientError.set(err?.error?.detail || 'Error al actualizar el cliente');
+        setTimeout(() => this.patientError.set(null), 4000);
+      },
+    });
+  }
+
+  openDeletePatient(patient: PatientListItem): void {
+    this.deletingPatient.set(patient);
+    this.patientDeleteModalOpen.set(true);
+  }
+
+  closeDeletePatient(): void {
+    this.patientDeleteModalOpen.set(false);
+    this.deletingPatient.set(null);
+  }
+
+  confirmDeletePatient(): void {
+    if (!this.deletingPatient()) return;
+    const p = this.deletingPatient()!;
+    this.patientService.deletePatient(p.id).subscribe({
+      next: () => {
+        this.patientSuccess.set(`El cliente '${p.full_name}' ha sido desactivado y desvinculado.`);
+        setTimeout(() => this.patientSuccess.set(null), 4000);
+        this.closeDeletePatient();
+      },
+      error: (err: any) => {
+        this.patientError.set(err?.error?.detail || 'Error al desactivar el cliente');
+        setTimeout(() => this.patientError.set(null), 4000);
+      },
+    });
+  }
+
+  // ==========================================
+  // ASISTENTE IA DE RECOMENDACIÓN NUTRICIONAL
+  // ==========================================
+  openAiAssistant(patient: PatientListItem): void {
+    this.selectedPatientForAi.set(patient);
+    this.aiModalOpen.set(true);
+    this.isLoadingAi.set(true);
+    this.aiError.set(null);
+    this.aiAssignSuccess.set(null);
+    this.clinicalService.getAiRecommendations(patient.id).subscribe({
+      next: (data) => {
+        this.aiRecommendations.set(data);
+        this.isLoadingAi.set(false);
+      },
+      error: (err: any) => {
+        this.aiError.set(err?.error?.detail || 'Error al consultar al Asistente Inteligente IA');
+        this.isLoadingAi.set(false);
+      },
+    });
+  }
+
+  closeAiAssistant(): void {
+    this.aiModalOpen.set(false);
+    this.selectedPatientForAi.set(null);
+    this.aiRecommendations.set(null);
+    this.aiError.set(null);
+    this.aiAssignSuccess.set(null);
+  }
+
+  assignAiRecipe(recipeId: string): void {
+    const patient = this.selectedPatientForAi();
+    if (!patient) return;
+    this.recipeService.assignRecipe(recipeId, patient.id).subscribe({
+      next: () => {
+        this.aiAssignSuccess.set('¡Receta prescrita y vinculada al plan del cliente exitosamente!');
+        this.aiRecommendations.update((curr) => {
+          if (!curr) return null;
+          return {
+            ...curr,
+            recommendations: curr.recommendations.map((r) =>
+              r.recipe_id === recipeId ? { ...r, already_assigned: true } : r
+            ),
+          };
+        });
+        setTimeout(() => this.aiAssignSuccess.set(null), 4000);
+      },
+      error: (err: any) => {
+        this.aiError.set(err?.error?.detail || 'Error al asignar la receta al paciente');
+        setTimeout(() => this.aiError.set(null), 4000);
+      },
+    });
+  }
+
+  // ==========================================
+  // MÓDULO DE REPORTES DINÁMICOS
+  // ==========================================
+  loadReportConfig(): void {
+    this.reportService.getEntities().subscribe({
+      next: (entities) => {
+        if (entities.length > 0) {
+          const current = this.selectedReportEntity();
+          const target = entities.find((e) => e.entity === current) ? current : entities[0].entity;
+          this.onReportEntityChange(target);
+        }
+      },
+    });
+  }
+
+  onReportEntityChange(entityKey: string): void {
+    this.selectedReportEntity.set(entityKey);
+    const ent = this.reportService.entities().find((e) => e.entity === entityKey);
+    if (ent) {
+      this.selectedReportColumns.set(ent.available_columns.map((c) => c.key));
+    } else {
+      this.selectedReportColumns.set([]);
+    }
+    this.reportPreviewData.set(null);
+  }
+
+  toggleReportColumn(colKey: string): void {
+    this.selectedReportColumns.update((cols) => {
+      if (cols.includes(colKey)) {
+        return cols.filter((c) => c !== colKey);
+      } else {
+        return [...cols, colKey];
+      }
+    });
+  }
+
+  selectAllReportColumns(): void {
+    const ent = this.reportService.entities().find((e) => e.entity === this.selectedReportEntity());
+    if (ent) {
+      this.selectedReportColumns.set(ent.available_columns.map((c) => c.key));
+    }
+  }
+
+  deselectAllReportColumns(): void {
+    this.selectedReportColumns.set([]);
+  }
+
+  generateReportPreview(): void {
+    const req = {
+      entity: this.selectedReportEntity(),
+      columns: this.selectedReportColumns(),
+      start_date: this.reportStartDate() || undefined,
+      end_date: this.reportEndDate() || undefined,
+      status: this.reportStatusFilter() || undefined,
+      search: this.reportSearch() || undefined,
+      limit: 200,
+    };
+    this.isLoadingReport.set(true);
+    this.reportError.set(null);
+    this.reportService.queryReport(req).subscribe({
+      next: (res) => {
+        this.reportPreviewData.set(res);
+        this.isLoadingReport.set(false);
+      },
+      error: (err: any) => {
+        this.reportError.set(err?.error?.detail || 'Error al generar vista previa');
+        this.isLoadingReport.set(false);
+      },
+    });
+  }
+
+  exportReportExcel(): void {
+    const req = {
+      entity: this.selectedReportEntity(),
+      columns: this.selectedReportColumns(),
+      start_date: this.reportStartDate() || undefined,
+      end_date: this.reportEndDate() || undefined,
+      status: this.reportStatusFilter() || undefined,
+      search: this.reportSearch() || undefined,
+      limit: 500,
+    };
+    this.isExportingReport.set(true);
+    this.reportService.exportExcel(req).subscribe({
+      next: (blob) => {
+        const filename = `reporte_${this.selectedReportEntity()}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        this.reportService.downloadBlob(blob, filename);
+        this.isExportingReport.set(false);
+        this.reportMessage.set('Reporte Excel descargado exitosamente.');
+        setTimeout(() => this.reportMessage.set(null), 3500);
+      },
+      error: () => {
+        this.isExportingReport.set(false);
+        this.reportError.set('Error al descargar archivo Excel.');
+        setTimeout(() => this.reportError.set(null), 3500);
+      },
+    });
+  }
+
+  exportReportPdf(): void {
+    const req = {
+      entity: this.selectedReportEntity(),
+      columns: this.selectedReportColumns(),
+      start_date: this.reportStartDate() || undefined,
+      end_date: this.reportEndDate() || undefined,
+      status: this.reportStatusFilter() || undefined,
+      search: this.reportSearch() || undefined,
+      limit: 500,
+    };
+    this.isExportingReport.set(true);
+    this.reportService.exportPdf(req).subscribe({
+      next: (blob) => {
+        const filename = `reporte_${this.selectedReportEntity()}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        this.reportService.downloadBlob(blob, filename);
+        this.isExportingReport.set(false);
+        this.reportMessage.set('Reporte PDF descargado exitosamente.');
+        setTimeout(() => this.reportMessage.set(null), 3500);
+      },
+      error: () => {
+        this.isExportingReport.set(false);
+        this.reportError.set('Error al exportar a PDF.');
+        setTimeout(() => this.reportError.set(null), 3500);
+      },
+    });
+  }
+
+  // ==========================================
+  // MÓDULO DE COPIAS DE SEGURIDAD (BACKUP)
+  // ==========================================
+  loadBackupData(): void {
+    this.backupService.getSettings().subscribe({
+      next: (s) => {
+        this.backupForm.patchValue({
+          auto_backup_enabled: s.auto_backup_enabled,
+          frequency_hours: s.frequency_hours,
+          retention_days: s.retention_days,
+        });
+      },
+    });
+    this.backupService.getHistory().subscribe();
+  }
+
+  saveBackupSettings(): void {
+    this.backupService.updateSettings(this.backupForm.value).subscribe({
+      next: () => {
+        this.backupSuccess.set('Configuración de copias de seguridad actualizada.');
+        setTimeout(() => this.backupSuccess.set(null), 3500);
+      },
+      error: (err: any) => {
+        this.backupError.set(err?.error?.detail || 'Error al guardar configuración');
+        setTimeout(() => this.backupError.set(null), 3500);
+      },
+    });
+  }
+
+  createManualBackup(): void {
+    this.backupService.exportManual().subscribe({
+      next: (log) => {
+        this.backupSuccess.set(`Copia de seguridad manual generada: ${log.filename} (${log.file_size_bytes} bytes).`);
+        setTimeout(() => this.backupSuccess.set(null), 4000);
+      },
+      error: (err: any) => {
+        this.backupError.set(err?.error?.detail || 'Error al generar la copia de seguridad manual');
+        setTimeout(() => this.backupError.set(null), 4000);
+      },
+    });
+  }
+
+  downloadBackup(filename: string): void {
+    this.backupService.downloadBackup(filename);
+  }
+
+  onBackupFileSelected(event: any): void {
+    const file: File = event.target.files[0];
+    if (file) {
+      this.selectedRestoreFile = file;
+      this.restoreModalOpen.set(true);
+    }
+  }
+
+  closeRestoreModal(): void {
+    this.restoreModalOpen.set(false);
+    this.selectedRestoreFile = null;
+  }
+
+  executeRestore(): void {
+    if (!this.selectedRestoreFile) return;
+    this.isRestoringBackup.set(true);
+    this.backupService.restoreBackup(this.selectedRestoreFile).subscribe({
+      next: (res) => {
+        this.isRestoringBackup.set(false);
+        this.backupSuccess.set(res.message);
+        this.closeRestoreModal();
+        setTimeout(() => this.backupSuccess.set(null), 5000);
+      },
+      error: (err: any) => {
+        this.isRestoringBackup.set(false);
+        this.backupError.set(err?.error?.detail || 'Error durante la restauración del sistema');
+        setTimeout(() => this.backupError.set(null), 4000);
+      },
+    });
+  }
 }
+
 
