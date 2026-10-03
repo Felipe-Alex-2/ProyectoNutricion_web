@@ -1,0 +1,34 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="color: #d9534f; margin: 0; font-size: 1.15rem; font-weight: 700;">Confirmar Desactivación</h3>
+        <button class="modal-close" (click)="cerrar()">✕</button>
+      </div>
+
+      @if (errorMessage) {
+        <div class="alert alert-error my-3" style="margin-top: 14px;">{{ errorMessage }}</div>
+      }
+
+      <div style="padding: 20px 0;">
+        <p style="font-size: 0.95rem; line-height: 1.5; color: var(--color-text-title, #0f172a); margin-bottom: 12px;">
+          ¿Estás seguro de que deseas desactivar a <strong>{{ patient?.full_name }}</strong>?
+        </p>
+        <div style="background: rgba(217, 83, 79, 0.08); border-left: 4px solid #d9534f; padding: 12px 14px; border-radius: 4px; font-size: 0.85rem; color: #b91c1c;">
+          Esta acción anulará cualquier código de vinculación o acceso activo con su especialista de nutrición.
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button (click)="cerrar()" class="btn-outline" [disabled]="isProcessing">Cancelar</button>
+        <button (click)="confirmar()" class="btn-danger" [disabled]="isProcessing" style="background: #d9534f; color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+          @if (isProcessing) {
+            <span>Desactivando...</span>
+          } @else {
+            <span>Desactivar Cliente</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

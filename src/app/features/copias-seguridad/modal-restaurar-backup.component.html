@@ -1,0 +1,37 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 style="color: #d9534f; margin: 0; font-size: 1.15rem; font-weight: 700;">Confirmar Restauración del Sistema</h3>
+        <button class="modal-close" (click)="cerrar()">✕</button>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="alert alert-error my-3" style="margin-top: 14px;">{{ errorMessage() }}</div>
+      }
+
+      <div style="padding: 20px 0;">
+        <p style="font-size: 0.95rem; line-height: 1.5; color: var(--color-text-title, #0f172a); margin-bottom: 12px;">
+          Estás a punto de restaurar la base de datos a partir del archivo:
+        </p>
+        <div style="font-family: monospace; font-size: 0.88rem; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 16px;">
+          📁 {{ restoreFile?.name }} ({{ restoreFile?.size }} bytes)
+        </div>
+        <div style="background: rgba(217, 83, 79, 0.08); border-left: 4px solid #d9534f; padding: 12px 14px; border-radius: 4px; font-size: 0.85rem; color: #b91c1c;">
+          ⚠️ <strong>Precaución:</strong> Este proceso sincronizará y actualizará registros en todas las tablas del sistema. Asegúrate de que el archivo provenga de una fuente de confianza de NutriSalud.
+        </div>
+      </div>
+
+      <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button (click)="cerrar()" class="btn-outline" [disabled]="isRestoring()">Cancelar</button>
+        <button (click)="confirmarRestauracion()" class="btn-danger" [disabled]="isRestoring()" style="background: #d9534f; color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+          @if (isRestoring()) {
+            <span>Restaurando datos...</span>
+          } @else {
+            <span>Confirmar y Restaurar</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

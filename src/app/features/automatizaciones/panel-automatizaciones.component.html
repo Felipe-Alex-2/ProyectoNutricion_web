@@ -1,0 +1,56 @@
+<div class="card mb-4 automatizaciones-container">
+  <div class="header-row">
+    <div>
+      <div class="badge-title">
+        <span style="font-size: 1.1rem;">⚡</span>
+        <h3 class="panel-title">Automatizaciones RPA con IA</h3>
+        <span class="badge-active">Módulo Clínico Activo</span>
+      </div>
+      <p class="panel-desc">
+        Ejecuta tareas automatizadas de evaluación de hábitos, recordatorios de citas y resúmenes clínicos de cohorte.
+      </p>
+    </div>
+    <div class="actions-row">
+      <button 
+        (click)="ejecutarRecordatoriosCitas()" 
+        class="btn-outline btn-sm"
+        [disabled]="automationRunning() !== null">
+        <span>🔔 Recordatorios Cita (1h)</span>
+        @if (automationRunning() === 'appointments') {
+          <span class="spinner-inline"></span>
+        }
+      </button>
+
+      <button 
+        (click)="ejecutarEvaluacionHabitos()" 
+        class="btn-outline btn-sm"
+        [disabled]="automationRunning() !== null">
+        <span>🥗 Evaluar Hábitos Semanales</span>
+        @if (automationRunning() === 'habits') {
+          <span class="spinner-inline"></span>
+        }
+      </button>
+
+      <button 
+        (click)="ejecutarResumenNutricionista()" 
+        class="btn-primary btn-sm"
+        [disabled]="automationRunning() !== null">
+        <span>📊 Resumen IA Nutricionista</span>
+        @if (automationRunning() === 'summary') {
+          <span class="spinner-inline"></span>
+        }
+      </button>
+    </div>
+  </div>
+
+  @if (automationSuccess()) {
+    <div class="alert alert-success mt-3">
+      {{ automationSuccess() }}
+    </div>
+  }
+  @if (automationError()) {
+    <div class="alert alert-error mt-3">
+      {{ automationError() }}
+    </div>
+  }
+</div>

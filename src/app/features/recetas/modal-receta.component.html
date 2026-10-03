@@ -1,0 +1,127 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 750px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">{{ editingRecipe ? 'Editar Receta' : 'Nueva Receta Nutricional' }}</h3>
+        <button class="modal-close" (click)="cerrar()">✕</button>
+      </div>
+
+      @if (errorMessage) {
+        <div class="alert alert-error my-3">{{ errorMessage }}</div>
+      }
+
+      <form [formGroup]="recipeForm" (ngSubmit)="guardar()" class="modal-form" style="margin-top: 16px;">
+        <div class="form-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Nombre del Plato / Receta *</label>
+            <input type="text" class="form-control" formControlName="title" placeholder="Ej: Pollo al Limón con Quinoa" style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Categoría *</label>
+            <select class="form-control" formControlName="category" style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);">
+              <option value="Desayuno">Desayuno</option>
+              <option value="Almuerzo">Almuerzo</option>
+              <option value="Cena">Cena</option>
+              <option value="Snack">Snack</option>
+              <option value="Postre Saludable">Postre Saludable</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group my-3">
+          <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">URL de la Fotografía</label>
+          <input type="text" class="form-control" formControlName="image_url" placeholder="https://..." style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 10px;">
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Calorías (kcal) *</label>
+            <input type="number" class="form-control" formControlName="calories" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Proteína (g) *</label>
+            <input type="number" class="form-control" formControlName="protein" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Carbohidratos (g) *</label>
+            <input type="number" class="form-control" formControlName="carbohydrates" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Grasas (g) *</label>
+            <input type="number" class="form-control" formControlName="fats" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Fibra (g)</label>
+            <input type="number" class="form-control" formControlName="fiber" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Porciones</label>
+            <input type="number" class="form-control" formControlName="servings" min="1" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Preparación (min)</label>
+            <input type="number" class="form-control" formControlName="prep_time_minutes" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Cocción (min)</label>
+            <input type="number" class="form-control" formControlName="cook_time_minutes" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 600; display: block;">Dificultad</label>
+            <select class="form-control" formControlName="difficulty" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;">
+              <option value="Fácil">Fácil</option>
+              <option value="Media">Media</option>
+              <option value="Difícil">Difícil</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group mb-3">
+          <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Ingredientes y Cantidades *</label>
+          <textarea class="form-control" rows="3" formControlName="ingredients" placeholder="150g pechuga de pollo, 1 taza de espinacas..." style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);"></textarea>
+        </div>
+
+        <div class="form-group mb-3">
+          <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Instrucciones de Preparación *</label>
+          <textarea class="form-control" rows="3" formControlName="instructions" placeholder="1. Lavar los ingredientes... 2. Cocinar a fuego lento..." style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);"></textarea>
+        </div>
+
+        <!-- Asignar a Clientes -->
+        <div style="border: 1px solid var(--color-border, #cbd5e1); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div>
+              <h4 style="margin: 0; font-size: 0.9rem; font-weight: 700;">Asignar Receta a Pacientes</h4>
+              <small style="color: var(--color-text-muted, #64748b);">Selecciona los pacientes que verán esta receta en su App Móvil.</small>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-xs" (click)="selectAllPatients(true)" style="padding: 2px 8px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; background: transparent; cursor: pointer;">Todos</button>
+              <button type="button" class="btn-xs" (click)="selectAllPatients(false)" style="padding: 2px 8px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; background: transparent; cursor: pointer;">Limpiar</button>
+            </div>
+          </div>
+
+          <div style="max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            @for (user of orgUsers; track user.id) {
+              @if (user.role_id === 'CLIENTE') {
+                <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.02); cursor: pointer;">
+                  <input type="checkbox" [checked]="recipeSelectedPatients().includes(user.id)" (change)="togglePatient(user.id)" style="width: 16px; height: 16px;" />
+                  <span style="font-size: 0.85rem; font-weight: 600;">{{ user.full_name }}</span>
+                  <small style="color: #64748b; font-size: 0.78rem;">({{ user.email }})</small>
+                </label>
+              }
+            }
+          </div>
+        </div>
+
+        <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn-outline" (click)="cerrar()">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="recipeForm.invalid" style="background: #206443; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
+            {{ editingRecipe ? 'Actualizar Receta' : 'Guardar Receta' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

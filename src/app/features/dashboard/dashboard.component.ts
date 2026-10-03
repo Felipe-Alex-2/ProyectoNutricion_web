@@ -18,7 +18,8 @@ import { ClinicalService } from '../../core/services/clinical.service';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { PaymentService } from '../../core/services/payment.service';
 import { Recipe } from '../../core/models/recipe.model';
-import { PatientAnamnesis, ClinicalRecord } from '../../core/models/clinical.model';
+import { PatientAnamnesis, ClinicalRecord, NutritionalPlanModel } from '../../core/models/clinical.model';
+import { AIPlanService } from '../../core/services/ai-plan.service';
 import { SubscriptionPlan, Subscription, SubscriptionHistory } from '../../core/models/subscription.model';
 import { Payment, PaymentStats } from '../../core/models/payment.model';
 import { Appointment, AppointmentCreate, AppointmentCancel, Nutritionist } from '../../core/models/appointment.model';
@@ -32,12 +33,30 @@ import { PatientListItem, UserUpdate } from '../../core/models/user.model';
 import { BackupSetting, BackupLog } from '../../core/models/backup.model';
 import { ReportEntityMeta, ReportQueryResponse } from '../../core/models/report.model';
 import { AIRecommendationResponse } from '../../core/models/ai-recommendation.model';
-
+import { PlanIaModalComponent } from '../planes-nutricionales/plan-ia-modal.component';
+import { PanelAutomatizacionesComponent } from '../automatizaciones/panel-automatizaciones.component';
+import { ModalEditarPacienteComponent } from '../pacientes/modal-editar-paciente.component';
+import { ModalDesactivarPacienteComponent } from '../pacientes/modal-desactivar-paciente.component';
+import { ModalRecetaComponent } from '../recetas/modal-receta.component';
+import { ModalAsistenteIaRecetasComponent } from '../recetas/modal-asistente-ia-recetas.component';
+import { ModalCancelarCitaComponent } from '../citas/modal-cancelar-cita.component';
+import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaurar-backup.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    PlanIaModalComponent,
+    PanelAutomatizacionesComponent,
+    ModalEditarPacienteComponent,
+    ModalDesactivarPacienteComponent,
+    ModalRecetaComponent,
+    ModalAsistenteIaRecetasComponent,
+    ModalCancelarCitaComponent,
+    ModalRestaurarBackupComponent,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
@@ -77,6 +96,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoadingAi = signal<boolean>(false);
   aiError = signal<string | null>(null);
   aiAssignSuccess = signal<string | null>(null);
+
+  // Módulo IA: Planes Nutricionales (Mifflin-St Jeor) y Automatizaciones RPA
+  aiPlanModalOpen = signal<boolean>(false);
+  selectedPatientForAiPlan = signal<PatientListItem | null>(null);
+  selectedPlanDraft = signal<NutritionalPlanModel | null>(null);
+  isGeneratingAiPlan = signal<boolean>(false);
+  isApprovingAiPlan = signal<boolean>(false);
+  aiPlanError = signal<string | null>(null);
+  aiPlanSuccess = signal<string | null>(null);
+  planCalorieAdjustmentPct = signal<number>(0);
+  planMealsPerDay = signal<number>(4);
+  planCustomGoal = signal<string>('');
+
+  // Automatizaciones RPA
+  automationRunning = signal<string | null>(null);
+  automationSuccess = signal<string | null>(null);
+  automationError = signal<string | null>(null);
+  automationResult = signal<any | null>(null);
 
   // Módulo de Reportes Dinámicos
   selectedReportEntity = signal<string>('patients');
@@ -229,7 +266,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private notificationService: NotificationService,
     public patientService: PatientService,
     public backupService: BackupService,
-    public reportService: ReportService
+    public reportService: ReportService,
+    public aiPlanService: AIPlanService
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
@@ -2183,6 +2221,150 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // ==========================================
+  // MÓDULO IA: GENERACIÓN Y APROBACIÓN DE PLANES
+  // ==========================================
+  openAiPlanModal(patient: PatientListItem): void {
+    this.selectedPatientForAiPlan.set(patient);
+    this.aiPlanModalOpen.set(true);
+    this.aiPlanError.set(null);
+    this.aiPlanSuccess.set(null);
+    this.selectedPlanDraft.set(null);
+    this.planCalorieAdjustmentPct.set(0);
+    this.planMealsPerDay.set(4);
+    this.planCustomGoal.set('');
+
+    this.aiPlanService.getPatientPlans(patient.id).subscribe({
+      next: (plans) => {
+        const approved = plans.find((p) => p.status === 'APPROVED');
+        const draft = plans.find((p) => p.status === 'DRAFT');
+        this.selectedPlanDraft.set(approved || draft || null);
+      },
+      error: () => {},
+    });
+  }
+
+  closeAiPlanModal(): void {
+    this.aiPlanModalOpen.set(false);
+    this.selectedPatientForAiPlan.set(null);
+    this.selectedPlanDraft.set(null);
+    this.aiPlanError.set(null);
+    this.aiPlanSuccess.set(null);
+  }
+
+  generateAiPlanDraft(): void {
+    const patient = this.selectedPatientForAiPlan();
+    if (!patient) return;
+    this.isGeneratingAiPlan.set(true);
+    this.aiPlanError.set(null);
+    this.aiPlanSuccess.set(null);
+
+    this.aiPlanService
+      .generateDraft(
+        patient.id,
+        this.planCustomGoal() || undefined,
+        this.planCalorieAdjustmentPct() || undefined,
+        this.planMealsPerDay() || 4
+      )
+      .subscribe({
+        next: (draft) => {
+          this.selectedPlanDraft.set(draft);
+          this.isGeneratingAiPlan.set(false);
+          this.aiPlanSuccess.set(
+            '¡Borrador generado con éxito con cálculo Mifflin-St Jeor y reglas de seguridad clínica!'
+          );
+        },
+        error: (err: any) => {
+          this.isGeneratingAiPlan.set(false);
+          this.aiPlanError.set(err?.error?.detail || 'Error al generar el borrador con IA.');
+        },
+      });
+  }
+
+  approveCurrentAiPlan(): void {
+    const plan = this.selectedPlanDraft();
+    if (!plan) return;
+    this.isApprovingAiPlan.set(true);
+    this.aiPlanError.set(null);
+    this.aiPlanSuccess.set(null);
+
+    this.aiPlanService.approvePlan(plan.id).subscribe({
+      next: (approvedPlan) => {
+        this.selectedPlanDraft.set(approvedPlan);
+        this.isApprovingAiPlan.set(false);
+        this.aiPlanSuccess.set('¡Plan aprobado y publicado! El paciente ahora tiene su menú de 7 días activo en la App Móvil.');
+      },
+      error: (err: any) => {
+        this.isApprovingAiPlan.set(false);
+        this.aiPlanError.set(err?.error?.detail || 'Error al aprobar el plan.');
+      },
+    });
+  }
+
+  // ==========================================
+  // MÓDULO IA: AUTOMATIZACIONES RPA
+  // ==========================================
+  runAutomationCheckAppointments(): void {
+    this.automationRunning.set('appointments');
+    this.automationSuccess.set(null);
+    this.automationError.set(null);
+    this.aiPlanService.triggerCheckAppointments().subscribe({
+      next: (res) => {
+        this.automationRunning.set(null);
+        this.automationResult.set(res);
+        this.automationSuccess.set(
+          `RPA Citas: ${res.message || 'Verificación completada'} (Recordatorios enviados: ${res.reminders_sent ?? 0})`
+        );
+        setTimeout(() => this.automationSuccess.set(null), 6000);
+      },
+      error: (err: any) => {
+        this.automationRunning.set(null);
+        this.automationError.set(err?.error?.detail || 'Error al ejecutar RPA de citas');
+        setTimeout(() => this.automationError.set(null), 5000);
+      },
+    });
+  }
+
+  runAutomationWeeklyHabits(): void {
+    this.automationRunning.set('habits');
+    this.automationSuccess.set(null);
+    this.automationError.set(null);
+    this.aiPlanService.triggerWeeklyHabits().subscribe({
+      next: (res) => {
+        this.automationRunning.set(null);
+        this.automationResult.set(res);
+        this.automationSuccess.set(
+          `RPA Hábitos: ${res.message || 'Evaluación de hábitos completada'} (Pacientes evaluados: ${res.patients_evaluated ?? 0})`
+        );
+        setTimeout(() => this.automationSuccess.set(null), 6000);
+      },
+      error: (err: any) => {
+        this.automationRunning.set(null);
+        this.automationError.set(err?.error?.detail || 'Error al evaluar hábitos semanales');
+        setTimeout(() => this.automationError.set(null), 5000);
+      },
+    });
+  }
+
+  runAutomationNutritionistSummary(): void {
+    this.automationRunning.set('summary');
+    this.automationSuccess.set(null);
+    this.automationError.set(null);
+    this.aiPlanService.triggerNutritionistSummary().subscribe({
+      next: (res) => {
+        this.automationRunning.set(null);
+        this.automationResult.set(res);
+        this.automationSuccess.set('RPA Resumen Nutricionista generado exitosamente.');
+        setTimeout(() => this.automationSuccess.set(null), 6000);
+      },
+      error: (err: any) => {
+        this.automationRunning.set(null);
+        this.automationError.set(err?.error?.detail || 'Error al generar resumen para nutricionista');
+        setTimeout(() => this.automationError.set(null), 5000);
+      },
+    });
+  }
+
+  // ==========================================
   // MÓDULO DE REPORTES DINÁMICOS
   // ==========================================
   loadReportConfig(): void {
@@ -2382,6 +2564,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
         setTimeout(() => this.backupError.set(null), 4000);
       },
     });
+  }
+
+  onBackupRestored(msg: string): void {
+    this.backupSuccess.set(msg);
+    this.closeRestoreModal();
+    setTimeout(() => this.backupSuccess.set(null), 5000);
+  }
+
+  onRecipeSaved(event: { isEdit: boolean; title: string }): void {
+    const action = event.isEdit ? 'RECETA_MODIFICADA' : 'RECETA_CREADA';
+    const detail = event.isEdit ? `Se editó la receta ${event.title}` : `Se creó la receta ${event.title}`;
+    this.activityLogService.recordActivity(action, detail, 'CLINICAL');
+    this.recipeSuccess.set(event.isEdit ? `Receta '${event.title}' actualizada con éxito.` : `Receta '${event.title}' creada con éxito.`);
+    this.loadRecipes();
+    setTimeout(() => this.recipeSuccess.set(null), 4000);
+  }
+
+  onPatientUpdated(): void {
+    this.patientSuccess.set('Datos del cliente actualizados exitosamente.');
+    this.loadPatients();
+    setTimeout(() => this.patientSuccess.set(null), 3500);
+  }
+
+  onPatientDeactivated(name?: string): void {
+    const patientName = name || this.deletingPatient()?.full_name || 'El cliente';
+    this.patientSuccess.set(`El cliente '${patientName}' ha sido desactivado y desvinculado.`);
+    this.loadPatients();
+    setTimeout(() => this.patientSuccess.set(null), 4000);
+  }
+
+  onAppointmentCancelled(appt?: Appointment): void {
+    const patientName = appt?.patient_name || this.appointmentToCancel()?.patient_name || 'el paciente';
+    this.appointmentSuccess.set(`La cita ha sido cancelada. Se ha enviado notificación a ${patientName} con el motivo especificado.`);
+    this.loadAppointments();
+    this.loadNotificationCount();
+    setTimeout(() => this.appointmentSuccess.set(null), 5000);
   }
 }
 

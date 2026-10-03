@@ -2415,6 +2415,9 @@
         </div>
       }
 
+      <!-- Automatizaciones RPA Clínicas e Inteligencia Artificial -->
+      <app-panel-automatizaciones />
+
       <!-- Filtros de búsqueda -->
       <div class="card search-filter-card mb-4" style="padding: 16px 20px;">
         <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
@@ -2512,6 +2515,21 @@
                   </td>
                   <td style="text-align: right;">
                     <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end;">
+                      <!-- Botón Plan IA -->
+                      <button 
+                        (click)="openAiPlanModal(p)" 
+                        class="btn-primary btn-sm" 
+                        style="padding: 5px 10px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #10b981, #059669);"
+                        title="Generar y aprobar Plan Nutricional IA (Mifflin-St Jeor & Menú Semanal)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                          <line x1="16" y1="13" x2="8" y2="13"></line>
+                          <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        <span>Plan IA</span>
+                      </button>
+
                       <!-- Botón Asistente IA -->
                       <button 
                         (click)="openAiAssistant(p)" 
@@ -2942,66 +2960,14 @@
     }
 
     <!-- ============================================================= -->
-    <!-- MODAL: CANCELAR CITA CON MOTIVO -->
+    <!-- MODAL: CANCELAR CITA CON MOTIVO (MODULARIZADO) -->
     <!-- ============================================================= -->
-    @if (cancelModalOpen()) {
-      <div class="modal-backdrop" (click)="closeCancelAppointmentModal()">
-        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 520px;">
-          <div class="modal-header">
-            <h3>Cancelar Cita Programada</h3>
-            <button class="modal-close" (click)="closeCancelAppointmentModal()">✕</button>
-          </div>
-
-          @if (appointmentToCancel()) {
-            <div class="modal-body-cancellation">
-              <div class="cancellation-info-box mb-3">
-                <div class="info-row">
-                  <span class="info-label">Paciente:</span>
-                  <span class="info-val font-bold">{{ appointmentToCancel()?.patient_name || 'Paciente' }}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">Fecha y Hora:</span>
-                  <span class="info-val">{{ formatDateTime(appointmentToCancel()!.scheduled_at) }}</span>
-                </div>
-                @if (appointmentToCancel()?.reason) {
-                  <div class="info-row">
-                    <span class="info-label">Motivo Inicial:</span>
-                    <span class="info-val">{{ appointmentToCancel()?.reason }}</span>
-                  </div>
-                }
-              </div>
-
-              <div class="form-group mb-3">
-                <label class="form-label" style="font-weight: 600;">Motivo de la Cancelación *</label>
-                <textarea 
-                  class="form-control" 
-                  rows="3" 
-                  [value]="cancelReason()"
-                  (input)="onCancelReasonChange($event)"
-                  placeholder="Explica el motivo por el cual no es posible atender la cita en este horario (ej. Inconveniente de fuerza mayor, reprogramación solicitada, etc.)">
-                </textarea>
-                <span class="text-xs text-secondary mt-1 d-block">
-                  Esta explicación se enviará como notificación directa al teléfono móvil del paciente.
-                </span>
-              </div>
-
-              <div class="modal-actions-flex">
-                <button (click)="closeCancelAppointmentModal()" class="btn-outline" [disabled]="cancellingAppointment()">
-                  Volver
-                </button>
-                <button (click)="submitCancelAppointment()" class="btn-danger" [disabled]="cancellingAppointment()">
-                  @if (cancellingAppointment()) {
-                    <span>Cancelando...</span>
-                  } @else {
-                    <span>Confirmar Cancelación</span>
-                  }
-                </button>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    }
+    <app-modal-cancelar-cita
+      [isOpen]="cancelModalOpen()"
+      [appointment]="appointmentToCancel()"
+      (closed)="closeCancelAppointmentModal()"
+      (cancelled)="onAppointmentCancelled($event)"
+    />
 
     <!-- ============================================================= -->
     <!-- MODAL: REGISTRAR / EDITAR TENANT -->
@@ -3435,450 +3401,63 @@
     }
 
     <!-- ============================================================= -->
-    <!-- MODAL: REGISTRAR / EDITAR RECETA CON FOTO Y MACROS -->
+    <!-- MODAL: REGISTRAR / EDITAR RECETA CON FOTO Y MACROS (MODULARIZADO) -->
     <!-- ============================================================= -->
-    @if (recipeModalOpen()) {
-      <div class="modal-backdrop" (click)="closeRecipeModal()">
-        <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h3>{{ editingRecipe() ? 'Editar Receta Nutricional' : 'Registrar Nueva Receta' }}</h3>
-            <button class="modal-close" (click)="closeRecipeModal()">✕</button>
-          </div>
-
-          @if (recipeSuccess()) {
-            <div class="alert alert-success">{{ recipeSuccess() }}</div>
-          }
-          @if (recipeError()) {
-            <div class="alert alert-error">{{ recipeError() }}</div>
-          }
-
-          <form [formGroup]="recipeForm" (ngSubmit)="submitRecipe()" class="modal-form">
-            <div class="modal-body">
-              <div class="form-grid mb-3">
-                <div class="form-group">
-                  <label class="form-label">Nombre de la Receta *</label>
-                  <input type="text" class="form-control" formControlName="title" maxlength="250" placeholder="Ej: Bowl Proteico de Quinoa y Salmón" />
-                  @if (recipeForm.get('title')?.touched && recipeForm.get('title')?.invalid) {
-                    @if (recipeForm.get('title')?.hasError('required') || recipeForm.get('title')?.hasError('minlength')) {
-                      <span class="text-danger text-xs">El nombre es obligatorio (mín. 2 car.)</span>
-                    }
-                    @if (recipeForm.get('title')?.hasError('maxlength')) {
-                      <span class="text-danger text-xs">El nombre no puede superar los 250 caracteres.</span>
-                    }
-                  }
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Momento / Categoría *</label>
-                  <select class="form-control" formControlName="category">
-                    <option value="Desayuno">Desayuno</option>
-                    <option value="Almuerzo">Almuerzo</option>
-                    <option value="Cena">Cena</option>
-                    <option value="Snack">Snack / Merienda</option>
-                    <option value="Bebida">Bebida / Batido</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- URL y Preview de Foto de la Comida -->
-              <div class="form-group mb-3">
-                <label class="form-label">Fotografía de la Comida (URL de imagen) *</label>
-                <input type="url" class="form-control" formControlName="image_url" placeholder="https://images.unsplash.com/..." />
-                @if (recipeForm.get('image_url')?.value) {
-                  <div class="recipe-img-preview mt-2">
-                    <img [src]="recipeForm.get('image_url')?.value" alt="Preview comida" class="img-preview" />
-                    <span class="text-xs text-secondary">Vista previa del platillo</span>
-                  </div>
-                }
-              </div>
-
-              <!-- Grid de Macronutrientes por porción -->
-              <div class="macros-input-card mb-3">
-                <h4 class="text-sm font-bold mb-2">Desglose de Macronutrientes (por porción)</h4>
-                <div class="macros-input-grid">
-                  <div class="form-group">
-                    <label class="form-label">Calorías (kcal) *</label>
-                    <input type="number" class="form-control" formControlName="calories" min="0" step="1" />
-                    @if (recipeForm.get('calories')?.touched && recipeForm.get('calories')?.invalid) {
-                      <span class="text-danger text-xs">Requerido (≥ 0)</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Proteínas (g) *</label>
-                    <input type="number" class="form-control" formControlName="protein" min="0" step="0.5" />
-                    @if (recipeForm.get('protein')?.touched && recipeForm.get('protein')?.invalid) {
-                      <span class="text-danger text-xs">Requerido</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Carbohidratos (g) *</label>
-                    <input type="number" class="form-control" formControlName="carbohydrates" min="0" step="0.5" />
-                    @if (recipeForm.get('carbohydrates')?.touched && recipeForm.get('carbohydrates')?.invalid) {
-                      <span class="text-danger text-xs">Requerido</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Grasas Totales (g) *</label>
-                    <input type="number" class="form-control" formControlName="fats" min="0" step="0.5" />
-                    @if (recipeForm.get('fats')?.touched && recipeForm.get('fats')?.invalid) {
-                      <span class="text-danger text-xs">Requerido</span>
-                    }
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Fibra (g)</label>
-                    <input type="number" class="form-control" formControlName="fiber" min="0" step="0.5" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Sodio (mg)</label>
-                    <input type="number" class="form-control" formControlName="sodium" min="0" step="10" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Tiempos, Porciones y Dificultad -->
-              <div class="form-grid mb-3">
-                <div class="form-group">
-                  <label class="form-label">Porciones *</label>
-                  <input type="number" class="form-control" formControlName="servings" min="1" />
-                  @if (recipeForm.get('servings')?.touched && recipeForm.get('servings')?.invalid) {
-                    <span class="text-danger text-xs">Mínimo 1 porción</span>
-                  }
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Preparación (min)</label>
-                  <input type="number" class="form-control" formControlName="prep_time_minutes" min="0" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Cocción (min)</label>
-                  <input type="number" class="form-control" formControlName="cook_time_minutes" min="0" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Dificultad</label>
-                  <select class="form-control" formControlName="difficulty">
-                    <option value="Fácil">Fácil</option>
-                    <option value="Media">Media</option>
-                    <option value="Difícil">Difícil</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group mb-3">
-                <label class="form-label">Breve Descripción</label>
-                <input type="text" class="form-control" formControlName="description" placeholder="Resumen o notas especiales de la receta" />
-              </div>
-
-              <div class="form-group mb-3">
-                <label class="form-label">Ingredientes y Cantidades *</label>
-                <textarea class="form-control" rows="3" formControlName="ingredients" placeholder="150g pechuga de pollo, 1 taza de espinacas frescas, 1 cda aceite de oliva..."></textarea>
-                @if (recipeForm.get('ingredients')?.touched && recipeForm.get('ingredients')?.invalid) {
-                  <span class="text-danger text-xs">Especifica los ingredientes requeridos.</span>
-                }
-              </div>
-
-              <div class="form-group mb-3">
-                <label class="form-label">Instrucciones de Preparación *</label>
-                <textarea class="form-control" rows="3" formControlName="instructions" placeholder="1. Lavar los ingredientes. 2. Cocinar a fuego lento durante 10 minutos. 3. Emplatar y sazonar."></textarea>
-                @if (recipeForm.get('instructions')?.touched && recipeForm.get('instructions')?.invalid) {
-                  <span class="text-danger text-xs">Las instrucciones son obligatorias.</span>
-                }
-              </div>
-
-              <!-- Asignación de Receta a Clientes/Pacientes vinculados -->
-              <div class="patient-assign-section mb-3">
-                <div class="assign-header">
-                  <div>
-                    <h4 class="text-sm font-bold">Asignar Receta a Pacientes</h4>
-                    <p class="text-xs text-secondary">Selecciona los pacientes a quienes se les mostrará esta receta en el apartado "Plan" de su App Móvil.</p>
-                  </div>
-                  <div class="assign-actions">
-                    <button type="button" class="btn-xs btn-outline" (click)="selectAllPatientsForRecipe(true)">Todos</button>
-                    <button type="button" class="btn-xs btn-outline" (click)="selectAllPatientsForRecipe(false)">Limpiar</button>
-                  </div>
-                </div>
-
-                <div class="patient-assign-list">
-                  @for (user of orgUsers(); track user.id) {
-                    @if (user.role_id === 'CLIENTE') {
-                      <label class="patient-assign-item" [class.selected]="isPatientSelectedForRecipe(user.id)">
-                        <input 
-                          type="checkbox" 
-                          [checked]="isPatientSelectedForRecipe(user.id)" 
-                          (change)="togglePatientForRecipe(user.id)" 
-                          class="patient-checkbox" />
-                        <div class="patient-avatar-sm">{{ user.full_name.charAt(0) }}</div>
-                        <div class="patient-assign-meta">
-                          <span class="patient-assign-name">{{ user.full_name }}</span>
-                          <span class="patient-assign-email">{{ user.email }}</span>
-                        </div>
-                      </label>
-                    }
-                  }
-                </div>
-              </div>
-            </div>
-
-            <div class="modal-actions">
-              <button type="button" class="btn-outline" (click)="closeRecipeModal()">
-                Cancelar
-              </button>
-              <button type="submit" class="btn-primary" [disabled]="recipeService.isLoading()">
-                <span>{{ editingRecipe() ? 'Actualizar Receta' : 'Guardar Receta' }}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    }
+    <app-modal-receta
+      [isOpen]="recipeModalOpen()"
+      [editingRecipe]="editingRecipe()"
+      [orgUsers]="orgUsers()"
+      (closed)="closeRecipeModal()"
+      (saved)="onRecipeSaved($event)"
+    />
 
     <!-- ============================================================= -->
-    <!-- MODAL: EDITAR CLIENTE / PACIENTE -->
+    <!-- MODAL: EDITAR CLIENTE / PACIENTE (MODULARIZADO) -->
     <!-- ============================================================= -->
-    @if (patientEditModalOpen()) {
-      <div class="modal-backdrop" (click)="closeEditPatient()">
-        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 500px;">
-          <div class="modal-header">
-            <h3>Editar Datos del Cliente</h3>
-            <button class="modal-close" (click)="closeEditPatient()">✕</button>
-          </div>
-
-          <form [formGroup]="patientForm" (ngSubmit)="saveEditPatient()" class="modal-form">
-            <div class="form-group mb-3">
-              <label class="form-label">Nombre Completo *</label>
-              <input type="text" formControlName="full_name" class="input-field form-control" />
-            </div>
-
-            <div class="form-group mb-3">
-              <label class="form-label">Correo Electrónico *</label>
-              <input type="email" formControlName="email" class="input-field form-control" />
-            </div>
-
-            <div class="form-group mb-3">
-              <label class="form-label">Teléfono</label>
-              <input type="text" formControlName="phone" class="input-field form-control" placeholder="+591 73683564" />
-            </div>
-
-            <div class="form-group mb-3">
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" formControlName="is_active" style="width: 18px; height: 18px; accent-color: var(--color-primary);" />
-                <span style="font-weight: 600; font-size: 0.9rem;">Cliente Activo en Plataforma</span>
-              </label>
-            </div>
-
-            <div class="modal-actions">
-              <button type="button" class="btn-outline" (click)="closeEditPatient()">Cancelar</button>
-              <button type="submit" class="btn-primary" [disabled]="patientForm.invalid">Guardar Cambios</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    }
+    <app-modal-editar-paciente
+      [isOpen]="patientEditModalOpen()"
+      [patient]="editingPatient()"
+      (closed)="closeEditPatient()"
+      (saved)="onPatientUpdated()"
+    />
 
     <!-- ============================================================= -->
-    <!-- MODAL: DESACTIVAR / ELIMINAR CLIENTE -->
+    <!-- MODAL: DESACTIVAR / ELIMINAR CLIENTE (MODULARIZADO) -->
     <!-- ============================================================= -->
-    @if (patientDeleteModalOpen()) {
-      <div class="modal-backdrop" (click)="closeDeletePatient()">
-        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 480px;">
-          <div class="modal-header">
-            <h3 style="color: #d9534f;">Confirmar Desactivación</h3>
-            <button class="modal-close" (click)="closeDeletePatient()">✕</button>
-          </div>
-
-          <div style="padding: 20px 0;">
-            <p style="font-size: 0.95rem; line-height: 1.5; color: var(--color-text-title); margin-bottom: 12px;">
-              ¿Estás seguro de que deseas desactivar a <strong>{{ deletingPatient()?.full_name }}</strong>?
-            </p>
-            <div style="background: rgba(217, 83, 79, 0.08); border-left: 4px solid #d9534f; padding: 12px 14px; border-radius: 4px; font-size: 0.85rem; color: #b91c1c;">
-              Esta acción anulará cualquier código de vinculación o acceso activo con su especialista de nutrición.
-            </div>
-          </div>
-
-          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button (click)="closeDeletePatient()" class="btn-outline">Cancelar</button>
-            <button (click)="confirmDeletePatient()" class="btn-primary" style="background: #d9534f;">Desactivar Cliente</button>
-          </div>
-        </div>
-      </div>
-    }
+    <app-modal-desactivar-paciente
+      [isOpen]="patientDeleteModalOpen()"
+      [patient]="deletingPatient()"
+      (closed)="closeDeletePatient()"
+      (deactivated)="onPatientDeactivated($event)"
+    />
 
     <!-- ============================================================= -->
-    <!-- MODAL: ASISTENTE INTELIGENTE IA DE RECOMENDACIÓN NUTRICIONAL -->
+    <!-- MODAL: ASISTENTE INTELIGENTE IA DE RECOMENDACIÓN NUTRICIONAL (MODULARIZADO) -->
     <!-- ============================================================= -->
-    @if (aiModalOpen()) {
-      <div class="modal-backdrop" (click)="closeAiAssistant()">
-        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 880px; max-height: 90vh; overflow-y: auto;">
-          <div class="modal-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 14px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 38px; height: 38px; border-radius: 8px; background: linear-gradient(135deg, #206443, #2e8b57); color: white; display: flex; align-items: center; justify-content: center;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-              </div>
-              <div>
-                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Asistente Inteligente de Prescripción Nutricional</h3>
-                <small style="color: var(--color-text-muted);">
-                  Paciente evaluado: <strong>{{ selectedPatientForAi()?.full_name }}</strong>
-                </small>
-              </div>
-            </div>
-            <button class="modal-close" (click)="closeAiAssistant()">✕</button>
-          </div>
-
-          @if (aiAssignSuccess()) {
-            <div class="alert alert-success my-3">{{ aiAssignSuccess() }}</div>
-          }
-          @if (aiError()) {
-            <div class="alert alert-error my-3">{{ aiError() }}</div>
-          }
-
-          @if (isLoadingAi()) {
-            <div style="padding: 60px 20px; text-align: center;">
-              <div style="width: 48px; height: 48px; border: 4px solid rgba(32, 100, 67, 0.15); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;"></div>
-              <h4 style="font-weight: 600; margin-bottom: 6px;">Analizando anamnesis, alergias y datos clínicos con IA...</h4>
-              <p style="font-size: 0.85rem; color: var(--color-text-muted);">Comparando el catálogo de recetas contra el perfil específico del paciente.</p>
-            </div>
-          } @else if (aiRecommendations(); as ai) {
-            <div style="padding: 16px 0;">
-              <!-- Banner de Perfil Clínico Analizado -->
-              <div style="background: rgba(32, 100, 67, 0.07); border: 1px solid rgba(32, 100, 67, 0.2); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
-                <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px;">
-                  <div>
-                    <span style="font-size: 0.76rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; display: block;">Objetivo Actual</span>
-                    <strong style="font-size: 0.95rem; color: var(--color-primary);">{{ ai.patient_goal || 'General / Bienestar' }}</strong>
-                  </div>
-                  <div>
-                    <span style="font-size: 0.76rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; display: block;">Patologías Notificadas</span>
-                    <span style="font-size: 0.9rem;">{{ ai.known_pathologies || 'Ninguna registrada' }}</span>
-                  </div>
-                  <div>
-                    <span style="font-size: 0.76rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 600; display: block;">Alergias Identificadas</span>
-                    <span style="font-size: 0.9rem; color: #d9534f; font-weight: 600;">{{ ai.known_allergies || 'Sin alergias' }}</span>
-                  </div>
-                </div>
-                <p style="font-size: 0.88rem; color: var(--color-text-title); line-height: 1.45; margin: 0;">
-                  💡 <em>{{ ai.summary_analysis }}</em>
-                </p>
-              </div>
-
-              <!-- Lista de Recetas Recomendadas -->
-              <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px; color: var(--color-text-title);">
-                Recetas Priorizadas según Compatibilidad ({{ ai.recommendations.length }})
-              </h4>
-
-              <div style="display: flex; flex-direction: column; gap: 14px;">
-                @for (rec of ai.recommendations; track rec.recipe_id) {
-                  <div style="border: 1px solid var(--color-border); border-radius: 12px; padding: 18px; transition: all 0.2s ease; background: var(--color-surface);"
-                       [style.border-left]="rec.compatibility_level === 'ALTA' ? '5px solid #206443' : (rec.compatibility_level === 'MEDIA' ? '5px solid #3b82f6' : (rec.compatibility_level === 'PRECAUCION' ? '5px solid #f59e0b' : '5px solid #d9534f'))">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px;">
-                      <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                          <h5 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--color-text-title);">{{ rec.recipe_title }}</h5>
-                          <span style="font-size: 0.75rem; background: rgba(0,0,0,0.06); padding: 2px 8px; border-radius: 4px; font-weight: 600;">{{ rec.category }}</span>
-                        </div>
-                        <small style="color: var(--color-text-muted); font-size: 0.8rem;">{{ rec.clinical_notes }}</small>
-                      </div>
-
-                      <div style="text-align: right; flex-shrink: 0;">
-                        <span 
-                          [style.background]="rec.compatibility_level === 'ALTA' ? 'rgba(32,100,67,0.15)' : (rec.compatibility_level === 'MEDIA' ? 'rgba(59,130,246,0.15)' : (rec.compatibility_level === 'PRECAUCION' ? 'rgba(245,158,11,0.15)' : 'rgba(217,83,79,0.15)'))"
-                          [style.color]="rec.compatibility_level === 'ALTA' ? '#206443' : (rec.compatibility_level === 'MEDIA' ? '#1d4ed8' : (rec.compatibility_level === 'PRECAUCION' ? '#b45309' : '#d9534f'))"
-                          style="display: inline-block; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
-                          {{ rec.match_score }}% Compatibilidad {{ rec.compatibility_level }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Macronutrientes -->
-                    <div style="display: flex; gap: 14px; background: rgba(0,0,0,0.02); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.82rem;">
-                      <span>🔥 <strong>{{ rec.calories }}</strong> kcal</span>
-                      <span>🥩 <strong>{{ rec.protein }}g</strong> Proteína</span>
-                      <span>🍚 <strong>{{ rec.carbohydrates }}g</strong> Carbos</span>
-                      <span>🥑 <strong>{{ rec.fats }}g</strong> Grasas</span>
-                      <span>🌾 <strong>{{ rec.fiber }}g</strong> Fibra</span>
-                    </div>
-
-                    <!-- Razones Clínicas -->
-                    @if (rec.reasons.length > 0) {
-                      <div style="margin-bottom: 8px;">
-                        @for (reason of rec.reasons; track reason) {
-                          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem; color: #206443; margin-bottom: 3px;">
-                            <span>✓</span>
-                            <span>{{ reason }}</span>
-                          </div>
-                        }
-                      </div>
-                    }
-
-                    <!-- Advertencias de Alérgenos o Patologías -->
-                    @if (rec.warnings.length > 0) {
-                      <div style="margin-bottom: 12px;">
-                        @for (warn of rec.warnings; track warn) {
-                          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem; color: #d9534f; margin-bottom: 3px; font-weight: 500;">
-                            <span>⚠️</span>
-                            <span>{{ warn }}</span>
-                          </div>
-                        }
-                      </div>
-                    }
-
-                    <!-- Botón de asignación directa -->
-                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                      @if (rec.already_assigned) {
-                        <span style="display: inline-flex; align-items: center; gap: 4px; color: #206443; font-weight: 600; font-size: 0.85rem; padding: 6px 12px; background: rgba(32,100,67,0.1); border-radius: 6px;">
-                          ✓ Asignada en su Plan Actual
-                        </span>
-                      } @else {
-                        <button 
-                          (click)="assignAiRecipe(rec.recipe_id)"
-                          class="btn-primary btn-sm"
-                          [disabled]="rec.compatibility_level === 'CONTRAINDICADA'"
-                          style="font-size: 0.85rem; padding: 6px 14px;">
-                          Prescribir y Asignar Receta
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    }
+    <app-modal-asistente-ia-recetas
+      [isOpen]="aiModalOpen()"
+      [patient]="selectedPatientForAi()"
+      (closed)="closeAiAssistant()"
+      (recipeAssigned)="loadRecipes()"
+    />
 
     <!-- ============================================================= -->
-    <!-- MODAL: CONFIRMAR RESTAURACIÓN DE COPIA DE SEGURIDAD -->
+    <!-- MODAL: GENERADOR Y VISOR DE PLANES NUTRICIONALES IA (MODULARIZADO) -->
     <!-- ============================================================= -->
-    @if (restoreModalOpen()) {
-      <div class="modal-backdrop" (click)="closeRestoreModal()">
-        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 520px;">
-          <div class="modal-header">
-            <h3 style="color: #d9534f;">Confirmar Restauración del Sistema</h3>
-            <button class="modal-close" (click)="closeRestoreModal()">✕</button>
-          </div>
+    <app-plan-ia-modal
+      [isOpen]="aiPlanModalOpen()"
+      [patient]="selectedPatientForAiPlan()"
+      (closed)="closeAiPlanModal()"
+    />
 
-          <div style="padding: 20px 0;">
-            <p style="font-size: 0.95rem; line-height: 1.5; color: var(--color-text-title); margin-bottom: 12px;">
-              Estás a punto de restaurar la base de datos a partir del archivo:
-            </p>
-            <div style="font-family: monospace; font-size: 0.88rem; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px; margin-bottom: 16px;">
-              📁 {{ selectedRestoreFile?.name }} ({{ selectedRestoreFile?.size }} bytes)
-            </div>
-            <div style="background: rgba(217, 83, 79, 0.08); border-left: 4px solid #d9534f; padding: 12px 14px; border-radius: 4px; font-size: 0.85rem; color: #b91c1c;">
-              ⚠️ <strong>Precaución:</strong> Este proceso sincronizará y actualizará registros en todas las tablas del sistema. Asegúrate de que el archivo provenga de una fuente de confianza de NutriSalud.
-            </div>
-          </div>
-
-          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button (click)="closeRestoreModal()" class="btn-outline" [disabled]="isRestoringBackup()">Cancelar</button>
-            <button (click)="executeRestore()" class="btn-primary" [disabled]="isRestoringBackup()" style="background: #d9534f;">
-              @if (isRestoringBackup()) {
-                <span>Restaurando datos...</span>
-              } @else {
-                <span>Confirmar y Restaurar</span>
-              }
-            </button>
-          </div>
-        </div>
-      </div>
-    }
+    <!-- ============================================================= -->
+    <!-- MODAL: CONFIRMAR RESTAURACIÓN DE COPIA DE SEGURIDAD (MODULARIZADO) -->
+    <!-- ============================================================= -->
+    <app-modal-restaurar-backup
+      [isOpen]="restoreModalOpen()"
+      [restoreFile]="selectedRestoreFile"
+      (closed)="closeRestoreModal()"
+      (restored)="onBackupRestored($event)"
+    />
   </main>
 </div>

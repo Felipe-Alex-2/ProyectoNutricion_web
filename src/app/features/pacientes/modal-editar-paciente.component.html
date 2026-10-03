@@ -1,0 +1,47 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Editar Datos del Cliente</h3>
+        <button class="modal-close" (click)="cerrar()">✕</button>
+      </div>
+
+      @if (errorMessage) {
+        <div class="alert alert-error my-3">{{ errorMessage }}</div>
+      }
+
+      <form [formGroup]="patientForm" (ngSubmit)="guardar()" class="modal-form" style="margin-top: 16px;">
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Nombre Completo *</label>
+          <input type="text" formControlName="full_name" class="input-field form-control" style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);" />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Correo Electrónico *</label>
+          <input type="email" formControlName="email" class="input-field form-control" style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);" />
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Teléfono / WhatsApp</label>
+          <input type="text" formControlName="phone" class="input-field form-control" placeholder="+591 70000000" style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);" />
+        </div>
+
+        <div class="form-group mb-4" style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" formControlName="is_active" id="edit_patient_active" style="width: 18px; height: 18px;" />
+          <label for="edit_patient_active" style="font-size: 0.9rem; font-weight: 500; cursor: pointer;">Cliente Activo en el Sistema</label>
+        </div>
+
+        <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+          <button type="button" class="btn-outline" (click)="cerrar()" [disabled]="isSaving">Cancelar</button>
+          <button type="submit" class="btn-primary" [disabled]="patientForm.invalid || isSaving" style="background: #206443; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
+            @if (isSaving) {
+              <span>Guardando...</span>
+            } @else {
+              <span>Guardar Cambios</span>
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

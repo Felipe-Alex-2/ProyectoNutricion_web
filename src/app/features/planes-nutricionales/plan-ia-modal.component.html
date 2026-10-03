@@ -1,0 +1,204 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 920px; max-height: 92vh; overflow-y: auto;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); color: white; display: flex; align-items: center; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">Plan Nutricional IA (Mifflin-St Jeor & Menú Semanal)</h3>
+            <small style="color: var(--color-text-muted);">
+              Paciente: <strong>{{ patient?.full_name }}</strong> ({{ patient?.email }})
+            </small>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrar()">✕</button>
+      </div>
+
+      @if (aiPlanSuccess()) {
+        <div class="alert alert-success my-3">{{ aiPlanSuccess() }}</div>
+      }
+      @if (aiPlanError()) {
+        <div class="alert alert-error my-3">{{ aiPlanError() }}</div>
+      }
+
+      <!-- Controles de Configuración para el Generador IA -->
+      <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 18px; margin: 18px 0;">
+        <h4 style="margin: 0 0 12px 0; font-size: 0.95rem; font-weight: 700; color: var(--color-text-title);">Parámetros del Plan con IA y Reglas de Seguridad</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px;">Comidas Diarias</label>
+            <select [value]="planMealsPerDay()" (change)="planMealsPerDay.set(+$any($event.target).value)" class="form-control input-field" style="padding: 7px 10px;">
+              <option [value]="3">3 comidas (Desayuno, Almuerzo, Cena)</option>
+              <option [value]="4">4 comidas (Desayuno, Almuerzo, Merienda, Cena)</option>
+              <option [value]="5">5 comidas (Desayuno, Media Mañana, Almuerzo, Merienda, Cena)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px;">Ajuste Calórico (% Déficit / Superávit)</label>
+            <input type="number" [value]="planCalorieAdjustmentPct()" (input)="planCalorieAdjustmentPct.set(+$any($event.target).value)" class="form-control input-field" placeholder="Ej: -15 para déficit, +10 para volumen" style="padding: 7px 10px;" />
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px;">Objetivo Personalizado (Opcional)</label>
+            <input type="text" [value]="planCustomGoal()" (input)="planCustomGoal.set($any($event.target).value)" class="form-control input-field" placeholder="Ej: Tonificación muscular, control glucemia..." style="padding: 7px 10px;" />
+          </div>
+          <div>
+            <button (click)="generarBorrador()" class="btn-primary" [disabled]="isGeneratingAiPlan()" style="width: 100%; padding: 9px 14px; background: linear-gradient(135deg, #10b981, #059669); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+              @if (isGeneratingAiPlan()) {
+                <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+                <span>Calculando con IA...</span>
+              } @else {
+                <span>✨ Generar Borrador</span>
+              }
+            </button>
+          </div>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--color-text-muted); margin: 8px 0 0 0;">
+          🔒 Seguridad clínica garantizada: Límites mínimos de 1200 kcal (mujeres) / 1500 kcal (hombres), exclusión automática de alérgenos y cálculo de proteína 1.8g/kg.
+        </p>
+      </div>
+
+      <!-- Si hay un plan activo o generado -->
+      @if (selectedPlanDraft(); as plan) {
+        <div style="border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; background: var(--color-surface); margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <h4 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--color-text-title);">{{ plan.title }}</h4>
+                @if (plan.status === 'APPROVED') {
+                  <span style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 0.78rem;">
+                    ✓ APROBADO & PUBLICADO
+                  </span>
+                } @else if (plan.status === 'DRAFT') {
+                  <span style="background: rgba(245, 158, 11, 0.15); color: #b45309; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 0.78rem;">
+                    📝 BORRADOR PENDIENTE
+                  </span>
+                } @else {
+                  <span style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 0.78rem;">
+                    {{ plan.status }}
+                  </span>
+                }
+              </div>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--color-text-muted);">
+                Objetivo: <strong>{{ plan.goal || 'General' }}</strong> • Creado el {{ plan.created_at | date:'dd/MM/yyyy HH:mm' }}
+              </p>
+            </div>
+
+            <div>
+              @if (plan.status === 'DRAFT') {
+                <button 
+                  (click)="aprobarPlan()" 
+                  class="btn-primary" 
+                  [disabled]="isApprovingAiPlan()"
+                  style="background: #206443; padding: 9px 18px; font-weight: 700; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;">
+                  @if (isApprovingAiPlan()) {
+                    <span style="display: inline-block; width: 14px; height: 14px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></span>
+                    <span>Aprobando...</span>
+                  } @else {
+                    <span>✓ Aprobar y Publicar en App</span>
+                  }
+                </button>
+              } @else {
+                <span style="color: #059669; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 4px;">
+                  ✓ Sincronizado con Flutter Móvil
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Tarjetas de Métricas Calóricas y Macronutrientes -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(32, 100, 67, 0.08); border-radius: 10px; padding: 12px; text-align: center;">
+              <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; font-weight: 600;">CALORÍAS META</span>
+              <strong style="font-size: 1.3rem; color: #206443;">{{ plan.daily_calories }}</strong>
+              <span style="font-size: 0.72rem; color: var(--color-text-muted); display: block;">kcal / día</span>
+            </div>
+            <div style="background: rgba(59, 130, 246, 0.08); border-radius: 10px; padding: 12px; text-align: center;">
+              <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; font-weight: 600;">PROTEÍNAS</span>
+              <strong style="font-size: 1.3rem; color: #1d4ed8;">{{ plan.protein_g }}g</strong>
+              <span style="font-size: 0.72rem; color: var(--color-text-muted); display: block;">(1.8g / kg peso)</span>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.08); border-radius: 10px; padding: 12px; text-align: center;">
+              <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; font-weight: 600;">GRASAS</span>
+              <strong style="font-size: 1.3rem; color: #b45309;">{{ plan.fats_g }}g</strong>
+              <span style="font-size: 0.72rem; color: var(--color-text-muted); display: block;">(25% del total)</span>
+            </div>
+            <div style="background: rgba(16, 185, 129, 0.08); border-radius: 10px; padding: 12px; text-align: center;">
+              <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; font-weight: 600;">CARBOHIDRATOS</span>
+              <strong style="font-size: 1.3rem; color: #059669;">{{ plan.carbs_g }}g</strong>
+              <span style="font-size: 0.72rem; color: var(--color-text-muted); display: block;">Resto energético</span>
+            </div>
+            <div style="background: rgba(139, 92, 246, 0.08); border-radius: 10px; padding: 12px; text-align: center;">
+              <span style="font-size: 0.75rem; color: var(--color-text-muted); display: block; font-weight: 600;">FIBRA MÍNIMA</span>
+              <strong style="font-size: 1.3rem; color: #7c3aed;">{{ plan.fiber_g || 25 }}g</strong>
+              <span style="font-size: 0.72rem; color: var(--color-text-muted); display: block;">Salud intestinal</span>
+            </div>
+          </div>
+
+          <!-- Distribución de Comidas del Menú -->
+          @if (plan.meals && plan.meals.length > 0) {
+            <h5 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 12px 0; color: var(--color-text-title);">
+              Distribución Diaria y Alimentos Sugeridos ({{ plan.meals.length }} tiempos de comida)
+            </h5>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              @for (meal of plan.meals; track meal.meal_name) {
+                <div style="background: var(--color-background); border: 1px solid var(--color-border); border-radius: 10px; padding: 14px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="background: var(--color-primary); color: white; padding: 2px 10px; border-radius: 6px; font-weight: 700; font-size: 0.78rem;">
+                        {{ meal.meal_name }}
+                      </span>
+                      <strong style="font-size: 0.92rem; color: var(--color-text-title);">{{ meal.meal_name }}</strong>
+                      @if (meal.time_suggestion) {
+                        <span style="font-size: 0.75rem; color: var(--color-text-muted);">⏰ {{ meal.time_suggestion }}</span>
+                      }
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+                      🔥 <strong>{{ meal.total_calories }}</strong> kcal
+                    </div>
+                  </div>
+
+                  @if (meal.foods && meal.foods.length > 0) {
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                      @for (item of meal.foods; track item.name) {
+                        <span style="background: rgba(0,0,0,0.04); border: 1px solid var(--color-border); border-radius: 6px; padding: 3px 8px; font-size: 0.78rem;">
+                          🍽️ {{ item.portion }} de <strong>{{ item.name }}</strong> ({{ item.calories }} kcal • {{ item.protein_g }}g P)
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Notas y Fundamento Clínico -->
+          @if (plan.clinical_notes) {
+            <div style="margin-top: 16px; padding: 12px 16px; background: rgba(0,0,0,0.02); border-radius: 8px; font-size: 0.84rem; color: var(--color-text-muted);">
+              💡 <strong>Fundamento y Observaciones:</strong> {{ plan.clinical_notes }}
+            </div>
+          }
+        </div>
+      } @else {
+        <div style="padding: 40px 20px; text-align: center; color: var(--color-text-muted);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px; opacity: 0.5;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <p style="margin: 0; font-size: 0.95rem;">No hay un plan activo o borrador cargado para este paciente.</p>
+          <p style="margin: 4px 0 0 0; font-size: 0.82rem;">Ajusta los parámetros arriba y presiona <strong>"✨ Generar Borrador"</strong> para crear el plan con cálculo Mifflin-St Jeor.</p>
+        </div>
+      }
+
+      <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+        <button (click)="cerrar()" class="btn-outline">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}

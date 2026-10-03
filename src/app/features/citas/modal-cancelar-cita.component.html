@@ -1,0 +1,42 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 style="color: #d9534f; margin: 0; font-size: 1.15rem; font-weight: 700;">Cancelar Cita Médica</h3>
+        <button class="modal-close" (click)="cerrar()">✕</button>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="alert alert-error my-3" style="margin-top: 14px;">{{ errorMessage() }}</div>
+      }
+
+      <div style="padding: 16px 0;">
+        <p style="font-size: 0.95rem; line-height: 1.5; color: var(--color-text-title, #0f172a); margin-bottom: 8px;">
+          ¿Estás seguro de cancelar la cita de <strong>{{ appointment?.patient_name || 'este paciente' }}</strong>?
+        </p>
+        <p style="font-size: 0.85rem; color: var(--color-text-muted, #64748b); margin: 0 0 14px 0;">
+          📅 {{ appointment?.scheduled_at | date:'dd/MM/yyyy HH:mm' }}
+        </p>
+
+        <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 4px;">Motivo de Cancelación (Opcional)</label>
+        <textarea 
+          [value]="cancelReason()" 
+          (input)="cancelReason.set($any($event.target).value)"
+          rows="3" 
+          placeholder="Indica la razón por la cual se cancela la cita..."
+          style="width: 100%; border: 1px solid var(--color-border, #cbd5e1); border-radius: 8px; padding: 8px 12px; font-size: 0.85rem;"></textarea>
+      </div>
+
+      <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button (click)="cerrar()" class="btn-outline" [disabled]="isCancelling()">Atrás</button>
+        <button (click)="confirmarCancelacion()" class="btn-danger" [disabled]="isCancelling()" style="background: #d9534f; color: white; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+          @if (isCancelling()) {
+            <span>Cancelando...</span>
+          } @else {
+            <span>Confirmar Cancelación</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
