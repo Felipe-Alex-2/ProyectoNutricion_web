@@ -9,17 +9,10 @@
         </span>
       </div>
       <p class="panel-desc">
-        Tareas automatizadas de recordatorios a 1 hora de las citas, encuestas interactivas de hábitos estilo WhatsApp y resúmenes clínicos.
+        Tareas automatizadas de recordatorios a 1 hora de las citas y resúmenes clínicos para el nutricionista.
       </p>
     </div>
     <div class="actions-row">
-      <button 
-        (click)="openSurveyModal()" 
-        class="btn-primary btn-sm"
-        style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">
-        <span>💬 Crear Encuesta Semanal (WhatsApp)</span>
-      </button>
-
       <button 
         (click)="ejecutarRecordatoriosCitas()" 
         class="btn-outline btn-sm"
@@ -54,111 +47,3 @@
     </div>
   }
 </div>
-
-<!-- ============================================================= -->
-<!-- MODAL: CREAR ENCUESTA SEMANAL DE HÁBITOS (ESTILO WHATSAPP) -->
-<!-- ============================================================= -->
-@if (isSurveyModalOpen()) {
-  <div class="modal-backdrop" (click)="closeSurveyModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 580px;">
-      <div class="modal-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 12px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: #25d366; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
-            📊
-          </div>
-          <div>
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Encuesta Semanal de Hábitos</h3>
-            <small style="color: var(--color-text-muted);">El paciente responderá con opciones seleccionables directamente en su app</small>
-          </div>
-        </div>
-        <button class="modal-close" (click)="closeSurveyModal()">✕</button>
-      </div>
-
-      <div style="padding: 16px 0;">
-        <!-- Destinatarios -->
-        <div class="form-group mb-3">
-          <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: block;">Enviar a:</label>
-          <select 
-            [value]="selectedPatientId()" 
-            (change)="selectedPatientId.set($any($event.target).value)"
-            class="form-control input-field">
-            <option value="ALL">📢 Todos los pacientes vinculados ({{ patients.length }})</option>
-            @for (p of patients; track p.id) {
-              <option [value]="p.id">👤 {{ p.full_name }} ({{ p.email }})</option>
-            }
-          </select>
-        </div>
-
-        <!-- Pregunta -->
-        <div class="form-group mb-3">
-          <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: block;">Pregunta de la Encuesta *</label>
-          <input 
-            type="text" 
-            [value]="surveyQuestion()" 
-            (input)="surveyQuestion.set($any($event.target).value)" 
-            class="form-control input-field" 
-            placeholder="Ej: ¿Estás tomando al menos 2 litros de agua diarios?" />
-        </div>
-
-        <!-- Opciones Interactivas -->
-        <div class="form-group mb-3">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <label style="font-weight: 600; font-size: 0.85rem; margin: 0;">Opciones de Respuesta (Estilo WhatsApp) *</label>
-            <button 
-              type="button" 
-              (click)="addSurveyOption()" 
-              class="btn-outline btn-sm" 
-              style="padding: 3px 8px; font-size: 0.78rem;">
-              + Añadir Opción
-            </button>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            @for (opt of surveyOptions(); track $index) {
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="color: #25d366; font-size: 0.9rem;">🔘</span>
-                <input 
-                  type="text" 
-                  [value]="opt" 
-                  (input)="updateSurveyOption($index, $any($event.target).value)" 
-                  class="form-control input-field" 
-                  style="flex: 1; padding: 7px 10px;" />
-                @if (surveyOptions().length > 2) {
-                  <button 
-                    type="button" 
-                    (click)="removeSurveyOption($index)" 
-                    class="btn-outline btn-sm" 
-                    style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 5px 8px;">
-                    ✕
-                  </button>
-                }
-              </div>
-            }
-          </div>
-        </div>
-
-        <div style="background: rgba(37, 211, 102, 0.08); border-radius: 10px; padding: 10px 14px; margin-top: 14px;">
-          <p style="margin: 0; font-size: 0.8rem; color: #065f46; display: flex; align-items: center; gap: 6px;">
-            <span>ℹ️</span> Cuando el paciente vote en su móvil, la respuesta llegará de inmediato a tu campana de notificaciones.
-          </p>
-        </div>
-      </div>
-
-      <div class="modal-footer" style="border-top: 1px solid var(--color-border); padding-top: 14px; display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" class="btn-outline" (click)="closeSurveyModal()">Cancelar</button>
-        <button 
-          type="button" 
-          class="btn-primary" 
-          [disabled]="isSendingSurvey()"
-          (click)="sendSurvey()"
-          style="background: #25d366; color: white; font-weight: 700;">
-          @if (isSendingSurvey()) {
-            <span>Enviando...</span>
-          } @else {
-            <span>🚀 Enviar Encuesta</span>
-          }
-        </button>
-      </div>
-    </div>
-  </div>
-}
