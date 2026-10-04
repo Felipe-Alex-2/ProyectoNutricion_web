@@ -17,6 +17,7 @@ export class PlanIaModalComponent implements OnChanges {
   @Input() patient: PatientListItem | null = null;
   @Output() closed = new EventEmitter<void>();
   @Output() planApproved = new EventEmitter<NutritionalPlanModel>();
+  @Output() createRecipeFromPlan = new EventEmitter<{ plan: NutritionalPlanModel; patient: PatientListItem }>();
 
   selectedPlanDraft = signal<NutritionalPlanModel | null>(null);
   isGeneratingAiPlan = signal<boolean>(false);
@@ -96,8 +97,13 @@ export class PlanIaModalComponent implements OnChanges {
       next: (approvedPlan) => {
         this.selectedPlanDraft.set(approvedPlan);
         this.isApprovingAiPlan.set(false);
-        this.aiPlanSuccess.set('¡Plan aprobado y publicado! El paciente ahora tiene su menú de 7 días activo en la App Móvil.');
+        this.aiPlanSuccess.set('¡Plan aprobado y publicado! Abriendo creación de receta para el paciente...');
         this.planApproved.emit(approvedPlan);
+        if (this.patient) {
+          setTimeout(() => {
+            this.createRecipeFromPlan.emit({ plan: approvedPlan, patient: this.patient! });
+          }, 600);
+        }
       },
       error: (err: any) => {
         this.isApprovingAiPlan.set(false);

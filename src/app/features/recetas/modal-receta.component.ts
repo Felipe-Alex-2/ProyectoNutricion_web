@@ -16,6 +16,7 @@ export class ModalRecetaComponent implements OnChanges {
   @Input() isOpen: boolean = false;
   @Input() editingRecipe: Recipe | null = null;
   @Input() orgUsers: User[] = [];
+  @Input() prefillData: any = null;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<{ isEdit: boolean; title: string }>();
 
@@ -70,6 +71,30 @@ export class ModalRecetaComponent implements OnChanges {
           instructions: this.editingRecipe.instructions || '',
         });
         this.recipeSelectedPatients.set([...(this.editingRecipe.assigned_patient_ids || [])]);
+      } else if (this.prefillData) {
+        this.recipeForm.patchValue({
+          title: this.prefillData.title || '',
+          description: this.prefillData.description || '',
+          image_url: this.prefillData.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+          calories: this.prefillData.calories || 450,
+          protein: this.prefillData.protein || 30,
+          carbohydrates: this.prefillData.carbohydrates || 40,
+          fats: this.prefillData.fats || 15,
+          fiber: this.prefillData.fiber || 6,
+          sodium: this.prefillData.sodium || 250,
+          servings: this.prefillData.servings || 1,
+          prep_time_minutes: this.prefillData.prep_time_minutes || 15,
+          cook_time_minutes: this.prefillData.cook_time_minutes || 15,
+          difficulty: this.prefillData.difficulty || 'Fácil',
+          category: this.prefillData.category || 'Almuerzo',
+          ingredients: this.prefillData.ingredients || '',
+          instructions: this.prefillData.instructions || '',
+        });
+        if (this.prefillData.patientId) {
+          this.recipeSelectedPatients.set([this.prefillData.patientId]);
+        } else {
+          this.recipeSelectedPatients.set([]);
+        }
       } else {
         this.recipeForm.reset({
           image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',

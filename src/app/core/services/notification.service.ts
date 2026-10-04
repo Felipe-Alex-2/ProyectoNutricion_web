@@ -28,4 +28,14 @@ export class NotificationService {
   markAllAsRead(): Observable<{ message: string; updated_count: number }> {
     return this.http.patch<{ message: string; updated_count: number }>(`${this.apiUrl}/read-all`, {});
   }
+
+  sendNotification(payload: {
+    user_id: string;
+    title: string;
+    message: string;
+    type?: string;
+    reference_id?: string;
+  }): Observable<Notification> {
+    return this.http.post<Notification>(`${this.apiUrl}/send`, payload);
+  }
 }

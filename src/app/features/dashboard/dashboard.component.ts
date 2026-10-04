@@ -194,6 +194,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Recetas Nutricionales con Foto y Macros
   recipeModalOpen = signal<boolean>(false);
   editingRecipe = signal<Recipe | null>(null);
+  prefillRecipeData = signal<any | null>(null);
   recipeSuccess = signal<string | null>(null);
   recipeError = signal<string | null>(null);
   recipeCategoryFilter = signal<string>('');
@@ -1242,6 +1243,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   closeRecipeModal(): void {
     this.recipeModalOpen.set(false);
     this.editingRecipe.set(null);
+    this.prefillRecipeData.set(null);
     this.recipeSelectedPatients.set([]);
   }
 
@@ -2249,6 +2251,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedPlanDraft.set(null);
     this.aiPlanError.set(null);
     this.aiPlanSuccess.set(null);
+  }
+
+  onCreateRecipeFromPlan(event: { plan: NutritionalPlanModel; patient: PatientListItem }): void {
+    const p = event.plan;
+    const mealsCount = p.meals_per_day || 4;
+    const calPerMeal = Math.round(p.daily_calories / mealsCount);
+    const protPerMeal = Math.round(p.protein_g / mealsCount);
+    const carbsPerMeal = Math.round(p.carbs_g / mealsCount);
+    const fatsPerMeal = Math.round(p.fats_g / mealsCount);
+    const fiberPerMeal = Math.round((p.fiber_g || 25) / mealsCount);
+
+    let suggestedIngredients = '150g pechuga de pollo o tofu, 1 taza de espinacas o ensalada fresca, 1/2 taza de quinoa o arroz integral, 1 cdta de aceite de oliva';
+    let suggestedInstructions = '1. Lavar y preparar los alimentos frescos.\n2. Cocinar a la plancha o al vapor con especias naturales al gusto.\n3. Servir en plato según los macronutrientes calculados en el plan.';
+    let suggestedCategory = 'Almuerzo';
+
+    if (p.meals && p.meals.length > 0) {
+      const matchMeal = p.meals.find((m) => m.meal_name?.toLowerCase().includes('almuerzo')) || p.meals[0];
+      if (matchMeal) {
+        if (matchMeal.meal_name?.toLowerCase().includes('desayuno')) suggestedCategory = 'Desayuno';
+        else if (matchMeal.meal_name?.toLowerCase().includes('cena')) suggestedCategory = 'Cena';
+        else suggestedCategory = 'Almuerzo';
+
+        if (matchMeal.foods && matchMeal.foods.length > 0) {
+          suggestedIngredients = matchMeal.foods.map((f) => `${f.portion} ${f.name}`).join(', ');
+        }
+      }
+    }
+
+    this.prefillRecipeData.set({
+      title: `${p.title} - ${suggestedCategory}`,
+      description: `Receta diseñada para ${event.patient.full_name} según cálculo de ${p.title} (Objetivo: ${p.goal || 'Nutricional'}).`,
+      image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+      calories: calPerMeal,
+      protein: protPerMeal,
+      carbohydrates: carbsPerMeal,
+      fats: fatsPerMeal,
+      fiber: fiberPerMeal,
+      sodium: 250,
+      servings: 1,
+      prep_time_minutes: 15,
+      cook_time_minutes: 20,
+      difficulty: 'Fácil',
+      category: suggestedCategory,
+      ingredients: suggestedIngredients,
+      instructions: suggestedInstructions,
+      patientId: event.patient.id,
+      patientName: event.patient.full_name,
+    });
+
+    this.aiPlanModalOpen.set(false);
+    this.editingRecipe.set(null);
+    this.recipeModalOpen.set(true);
   }
 
   generateAiPlanDraft(): void {
