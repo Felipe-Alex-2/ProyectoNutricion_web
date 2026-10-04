@@ -31,3 +31,26 @@ export interface ReportQueryResponse {
   rows: Record<string, any>[];
   total_rows: number;
 }
+
+export interface VoiceReportCommandRequest {
+  transcript: string;
+}
+
+export interface VoiceReportCommandResponse {
+  parsed_request: ReportQueryRequest;
+  explanation: string;
+  report_data?: ReportQueryResponse;
+}
+
+export interface VoiceReportSummaryRequest {
+  entity: string;
+  title: string;
+  total_rows: number;
+  columns: string[];
+  sample_rows: Record<string, any>[];
+}
+
+export interface VoiceReportSummaryResponse {
+  summary_text: string;
+  bullet_points: string[];
+}

@@ -31,7 +31,12 @@ import { BackupService } from '../../core/services/backup.service';
 import { ReportService } from '../../core/services/report.service';
 import { PatientListItem, UserUpdate } from '../../core/models/user.model';
 import { BackupSetting, BackupLog } from '../../core/models/backup.model';
-import { ReportEntityMeta, ReportQueryResponse } from '../../core/models/report.model';
+import {
+  ReportEntityMeta,
+  ReportQueryResponse,
+  VoiceReportSummaryResponse,
+  VoiceReportSummaryRequest,
+} from '../../core/models/report.model';
 import { AIRecommendationResponse } from '../../core/models/ai-recommendation.model';
 import { PlanIaModalComponent } from '../planes-nutricionales/plan-ia-modal.component';
 import { PanelAutomatizacionesComponent } from '../automatizaciones/panel-automatizaciones.component';
@@ -127,6 +132,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isExportingReport = signal<boolean>(false);
   reportMessage = signal<string | null>(null);
   reportError = signal<string | null>(null);
+
+  // Módulo de Reportes por Voz con Gemini IA
+  isRecordingVoice = signal<boolean>(false);
+  voiceTranscript = signal<string>('');
+  isProcessingVoice = signal<boolean>(false);
+  geminiVoiceExplanation = signal<string | null>(null);
+
+  // Resumen Locutado por Voz (TTS con Gemini)
+  voiceSummaryData = signal<VoiceReportSummaryResponse | null>(null);
+  isLoadingVoiceSummary = signal<boolean>(false);
+  isSpeakingVoiceSummary = signal<boolean>(false);
+  isPausedVoiceSummary = signal<boolean>(false);
+  private speechRecognition: any = null;
 
   // Módulo de Copias de Seguridad (Backup)
   backupForm: FormGroup;
@@ -2541,6 +2559,213 @@ export class DashboardComponent implements OnInit, OnDestroy {
         setTimeout(() => this.reportError.set(null), 3500);
       },
     });
+  }
+
+  // Métodos de Reportes por Voz con Gemini IA
+  toggleVoiceRecording(): void {
+    if (this.isRecordingVoice()) {
+      this.stopVoiceRecording();
+    } else {
+      this.startVoiceRecording();
+    }
+  }
+
+  startVoiceRecording(): void {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      this.reportError.set('Tu navegador no cuenta con soporte directo de SpeechRecognition. Puedes escribir la instrucción en el campo de texto.');
+      return;
+    }
+
+    try {
+      this.speechRecognition = new SpeechRecognition();
+      this.speechRecognition.lang = 'es-ES';
+      this.speechRecognition.continuous = false;
+      this.speechRecognition.interimResults = true;
+
+      this.isRecordingVoice.set(true);
+      this.voiceTranscript.set('');
+      this.geminiVoiceExplanation.set(null);
+      this.reportError.set(null);
+
+      this.speechRecognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        this.voiceTranscript.set(transcript);
+      };
+
+      this.speechRecognition.onend = () => {
+        this.isRecordingVoice.set(false);
+        const text = this.voiceTranscript().trim();
+        if (text) {
+          this.processVoiceReportCommand(text);
+        }
+      };
+
+      this.speechRecognition.onerror = (event: any) => {
+        this.isRecordingVoice.set(false);
+        if (event.error !== 'no-speech') {
+          this.reportError.set(`Error de micrófono: ${event.error}`);
+        }
+      };
+
+      this.speechRecognition.start();
+    } catch (e: any) {
+      this.isRecordingVoice.set(false);
+      this.reportError.set(`No se pudo iniciar el micrófono: ${e?.message || e}`);
+    }
+  }
+
+  stopVoiceRecording(): void {
+    if (this.speechRecognition) {
+      try {
+        this.speechRecognition.stop();
+      } catch (_) {}
+    }
+    this.isRecordingVoice.set(false);
+  }
+
+  processVoiceReportCommand(text?: string): void {
+    const transcript = (text || this.voiceTranscript()).trim();
+    if (!transcript) {
+      this.reportError.set('Por favor di o escribe una instrucción para el reporte.');
+      return;
+    }
+
+    this.isProcessingVoice.set(true);
+    this.reportError.set(null);
+    this.geminiVoiceExplanation.set(null);
+
+    this.reportService.sendVoiceCommand(transcript).subscribe({
+      next: (res) => {
+        this.isProcessingVoice.set(false);
+        this.geminiVoiceExplanation.set(res.explanation);
+
+        // Actualizar parámetros en la interfaz de forma sincronizada
+        if (res.parsed_request) {
+          this.selectedReportEntity.set(res.parsed_request.entity);
+          if (res.parsed_request.columns && res.parsed_request.columns.length > 0) {
+            this.selectedReportColumns.set(res.parsed_request.columns);
+          }
+          this.reportStartDate.set(res.parsed_request.start_date || '');
+          this.reportEndDate.set(res.parsed_request.end_date || '');
+          this.reportSearch.set(res.parsed_request.search || '');
+          this.reportStatusFilter.set(res.parsed_request.status || '');
+        }
+
+        // Si vino la vista previa de datos generada directamente, asignarla
+        if (res.report_data) {
+          this.reportPreviewData.set(res.report_data);
+          this.voiceSummaryData.set(null);
+          this.stopVoiceSummary();
+        } else {
+          this.generateReportPreview();
+        }
+
+        this.reportMessage.set(`✨ Gemini IA: ${res.explanation}`);
+        setTimeout(() => this.reportMessage.set(null), 6000);
+      },
+      error: (err: any) => {
+        this.isProcessingVoice.set(false);
+        this.reportError.set(err?.error?.detail || 'Error al procesar el comando por voz con Gemini.');
+      },
+    });
+  }
+
+  selectVoiceSuggestion(prompt: string): void {
+    this.voiceTranscript.set(prompt);
+    this.processVoiceReportCommand(prompt);
+  }
+
+  // Locución / Lectura por Voz de Resumen con Gemini (TTS)
+  requestVoiceSummary(): void {
+    const preview = this.reportPreviewData();
+    if (!preview) {
+      this.reportError.set('Primero genera una vista previa del reporte para poder narrarlo por voz.');
+      return;
+    }
+
+    this.isLoadingVoiceSummary.set(true);
+    this.reportError.set(null);
+
+    const req: VoiceReportSummaryRequest = {
+      entity: preview.entity,
+      title: preview.title,
+      total_rows: preview.total_rows,
+      columns: preview.columns.map((c) => c.key),
+      sample_rows: preview.rows.slice(0, 8),
+    };
+
+    this.reportService.getVoiceSummary(req).subscribe({
+      next: (res) => {
+        this.isLoadingVoiceSummary.set(false);
+        this.voiceSummaryData.set(res);
+        this.speakText(res.summary_text);
+      },
+      error: (err) => {
+        this.isLoadingVoiceSummary.set(false);
+        this.reportError.set(err?.error?.detail || 'Error al generar locución con Gemini.');
+      },
+    });
+  }
+
+  speakText(text: string): void {
+    if (!('speechSynthesis' in window)) {
+      this.reportError.set('Tu navegador no soporta síntesis de voz (Text-to-Speech).');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const esVoice = voices.find((v) => v.lang.startsWith('es'));
+    if (esVoice) {
+      utterance.voice = esVoice;
+    }
+
+    utterance.onstart = () => {
+      this.isSpeakingVoiceSummary.set(true);
+      this.isPausedVoiceSummary.set(false);
+    };
+
+    utterance.onend = () => {
+      this.isSpeakingVoiceSummary.set(false);
+      this.isPausedVoiceSummary.set(false);
+    };
+
+    utterance.onerror = () => {
+      this.isSpeakingVoiceSummary.set(false);
+      this.isPausedVoiceSummary.set(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  togglePauseVoiceSummary(): void {
+    if (!('speechSynthesis' in window)) return;
+
+    if (this.isPausedVoiceSummary()) {
+      window.speechSynthesis.resume();
+      this.isPausedVoiceSummary.set(false);
+      this.isSpeakingVoiceSummary.set(true);
+    } else if (this.isSpeakingVoiceSummary()) {
+      window.speechSynthesis.pause();
+      this.isPausedVoiceSummary.set(true);
+    }
+  }
+
+  stopVoiceSummary(): void {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    this.isSpeakingVoiceSummary.set(false);
+    this.isPausedVoiceSummary.set(false);
   }
 
   // ==========================================

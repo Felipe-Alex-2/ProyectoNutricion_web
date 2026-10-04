@@ -2,7 +2,14 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ReportEntityMeta, ReportQueryRequest, ReportQueryResponse } from '../models/report.model';
+import {
+  ReportEntityMeta,
+  ReportQueryRequest,
+  ReportQueryResponse,
+  VoiceReportCommandResponse,
+  VoiceReportSummaryRequest,
+  VoiceReportSummaryResponse,
+} from '../models/report.model';
 
 @Injectable({
   providedIn: 'root',
@@ -60,6 +67,14 @@ export class ReportService {
     return this.http.post(`${this.apiUrl}/export/pdf`, req, {
       responseType: 'blob',
     });
+  }
+
+  sendVoiceCommand(transcript: string): Observable<VoiceReportCommandResponse> {
+    return this.http.post<VoiceReportCommandResponse>(`${this.apiUrl}/voice-command`, { transcript });
+  }
+
+  getVoiceSummary(req: VoiceReportSummaryRequest): Observable<VoiceReportSummaryResponse> {
+    return this.http.post<VoiceReportSummaryResponse>(`${this.apiUrl}/voice-summary`, req);
   }
 
   downloadBlob(blob: Blob, filename: string): void {
