@@ -777,7 +777,7 @@
                     </svg>
                   </div>
                   <div class="method-btn-content">
-                    <span class="method-title">💵 Efectivo</span>
+                    <span class="method-title">Efectivo</span>
                     <span class="method-subtitle">Registro inmediato en caja</span>
                   </div>
                 </button>
@@ -892,7 +892,7 @@
                 class="filter-pill" 
                 [class.active]="paymentStatusFilter() === 'EFECTIVO'" 
                 (click)="onPaymentStatusFilterChange('EFECTIVO')">
-                💵 Efectivo
+                Efectivo
               </button>
               <button 
                 type="button" 
@@ -922,19 +922,20 @@
                   <th>Tipo</th>
                   <th>Estado</th>
                   <th>Referencia</th>
+                  <th>Detalle de Pago</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 @if (isLoadingPayments()) {
                   <tr>
-                    <td colspan="8" class="empty-table-cell">
+                    <td colspan="9" class="empty-table-cell">
                       Cargando cobros de la sucursal...
                     </td>
                   </tr>
                 } @else if (paymentsList().length === 0) {
                   <tr>
-                    <td colspan="8" class="empty-table-cell">
+                    <td colspan="9" class="empty-table-cell">
                       No hay cobros registrados en esta sucursal todavía.
                     </td>
                   </tr>
@@ -980,6 +981,36 @@
                     <td>
                       <div class="pos-ref-cell" [title]="p.paypal_order_id || (p.payment_method === 'EFECTIVO' ? 'Caja Local' : '')">
                         {{ p.paypal_order_id || (p.payment_method === 'EFECTIVO' ? 'Caja Local' : '-') }}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <button 
+                          type="button" 
+                          class="btn-detail-pay" 
+                          (click)="openPaymentDetail(p)" 
+                          title="Ver Detalle de Pago y Comprobante">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                          </svg>
+                          <span>Detalle (PDF)</span>
+                        </button>
+                        <button 
+                          type="button" 
+                          class="btn-icon-pdf" 
+                          (click)="downloadPaymentPdf(p)" 
+                          [disabled]="isExportingPaymentPdf()" 
+                          title="Descargar archivo PDF del Detalle de Pago">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                          </svg>
+                        </button>
                       </div>
                     </td>
                     <td>
@@ -1699,16 +1730,16 @@
             Todas
           </button>
           <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Desayuno'" (click)="filterRecipesByCategory('Desayuno')">
-            🍳 Desayunos
+            Desayunos
           </button>
           <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Almuerzo'" (click)="filterRecipesByCategory('Almuerzo')">
-            🥗 Almuerzos
+            Almuerzos
           </button>
           <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Cena'" (click)="filterRecipesByCategory('Cena')">
-            🍲 Cenas
+            Cenas
           </button>
           <button class="filter-chip" [class.active]="recipeCategoryFilter() === 'Snack'" (click)="filterRecipesByCategory('Snack')">
-            🍎 Snacks
+            Snacks
           </button>
         </div>
       </div>
@@ -1757,9 +1788,9 @@
                 </div>
 
                 <div class="recipe-meta-row">
-                  <span>⏱️ {{ recipe.prep_time_minutes + recipe.cook_time_minutes }} min</span>
-                  <span>🍽️ {{ recipe.servings }} porción</span>
-                  <span>🌾 {{ recipe.fiber }}g fibra</span>
+                  <span>Tiempo: {{ recipe.prep_time_minutes + recipe.cook_time_minutes }} min</span>
+                  <span>Porciones: {{ recipe.servings }}</span>
+                  <span>Fibra: {{ recipe.fiber }}g</span>
                 </div>
 
                 <div class="recipe-ingredients-box">
@@ -2032,7 +2063,7 @@
 
       <!-- Métricas de Citas -->
       <div class="metrics-grid mb-4">
-        <div class="metric-card">
+        <div class="metric-card card-total">
           <div class="metric-header">
             <span class="metric-label">Total Citas</span>
             <div class="metric-icon-circle icon-total">
@@ -2044,11 +2075,15 @@
               </svg>
             </div>
           </div>
-          <div class="metric-value">{{ totalAppointmentsCount }}</div>
-          <div class="metric-hint">Registradas en el sistema</div>
+          <div class="metric-body">
+            <div class="metric-number-box box-total">
+              <span class="metric-value">{{ totalAppointmentsCount }}</span>
+            </div>
+            <div class="metric-hint">Registradas en el sistema</div>
+          </div>
         </div>
 
-        <div class="metric-card">
+        <div class="metric-card card-pending">
           <div class="metric-header">
             <span class="metric-label">Pendientes</span>
             <div class="metric-icon-circle icon-pending">
@@ -2058,11 +2093,15 @@
               </svg>
             </div>
           </div>
-          <div class="metric-value" style="color: #d97706;">{{ pendingAppointmentsCount }}</div>
-          <div class="metric-hint">Requieren confirmación</div>
+          <div class="metric-body">
+            <div class="metric-number-box box-pending">
+              <span class="metric-value">{{ pendingAppointmentsCount }}</span>
+            </div>
+            <div class="metric-hint">Requieren confirmación</div>
+          </div>
         </div>
 
-        <div class="metric-card">
+        <div class="metric-card card-confirmed">
           <div class="metric-header">
             <span class="metric-label">Confirmadas</span>
             <div class="metric-icon-circle icon-confirmed">
@@ -2072,11 +2111,15 @@
               </svg>
             </div>
           </div>
-          <div class="metric-value" style="color: #059669;">{{ confirmedAppointmentsCount }}</div>
-          <div class="metric-hint">Agendadas formalmente</div>
+          <div class="metric-body">
+            <div class="metric-number-box box-confirmed">
+              <span class="metric-value">{{ confirmedAppointmentsCount }}</span>
+            </div>
+            <div class="metric-hint">Agendadas formalmente</div>
+          </div>
         </div>
 
-        <div class="metric-card">
+        <div class="metric-card card-cancelled">
           <div class="metric-header">
             <span class="metric-label">Canceladas</span>
             <div class="metric-icon-circle icon-cancelled">
@@ -2087,8 +2130,12 @@
               </svg>
             </div>
           </div>
-          <div class="metric-value" style="color: #dc2626;">{{ cancelledAppointmentsCount }}</div>
-          <div class="metric-hint">Canceladas con motivo</div>
+          <div class="metric-body">
+            <div class="metric-number-box box-cancelled">
+              <span class="metric-value">{{ cancelledAppointmentsCount }}</span>
+            </div>
+            <div class="metric-hint">Canceladas con motivo</div>
+          </div>
         </div>
       </div>
 
@@ -2127,7 +2174,7 @@
             <div class="spinner"></div>
             <p style="margin-top: 1rem; color: var(--text-secondary);">Cargando citas programadas...</p>
           </div>
-        } @else if (appointments().length === 0) {
+        } @else if (filteredAppointments.length === 0) {
           <div style="padding: 3.5rem; text-align: center;">
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-hover, #f3f4f6); margin-bottom: 1rem;">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-secondary);">
@@ -2156,7 +2203,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (appt of appointments(); track appt.id) {
+                @for (appt of filteredAppointments; track appt.id) {
                   <tr>
                     <td>
                       <div class="date-cell">
@@ -3111,14 +3158,13 @@
 
           <form [formGroup]="tenantForm" (ngSubmit)="onSaveTenant()" class="modal-form">
             <div class="form-group">
-              <label>Nombre de la Clínica / Centro *</label>
+              <label>Nombre de la Sucursal / Clínica *</label>
               <input type="text" formControlName="name" maxlength="250" class="input-field" placeholder="Clínica NutriVida" />
-              @if (tenantForm.get('name')?.touched && tenantForm.get('name')?.invalid) {
-                @if (tenantForm.get('name')?.hasError('required') || tenantForm.get('name')?.hasError('minlength')) {
-                  <span class="text-danger text-xs mt-1">El nombre es obligatorio (mínimo 3 caracteres).</span>
-                }
+              @if (tenantForm.get('name')?.touched && (tenantForm.get('name')?.invalid || !tenantForm.get('name')?.value?.trim())) {
                 @if (tenantForm.get('name')?.hasError('maxlength')) {
                   <span class="text-danger text-xs mt-1">El nombre no puede superar los 250 caracteres.</span>
+                } @else {
+                  <span class="text-danger text-xs mt-1">El nombre de la sucursal es obligatorio (mínimo 3 caracteres).</span>
                 }
               }
             </div>
@@ -3126,6 +3172,9 @@
             <div class="form-group">
               <label>Código Identificador Único *</label>
               <input type="text" formControlName="code" class="input-field text-uppercase" placeholder="NUTRIVIDA" [attr.disabled]="editingTenant() ? '' : null" />
+              @if (tenantForm.get('code')?.touched && (tenantForm.get('code')?.invalid || !tenantForm.get('code')?.value?.trim())) {
+                <span class="text-danger text-xs mt-1">El código identificador de la sucursal es obligatorio (mínimo 2 caracteres).</span>
+              }
             </div>
 
             <div class="form-row">
@@ -3583,5 +3632,133 @@
       (closed)="closeRestoreModal()"
       (restored)="onBackupRestored($event)"
     />
+
+    <!-- ============================================================= -->
+    <!-- MODAL: DETALLE DE PAGO / FACTURA DE TRANSACCIÓN -->
+    <!-- ============================================================= -->
+    @if (paymentDetailModalOpen() && selectedPaymentForDetail()) {
+      <div class="modal-backdrop" (click)="closePaymentDetail()">
+        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 620px; border-radius: 16px; overflow: hidden; padding: 0;">
+          <!-- Header del Modal -->
+          <div style="background: #206443; color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85;">Comprobante de Transacción</span>
+              <h3 style="margin: 2px 0 0; font-size: 1.25rem; font-weight: 700; color: white;">Detalle de Pago</h3>
+            </div>
+            <button class="modal-close" (click)="closePaymentDetail()" style="color: white; opacity: 0.9; font-size: 1.2rem; background: transparent; border: none; cursor: pointer;">✕</button>
+          </div>
+
+          <!-- Cuerpo del Comprobante -->
+          <div style="padding: 24px; max-height: 75vh; overflow-y: auto;">
+            <!-- Folio y Estado -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px dashed var(--color-border, #cbd5e1); margin-bottom: 18px;">
+              <div>
+                <span style="font-size: 0.75rem; color: var(--color-text-muted, #64748b);">Número de Comprobante</span>
+                <div style="font-weight: 700; font-size: 1.05rem; color: #206443;">#PAG-{{ selectedPaymentForDetail()!.id.slice(0, 8).toUpperCase() }}</div>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 0.75rem; color: var(--color-text-muted, #64748b);">Estado del Cobro</span>
+                <div>
+                  <span class="pos-badge" [ngClass]="getPaymentStatusBadgeClass(selectedPaymentForDetail()!.status)">
+                    {{ getPaymentStatusBadgeLabel(selectedPaymentForDetail()!.status) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Datos de Sucursal y Fecha -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; background: rgba(0,0,0,0.02); padding: 14px; border-radius: 10px;">
+              <div>
+                <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #206443; display: block; margin-bottom: 4px;">Sucursal Emisora</span>
+                <div style="font-weight: 600; font-size: 0.9rem;">{{ selectedPaymentForDetail()!.tenant_name || 'Sucursal Principal' }}</div>
+                <div style="font-size: 0.78rem; color: #64748b;">Código: {{ selectedPaymentForDetail()!.tenant_id }}</div>
+              </div>
+              <div>
+                <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #206443; display: block; margin-bottom: 4px;">Fecha y Hora</span>
+                <div style="font-size: 0.85rem; font-weight: 600;">{{ selectedPaymentForDetail()!.created_at | date:'dd/MM/yyyy HH:mm' }}</div>
+                @if (selectedPaymentForDetail()!.paid_at) {
+                  <div style="font-size: 0.75rem; color: #16a34a;">Pagado: {{ selectedPaymentForDetail()!.paid_at | date:'dd/MM/yyyy HH:mm' }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Datos del Cliente -->
+            <div style="margin-bottom: 18px;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--color-text-muted, #64748b); display: block; margin-bottom: 6px;">Datos del Cliente</span>
+              <div style="background: white; border: 1px solid var(--color-border, #cbd5e1); border-radius: 8px; padding: 12px 14px;">
+                <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-text-primary, #0f172a);">{{ selectedPaymentForDetail()!.customer_name }}</div>
+                @if (selectedPaymentForDetail()!.customer_email) {
+                  <div style="font-size: 0.82rem; color: #64748b;">{{ selectedPaymentForDetail()!.customer_email }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Desglose del Servicio / Cobro -->
+            <div style="margin-bottom: 18px;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--color-text-muted, #64748b); display: block; margin-bottom: 6px;">Concepto y Desglose</span>
+              <div style="border: 1px solid var(--color-border, #cbd5e1); border-radius: 8px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                  <thead>
+                    <tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1; text-align: left;">
+                      <th style="padding: 10px 12px; font-weight: 700;">Descripción</th>
+                      <th style="padding: 10px 12px; font-weight: 700;">Método</th>
+                      <th style="padding: 10px 12px; font-weight: 700; text-align: right;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding: 12px; font-weight: 600;">{{ selectedPaymentForDetail()!.concept }}</td>
+                      <td style="padding: 12px; color: #475569;">{{ selectedPaymentForDetail()!.payment_method || 'PAYPAL' }}</td>
+                      <td style="padding: 12px; text-align: right; font-weight: 700; color: #206443; font-size: 1rem;">
+                        ${{ selectedPaymentForDetail()!.amount }} {{ selectedPaymentForDetail()!.currency }}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr style="background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                      <td colspan="2" style="padding: 10px 12px; text-align: right; font-weight: 700;">Total Facturado:</td>
+                      <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 1.05rem; color: #206443;">
+                        ${{ selectedPaymentForDetail()!.amount }} {{ selectedPaymentForDetail()!.currency }}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            <!-- Referencias técnicas -->
+            <div style="font-size: 0.78rem; color: #64748b; margin-bottom: 16px; background: rgba(0,0,0,0.02); padding: 10px 12px; border-radius: 6px;">
+              <div><strong>Referencia de Transacción:</strong> {{ selectedPaymentForDetail()!.paypal_order_id || (selectedPaymentForDetail()!.payment_method === 'EFECTIVO' ? 'Caja Local Sucursal' : '-') }}</div>
+              @if (selectedPaymentForDetail()!.cashier_name) {
+                <div><strong>Registrado por:</strong> {{ selectedPaymentForDetail()!.cashier_name }}</div>
+              }
+              @if (selectedPaymentForDetail()!.notes) {
+                <div style="margin-top: 4px;"><strong>Notas:</strong> {{ selectedPaymentForDetail()!.notes }}</div>
+              }
+            </div>
+          </div>
+
+          <!-- Acciones del Modal -->
+          <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn-outline" (click)="closePaymentDetail()">
+              Cerrar
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="downloadPaymentPdf(selectedPaymentForDetail()!)"
+              [disabled]="isExportingPaymentPdf()"
+              style="background: #206443; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>{{ isExportingPaymentPdf() ? 'Generando PDF...' : 'Exportar Detalle (PDF)' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   </main>
 </div>

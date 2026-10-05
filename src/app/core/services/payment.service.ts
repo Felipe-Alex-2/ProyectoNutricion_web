@@ -43,4 +43,21 @@ export class PaymentService {
   cancelPayment(paymentId: string): Observable<Payment> {
     return this.http.post<Payment>(`${this.apiUrl}/${paymentId}/cancel`, {});
   }
+
+  exportPaymentPdf(paymentId: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${paymentId}/pdf`, {
+      responseType: 'blob',
+    });
+  }
+
+  downloadPdf(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
 }

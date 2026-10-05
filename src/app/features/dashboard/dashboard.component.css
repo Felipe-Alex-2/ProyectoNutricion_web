@@ -3895,6 +3895,47 @@ textarea.form-control {
   border-color: #ef4444;
 }
 
+.btn-detail-pay {
+  background: rgba(32, 100, 67, 0.08);
+  border: 1px solid rgba(32, 100, 67, 0.3);
+  color: #206443;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-detail-pay:hover {
+  background: #206443;
+  color: white;
+  border-color: #206443;
+}
+
+.btn-icon-pdf {
+  background: var(--bg-hover, #f3f4f6);
+  border: 1px solid var(--border-color, #d1d5db);
+  color: #206443;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon-pdf:hover {
+  background: #206443;
+  color: white;
+  border-color: #206443;
+}
+
 /* Payment Method Selector (Efectivo vs PayPal) */
 .payment-method-selector {
   display: grid;
@@ -4304,6 +4345,94 @@ textarea.form-control {
 /* =============================================================
    GESTIÓN DE CITAS: MÉTRICAS, ESTADOS Y ACCIONES
    ============================================================= */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card {
+  background: var(--bg-card, #ffffff);
+  border-radius: var(--radius-md, 16px);
+  border: 1px solid var(--border-card, rgba(0, 0, 0, 0.06));
+  padding: 20px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--card-shadow, 0 4px 20px -2px rgba(60, 48, 30, 0.05));
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(60, 48, 30, 0.1);
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+
+.metric-card.card-total::before {
+  background: #2563eb;
+}
+
+.metric-card.card-pending::before {
+  background: #d97706;
+}
+
+.metric-card.card-confirmed::before {
+  background: #059669;
+}
+
+.metric-card.card-cancelled::before {
+  background: #dc2626;
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #65756b);
+}
+
+.metric-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .icon-total {
   background: rgba(37, 99, 235, 0.1);
   color: #2563eb;
@@ -4322,6 +4451,122 @@ textarea.form-control {
 .icon-cancelled {
   background: rgba(220, 38, 38, 0.1);
   color: #dc2626;
+}
+
+/* Cajas de colores que contienen los números de cada métrica */
+.metric-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.metric-number-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: 12px;
+  width: fit-content;
+  min-width: 68px;
+  min-height: 46px;
+}
+
+.metric-number-box.box-total {
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.metric-number-box.box-pending {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  color: #b45309;
+}
+
+.metric-number-box.box-confirmed {
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  color: #047857;
+}
+
+.metric-number-box.box-cancelled {
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+  color: #b91c1c;
+}
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.metric-hint {
+  font-size: 12px;
+  color: var(--text-secondary, #65756b);
+  margin-top: 2px;
+}
+
+/* Modo oscuro para métricas de citas */
+.dark-theme .metric-card {
+  background: var(--bg-card, #18221d);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark-theme .metric-number-box.box-total {
+  background: rgba(37, 99, 235, 0.16);
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #93c5fd;
+}
+
+.dark-theme .metric-number-box.box-pending {
+  background: rgba(217, 119, 6, 0.16);
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #fcd34d;
+}
+
+.dark-theme .metric-number-box.box-confirmed {
+  background: rgba(5, 150, 105, 0.16);
+  border-color: rgba(5, 150, 105, 0.35);
+  color: #6ee7b7;
+}
+
+.dark-theme .metric-number-box.box-cancelled {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #fca5a5;
+}
+
+/* Barra de Filtros de Citas */
+.pos-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  padding: 8px 18px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-color, rgba(32, 100, 67, 0.15));
+  background: var(--bg-card, #ffffff);
+  color: var(--text-secondary, #65756b);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+  background: var(--bg-pill-hover, rgba(35, 122, 87, 0.08));
+  color: var(--text-primary, #172920);
+}
+
+.filter-pill.active {
+  background-color: var(--color-primary, #206443);
+  border-color: var(--color-primary, #206443);
+  color: #ffffff;
 }
 
 .filter-pill.pill-pending.active {
@@ -4358,6 +4603,23 @@ textarea.form-control {
   background: rgba(220, 38, 38, 0.12);
   color: #dc2626;
   border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+/* Celdas de la tabla de citas */
+.date-cell, .customer-cell, .specialist-cell, .reason-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.customer-name {
+  font-weight: 600;
+  color: var(--text-primary, #172920);
+}
+
+.customer-email {
+  font-size: 12px;
+  color: var(--text-secondary, #65756b);
 }
 
 .btn-action-confirm {

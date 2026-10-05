@@ -27,9 +27,9 @@ import { SubscriptionService } from '../../core/services/subscription.service';
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
           </div>
-          <h2>¡Cobro Exitoso!</h2>
+          <h2>Cobro Exitoso</h2>
           <p class="text-secondary">{{ successDetail() || 'El pago fue procesado y registrado en la caja de la sucursal.' }}</p>
-          <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;">Serás redirigido al panel en unos segundos...</p>
+          <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;">Redirigiendo a tu cuenta en el panel...</p>
         }
         @if (errorMsg()) {
           <div class="return-icon error-icon">
@@ -135,8 +135,8 @@ export class PaypalReturnComponent implements OnInit {
           `Cobro de $${payment.amount} ${payment.currency} por "${payment.concept}" (${payment.customer_name}) confirmado exitosamente.`
         );
         setTimeout(() => {
-          this.router.navigate(['/dashboard']);
-        }, 3000);
+          this.router.navigate(['/dashboard'], { queryParams: { tab: 'pagos', payment_success: 'true' } });
+        }, 1200);
       },
       error: () => {
         // Fallback to subscription service in case it was a subscription
@@ -146,8 +146,8 @@ export class PaypalReturnComponent implements OnInit {
             this.success.set(true);
             this.successDetail.set('Suscripción activada exitosamente.');
             setTimeout(() => {
-              this.router.navigate(['/dashboard']);
-            }, 3000);
+              this.router.navigate(['/dashboard'], { queryParams: { tab: 'suscripciones', sub_success: 'true' } });
+            }, 1200);
           },
           error: (subErr) => {
             this.loading.set(false);
@@ -161,7 +161,7 @@ export class PaypalReturnComponent implements OnInit {
   }
 
   goToDashboard(): void {
-    this.router.navigate(['/dashboard']);
+    this.router.navigate(['/dashboard'], { queryParams: { tab: 'pagos' } });
   }
 }
 

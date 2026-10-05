@@ -15,6 +15,9 @@
           <div class="form-group">
             <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Nombre del Plato / Receta *</label>
             <input type="text" class="form-control" formControlName="title" placeholder="Ej: Pollo al Limón con Quinoa" style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);" />
+            @if (recipeForm.get('title')?.touched && (recipeForm.get('title')?.invalid || !recipeForm.get('title')?.value?.trim())) {
+              <span style="color: #dc2626; font-size: 0.75rem; display: block; margin-top: 4px;">El nombre de la receta es obligatorio (mínimo 2 caracteres).</span>
+            }
           </div>
           <div class="form-group">
             <label class="form-label" style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Categoría *</label>
@@ -36,23 +39,35 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 10px;">
           <div>
             <label style="font-size: 0.75rem; font-weight: 600; display: block;">Calorías (kcal) *</label>
-            <input type="number" class="form-control" formControlName="calories" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            <input type="number" class="form-control" formControlName="calories" min="0" placeholder="Ej: 450" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            @if (recipeForm.get('calories')?.touched && (recipeForm.get('calories')?.invalid || recipeForm.get('calories')?.value === null)) {
+              <span style="color: #dc2626; font-size: 0.72rem; display: block; margin-top: 2px;">Calorías obligatorias.</span>
+            }
           </div>
           <div>
             <label style="font-size: 0.75rem; font-weight: 600; display: block;">Proteína (g) *</label>
-            <input type="number" class="form-control" formControlName="protein" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            <input type="number" class="form-control" formControlName="protein" min="0" placeholder="Ej: 30" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            @if (recipeForm.get('protein')?.touched && (recipeForm.get('protein')?.invalid || recipeForm.get('protein')?.value === null)) {
+              <span style="color: #dc2626; font-size: 0.72rem; display: block; margin-top: 2px;">Proteína obligatoria.</span>
+            }
           </div>
           <div>
             <label style="font-size: 0.75rem; font-weight: 600; display: block;">Carbohidratos (g) *</label>
-            <input type="number" class="form-control" formControlName="carbohydrates" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            <input type="number" class="form-control" formControlName="carbohydrates" min="0" placeholder="Ej: 40" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            @if (recipeForm.get('carbohydrates')?.touched && (recipeForm.get('carbohydrates')?.invalid || recipeForm.get('carbohydrates')?.value === null)) {
+              <span style="color: #dc2626; font-size: 0.72rem; display: block; margin-top: 2px;">Carbohidratos obligatorios.</span>
+            }
           </div>
           <div>
             <label style="font-size: 0.75rem; font-weight: 600; display: block;">Grasas (g) *</label>
-            <input type="number" class="form-control" formControlName="fats" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            <input type="number" class="form-control" formControlName="fats" min="0" placeholder="Ej: 15" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            @if (recipeForm.get('fats')?.touched && (recipeForm.get('fats')?.invalid || recipeForm.get('fats')?.value === null)) {
+              <span style="color: #dc2626; font-size: 0.72rem; display: block; margin-top: 2px;">Grasas obligatorias.</span>
+            }
           </div>
           <div>
             <label style="font-size: 0.75rem; font-weight: 600; display: block;">Fibra (g)</label>
-            <input type="number" class="form-control" formControlName="fiber" min="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
+            <input type="number" class="form-control" formControlName="fiber" min="0" placeholder="0" style="padding: 6px 10px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" />
           </div>
         </div>
 
@@ -82,11 +97,17 @@
         <div class="form-group mb-3">
           <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Ingredientes y Cantidades *</label>
           <textarea class="form-control" rows="3" formControlName="ingredients" placeholder="150g pechuga de pollo, 1 taza de espinacas..." style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);"></textarea>
+          @if (recipeForm.get('ingredients')?.touched && (recipeForm.get('ingredients')?.invalid || !recipeForm.get('ingredients')?.value?.trim())) {
+            <span style="color: #dc2626; font-size: 0.75rem; display: block; margin-top: 4px;">Debe ingresar los ingredientes y sus cantidades.</span>
+          }
         </div>
 
         <div class="form-group mb-3">
           <label style="font-size: 0.85rem; font-weight: 600; display: block; margin-bottom: 4px;">Instrucciones de Preparación *</label>
           <textarea class="form-control" rows="3" formControlName="instructions" placeholder="1. Lavar los ingredientes... 2. Cocinar a fuego lento..." style="padding: 8px 12px; width: 100%; border-radius: 8px; border: 1px solid var(--color-border, #cbd5e1);"></textarea>
+          @if (recipeForm.get('instructions')?.touched && (recipeForm.get('instructions')?.invalid || !recipeForm.get('instructions')?.value?.trim())) {
+            <span style="color: #dc2626; font-size: 0.75rem; display: block; margin-top: 4px;">Debe ingresar las instrucciones de preparación paso a paso.</span>
+          }
         </div>
 
         <!-- Asignar a Clientes -->
@@ -117,7 +138,7 @@
 
         <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
           <button type="button" class="btn-outline" (click)="cerrar()">Cancelar</button>
-          <button type="submit" class="btn-primary" [disabled]="recipeForm.invalid" style="background: #206443; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
+          <button type="submit" class="btn-primary" style="background: #206443; color: white; padding: 8px 18px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer;">
             {{ editingRecipe ? 'Actualizar Receta' : 'Guardar Receta' }}
           </button>
         </div>

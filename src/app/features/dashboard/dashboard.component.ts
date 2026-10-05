@@ -1,5 +1,6 @@
 import { Component, HostListener, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -243,6 +244,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   paymentSuccess = signal<string | null>(null);
   paymentStatusFilter = signal<string>('');
   lastCreatedApprovalUrl = signal<string | null>(null);
+  selectedPaymentForDetail = signal<Payment | null>(null);
+  paymentDetailModalOpen = signal<boolean>(false);
+  isExportingPaymentPdf = signal<boolean>(false);
   paymentForm: FormGroup;
 
   // Citas Médicas y Nutricionales
@@ -270,6 +274,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     public authService: AuthService,
     public themeService: ThemeService,
     private tenantService: TenantService,
@@ -386,6 +391,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadNotificationCount();
     this.loadAppointments();
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
+
+    // Escuchar parametro tab de navegacion o redireccion de pago PayPal
+    this.route.queryParams.subscribe((params) => {
+      if (params['tab']) {
+        this.activeTab.set(params['tab']);
+        if (params['tab'] === 'pagos') {
+          this.loadPaymentData();
+          if (params['payment_success']) {
+            this.paymentSuccess.set('Cobro con PayPal Sandbox completado y registrado exitosamente en su cuenta.');
+            setTimeout(() => this.paymentSuccess.set(null), 5000);
+          }
+        }
+      }
+    });
 
     // Polling en tiempo real para citas pendientes y notificaciones (cada 12s)
     this.pollingTimer = setInterval(() => {
@@ -711,46 +730,88 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onSaveTenant(): void {
-    if (this.tenantForm.invalid) {
-      this.tenantForm.markAllAsTouched();
-      return;
-    }
     this.tenantSuccess.set(null);
     this.tenantError.set(null);
 
-    const nameVal = this.tenantForm.value.name?.trim().toLowerCase();
+    // 1. Validacion de campos vacios y obligatorios
+    const rawVal = this.tenantForm.value;
+    const nameVal = (rawVal.name || '').trim();
+    const codeVal = (rawVal.code || '').trim().toUpperCase();
+
+    if (!nameVal || !codeVal) {
+      this.tenantForm.markAllAsTouched();
+      this.tenantError.set('No se puede crear la sucursal con campos vacios. Debe ingresar el nombre y el codigo identificador.');
+      return;
+    }
+
+    if (nameVal.length < 3) {
+      this.tenantForm.get('name')?.markAsTouched();
+      this.tenantError.set('El nombre de la sucursal debe tener al menos 3 caracteres.');
+      return;
+    }
+
+    if (codeVal.length < 2) {
+      this.tenantForm.get('code')?.markAsTouched();
+      this.tenantError.set('El codigo identificador de la sucursal debe tener al menos 2 caracteres.');
+      return;
+    }
+
+    if (this.tenantForm.invalid) {
+      this.tenantForm.markAllAsTouched();
+      this.tenantError.set('Por favor corrija los campos no validos antes de continuar.');
+      return;
+    }
+
+    // 2. Validacion de nombres duplicados (repetidos)
     const currentEdit = this.editingTenant();
     const dupTenant = this.tenants().some(
-      (t) => t.name?.trim().toLowerCase() === nameVal && (!currentEdit || t.id !== currentEdit.id)
+      (t) => t.name?.trim().toLowerCase() === nameVal.toLowerCase() && (!currentEdit || t.id !== currentEdit.id)
     );
     if (dupTenant) {
       this.tenantError.set(
-        `Ya existe una organización con el nombre "${this.tenantForm.value.name?.trim()}". No se puede repetir el mismo nombre.`
+        `Ya existe una sucursal con el nombre "${nameVal}". No se permite duplicar nombres de sucursales.`
       );
       return;
     }
 
+    // 3. Validacion de codigo duplicado (repetido)
+    const dupCode = this.tenants().some(
+      (t) => t.code?.trim().toUpperCase() === codeVal && (!currentEdit || t.id !== currentEdit.id)
+    );
+    if (dupCode && !currentEdit) {
+      this.tenantError.set(
+        `Ya existe una sucursal con el codigo "${codeVal}". No se permite duplicar codigos de sucursales.`
+      );
+      return;
+    }
+
+    const payload = {
+      ...rawVal,
+      name: nameVal,
+      code: codeVal,
+    };
+
     if (currentEdit) {
-      this.tenantService.updateTenant(currentEdit.id, this.tenantForm.value).subscribe({
+      this.tenantService.updateTenant(currentEdit.id, payload).subscribe({
         next: (updated) => {
-          this.tenantSuccess.set(`Clínica "${updated.name}" actualizada con éxito.`);
+          this.tenantSuccess.set(`Sucursal "${updated.name}" actualizada exitosamente.`);
           this.loadTenants();
-          setTimeout(() => this.closeTenantModal(), 1100);
+          setTimeout(() => this.closeTenantModal(), 1200);
         },
         error: (err) => {
-          const msg = err?.error?.detail || 'Error al actualizar organización';
+          const msg = err?.error?.detail || 'Error al actualizar la sucursal.';
           this.tenantError.set(typeof msg === 'string' ? msg : JSON.stringify(msg));
         },
       });
     } else {
-      this.tenantService.createTenant(this.tenantForm.value).subscribe({
+      this.tenantService.createTenant(payload).subscribe({
         next: (created) => {
-          this.tenantSuccess.set(`Clínica "${created.name}" creada exitosamente.`);
+          this.tenantSuccess.set(`Sucursal "${created.name}" creada exitosamente.`);
           this.loadTenants();
-          setTimeout(() => this.closeTenantModal(), 1100);
+          setTimeout(() => this.closeTenantModal(), 1200);
         },
         error: (err) => {
-          const msg = err?.error?.detail || 'Error al registrar el tenant';
+          const msg = err?.error?.detail || 'Error al registrar la sucursal.';
           this.tenantError.set(typeof msg === 'string' ? msg : JSON.stringify(msg));
         },
       });
@@ -1240,12 +1301,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         title: '',
         description: '',
         image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-        calories: 450,
-        protein: 30,
-        carbohydrates: 40,
-        fats: 15,
-        fiber: 6,
-        sodium: 200,
+        calories: null,
+        protein: null,
+        carbohydrates: null,
+        fats: null,
+        fiber: null,
+        sodium: null,
         servings: 1,
         prep_time_minutes: 15,
         cook_time_minutes: 15,
@@ -1290,28 +1351,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   submitRecipe(): void {
-    if (this.recipeForm.invalid) {
-      this.recipeForm.markAllAsTouched();
-      return;
-    }
-
     this.recipeSuccess.set(null);
     this.recipeError.set(null);
 
-    const titleVal = this.recipeForm.value.title?.trim().toLowerCase();
+    const rawVal = this.recipeForm.value;
+    const cleanTitle = (rawVal.title || '').trim();
+    const cleanIngredients = (rawVal.ingredients || '').trim();
+    const cleanInstructions = (rawVal.instructions || '').trim();
+
+    if (!cleanTitle || !cleanIngredients || !cleanInstructions) {
+      this.recipeForm.markAllAsTouched();
+      this.recipeError.set('Debe llenar todos los campos obligatorios antes de crear la receta: Nombre, Ingredientes y Cantidades, e Instrucciones de Preparación.');
+      return;
+    }
+
+    if (
+      rawVal.calories === null || rawVal.calories === undefined || rawVal.calories === '' ||
+      rawVal.protein === null || rawVal.protein === undefined || rawVal.protein === '' ||
+      rawVal.carbohydrates === null || rawVal.carbohydrates === undefined || rawVal.carbohydrates === '' ||
+      rawVal.fats === null || rawVal.fats === undefined || rawVal.fats === ''
+    ) {
+      this.recipeForm.markAllAsTouched();
+      this.recipeError.set('Debe llenar todos los valores nutricionales obligatorios: Calorías, Proteínas, Carbohidratos y Grasas.');
+      return;
+    }
+
+    if (this.recipeForm.invalid) {
+      this.recipeForm.markAllAsTouched();
+      this.recipeError.set('Por favor complete todos los campos obligatorios con valores válidos.');
+      return;
+    }
+
+    const titleVal = cleanTitle.toLowerCase();
     const editing = this.editingRecipe();
     const dupRecipe = this.recipeService.recipes().some(
       (r: Recipe) => r.title?.trim().toLowerCase() === titleVal && (!editing || r.id !== editing.id)
     );
     if (dupRecipe) {
       this.recipeError.set(
-        `Ya existe una receta con el nombre "${this.recipeForm.value.title?.trim()}". No se puede repetir el mismo nombre.`
+        `Ya existe una receta con el nombre "${cleanTitle}". No se puede repetir el mismo nombre.`
       );
       return;
     }
 
     const formData = {
-      ...this.recipeForm.value,
+      ...rawVal,
+      title: cleanTitle,
+      ingredients: cleanIngredients,
+      instructions: cleanInstructions,
+      calories: Number(rawVal.calories),
+      protein: Number(rawVal.protein),
+      carbohydrates: Number(rawVal.carbohydrates),
+      fats: Number(rawVal.fats),
       assigned_patient_ids: this.recipeSelectedPatients(),
     };
 
@@ -1657,7 +1748,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (paymentMethod === 'EFECTIVO') {
           this.lastCreatedApprovalUrl.set(null);
           this.paymentSuccess.set(
-            `¡Cobro de $${res.amount} USD en Efectivo registrado con éxito para ${res.customer_name}!`
+            `Cobro de $${res.amount} USD en Efectivo registrado con exito para ${res.customer_name}.`
           );
           this.paymentForm.patchValue({
             customer_name: '',
@@ -1672,18 +1763,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
         } else {
           this.lastCreatedApprovalUrl.set(res.approval_url || null);
           this.paymentSuccess.set(
-            '¡Orden generada! Si estás en el mismo navegador donde abriste tu cuenta Business de PayPal, copia el enlace y ábrelo en una Ventana de Incógnito para pagar con tu cuenta Personal.'
+            'Orden generada. Redirigiendo a PayPal Sandbox para realizar el pago...'
           );
           this.loadPaymentData();
           if (res.approval_url) {
-            window.open(res.approval_url, '_blank');
+            window.location.href = res.approval_url;
           }
         }
       },
       error: (err) => {
         this.isCreatingPayment.set(false);
         this.paymentError.set(
-          err?.error?.detail || 'Error al procesar el cobro. Verifica tus datos o conexión.'
+          err?.error?.detail || 'Error al procesar el cobro. Verifica tus datos o conexion.'
         );
       },
     });
@@ -1699,7 +1790,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     navigator.clipboard.writeText(url).then(() => {
       this.paymentSuccess.set(
-        '¡Enlace de pago copiado! Pégalo en una Ventana de Incógnito para iniciar sesión con tu cuenta Personal de prueba.'
+        'Enlace de pago copiado al portapapeles. Puede abrirlo en otra ventana para pagar con su cuenta Personal de prueba.'
       );
     });
   }
@@ -1725,11 +1816,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
       alert('Esta orden no cuenta con un identificador de PayPal asociado.');
       return;
     }
-    // Abrir PayPal Checkout Sandbox en una nueva pestaña para continuar la transacción
-    window.open(
-      `https://www.sandbox.paypal.com/checkoutnow?token=${payment.paypal_order_id}`,
-      '_blank'
-    );
+    window.location.href = `https://www.sandbox.paypal.com/checkoutnow?token=${payment.paypal_order_id}`;
+  }
+
+  openPaymentDetail(payment: Payment): void {
+    this.selectedPaymentForDetail.set(payment);
+    this.paymentDetailModalOpen.set(true);
+  }
+
+  closePaymentDetail(): void {
+    this.paymentDetailModalOpen.set(false);
+    this.selectedPaymentForDetail.set(null);
+  }
+
+  downloadPaymentPdf(payment: Payment): void {
+    this.isExportingPaymentPdf.set(true);
+    this.paymentService.exportPaymentPdf(payment.id).subscribe({
+      next: (blob) => {
+        this.isExportingPaymentPdf.set(false);
+        const filename = `Detalle_Pago_${payment.id.slice(0, 8).toUpperCase()}.pdf`;
+        this.paymentService.downloadPdf(blob, filename);
+      },
+      error: (err) => {
+        this.isExportingPaymentPdf.set(false);
+        const msg = err?.error?.detail || 'Error al generar el PDF del detalle de pago.';
+        alert(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      },
+    });
   }
 
   getPaymentStatusBadgeClass(status: string): string {
@@ -1770,9 +1883,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.appointmentError.set(null);
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : (this.selectedPaymentTenantId() || undefined);
+      : undefined;
 
-    this.appointmentService.getAppointments(this.selectedAppointmentStatus(), tenantId).subscribe({
+    this.appointmentService.getAppointments('ALL', tenantId).subscribe({
       next: (data) => {
         this.appointments.set(data);
         this.isLoadingAppointments.set(false);
@@ -1789,7 +1902,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadNutritionists(): void {
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : (this.selectedPaymentTenantId() || undefined);
+      : undefined;
 
     this.appointmentService.getNutritionists(tenantId).subscribe({
       next: (data) => {
@@ -1801,7 +1914,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   setAppointmentStatusFilter(status: string): void {
     this.selectedAppointmentStatus.set(status);
-    this.loadAppointments();
   }
 
   setNutritionistScheduleFilter(nutriId: string): void {
@@ -1981,6 +2093,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.appointments().filter((a) => a.status === 'CANCELLED').length;
   }
 
+  get filteredAppointments(): Appointment[] {
+    const status = this.selectedAppointmentStatus();
+    if (!status || status === 'ALL') {
+      return this.appointments();
+    }
+    return this.appointments().filter((a) => a.status === status);
+  }
+
   getAppointmentBadgeClass(status: string): string {
     switch (status) {
       case 'PENDING': return 'badge-appt-pending';
@@ -2066,16 +2186,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadNotificationCount();
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : (this.selectedPaymentTenantId() || undefined);
+      : undefined;
 
-    this.appointmentService.getAppointments(this.selectedAppointmentStatus(), tenantId).subscribe({
+    this.appointmentService.getAppointments('ALL', tenantId).subscribe({
       next: (data) => {
         const prevPending = this.pendingAppointmentsCount;
         this.appointments.set(data);
         const currentPending = this.pendingAppointmentsCount;
         if (currentPending > prevPending && prevPending >= 0) {
           this.newAppointmentAlert.set(
-            `¡Tienes ${currentPending} cita(s) pendiente(s) por atender!`
+            `Tienes ${currentPending} cita(s) pendiente(s) por atender.`
           );
           setTimeout(() => this.newAppointmentAlert.set(null), 8000);
         }
@@ -2664,7 +2784,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.generateReportPreview();
         }
 
-        this.reportMessage.set(`✨ Gemini IA: ${res.explanation}`);
+        this.reportMessage.set(`Gemini IA: ${res.explanation}`);
         setTimeout(() => this.reportMessage.set(null), 6000);
       },
       error: (err: any) => {

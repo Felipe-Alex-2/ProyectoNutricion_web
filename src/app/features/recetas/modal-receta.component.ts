@@ -32,12 +32,12 @@ export class ModalRecetaComponent implements OnChanges {
       title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       description: [''],
       image_url: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c'],
-      calories: [450, [Validators.required, Validators.min(0)]],
-      protein: [30, [Validators.required, Validators.min(0)]],
-      carbohydrates: [40, [Validators.required, Validators.min(0)]],
-      fats: [15, [Validators.required, Validators.min(0)]],
-      fiber: [6, [Validators.min(0)]],
-      sodium: [250, [Validators.min(0)]],
+      calories: [null, [Validators.required, Validators.min(0)]],
+      protein: [null, [Validators.required, Validators.min(0)]],
+      carbohydrates: [null, [Validators.required, Validators.min(0)]],
+      fats: [null, [Validators.required, Validators.min(0)]],
+      fiber: [null, [Validators.min(0)]],
+      sodium: [null, [Validators.min(0)]],
       servings: [1, [Validators.required, Validators.min(1)]],
       prep_time_minutes: [15, [Validators.required, Validators.min(0)]],
       cook_time_minutes: [15, [Validators.required, Validators.min(0)]],
@@ -60,11 +60,11 @@ export class ModalRecetaComponent implements OnChanges {
           protein: this.editingRecipe.protein,
           carbohydrates: this.editingRecipe.carbohydrates,
           fats: this.editingRecipe.fats,
-          fiber: this.editingRecipe.fiber || 0,
-          sodium: this.editingRecipe.sodium || 0,
+          fiber: this.editingRecipe.fiber ?? null,
+          sodium: this.editingRecipe.sodium ?? null,
           servings: this.editingRecipe.servings || 1,
-          prep_time_minutes: this.editingRecipe.prep_time_minutes || 15,
-          cook_time_minutes: this.editingRecipe.cook_time_minutes || 15,
+          prep_time_minutes: this.editingRecipe.prep_time_minutes ?? 15,
+          cook_time_minutes: this.editingRecipe.cook_time_minutes ?? 15,
           difficulty: this.editingRecipe.difficulty || 'Fácil',
           category: this.editingRecipe.category || 'Almuerzo',
           ingredients: this.editingRecipe.ingredients || '',
@@ -76,15 +76,15 @@ export class ModalRecetaComponent implements OnChanges {
           title: this.prefillData.title || '',
           description: this.prefillData.description || '',
           image_url: this.prefillData.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-          calories: this.prefillData.calories || 450,
-          protein: this.prefillData.protein || 30,
-          carbohydrates: this.prefillData.carbohydrates || 40,
-          fats: this.prefillData.fats || 15,
-          fiber: this.prefillData.fiber || 6,
-          sodium: this.prefillData.sodium || 250,
+          calories: this.prefillData.calories ?? null,
+          protein: this.prefillData.protein ?? null,
+          carbohydrates: this.prefillData.carbohydrates ?? null,
+          fats: this.prefillData.fats ?? null,
+          fiber: this.prefillData.fiber ?? null,
+          sodium: this.prefillData.sodium ?? null,
           servings: this.prefillData.servings || 1,
-          prep_time_minutes: this.prefillData.prep_time_minutes || 15,
-          cook_time_minutes: this.prefillData.cook_time_minutes || 15,
+          prep_time_minutes: this.prefillData.prep_time_minutes ?? 15,
+          cook_time_minutes: this.prefillData.cook_time_minutes ?? 15,
           difficulty: this.prefillData.difficulty || 'Fácil',
           category: this.prefillData.category || 'Almuerzo',
           ingredients: this.prefillData.ingredients || '',
@@ -96,19 +96,24 @@ export class ModalRecetaComponent implements OnChanges {
           this.recipeSelectedPatients.set([]);
         }
       } else {
+        // Nueva receta: se exige al usuario llenar los campos antes de crear
         this.recipeForm.reset({
+          title: '',
+          description: '',
           image_url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-          calories: 450,
-          protein: 30,
-          carbohydrates: 40,
-          fats: 15,
-          fiber: 6,
-          sodium: 250,
+          calories: null,
+          protein: null,
+          carbohydrates: null,
+          fats: null,
+          fiber: null,
+          sodium: null,
           servings: 1,
           prep_time_minutes: 15,
           cook_time_minutes: 15,
           difficulty: 'Fácil',
           category: 'Almuerzo',
+          ingredients: '',
+          instructions: '',
         });
         this.recipeSelectedPatients.set([]);
       }
@@ -131,24 +136,74 @@ export class ModalRecetaComponent implements OnChanges {
   }
 
   guardar(): void {
-    if (this.recipeForm.invalid) {
-      this.recipeForm.markAllAsTouched();
-      return;
-    }
     this.errorMessage = null;
 
-    const titleVal = this.recipeForm.value.title?.trim().toLowerCase();
+    const rawVal = this.recipeForm.value;
+    const cleanTitle = (rawVal.title || '').trim();
+    const cleanIngredients = (rawVal.ingredients || '').trim();
+    const cleanInstructions = (rawVal.instructions || '').trim();
+
+    // 1. Validacion de campos vacios y obligatorios
+    if (!cleanTitle) {
+      this.recipeForm.get('title')?.markAsTouched();
+      this.errorMessage = 'El nombre de la receta es obligatorio y no puede estar vacio.';
+      return;
+    }
+
+    if (!cleanIngredients) {
+      this.recipeForm.get('ingredients')?.markAsTouched();
+      this.errorMessage = 'Debe ingresar los ingredientes y sus cantidades antes de guardar la receta.';
+      return;
+    }
+
+    if (!cleanInstructions) {
+      this.recipeForm.get('instructions')?.markAsTouched();
+      this.errorMessage = 'Debe ingresar las instrucciones de preparacion antes de guardar la receta.';
+      return;
+    }
+
+    if (
+      rawVal.calories === null || rawVal.calories === undefined || rawVal.calories === '' ||
+      rawVal.protein === null || rawVal.protein === undefined || rawVal.protein === '' ||
+      rawVal.carbohydrates === null || rawVal.carbohydrates === undefined || rawVal.carbohydrates === '' ||
+      rawVal.fats === null || rawVal.fats === undefined || rawVal.fats === ''
+    ) {
+      this.recipeForm.markAllAsTouched();
+      this.errorMessage = 'Debe llenar todos los valores nutricionales obligatorios: Calorias, Proteinas, Carbohidratos y Grasas.';
+      return;
+    }
+
+    if (this.recipeForm.invalid) {
+      this.recipeForm.markAllAsTouched();
+      this.errorMessage = 'Por favor complete todos los campos obligatorios con valores validos antes de continuar.';
+      return;
+    }
+
+    // 2. Validacion de nombre repetido (duplicados)
+    const titleVal = cleanTitle.toLowerCase();
     const editing = this.editingRecipe;
     const dupRecipe = this.recipeService.recipes().some(
       (r: Recipe) => r.title?.trim().toLowerCase() === titleVal && (!editing || r.id !== editing.id)
     );
     if (dupRecipe) {
-      this.errorMessage = `Ya existe una receta con el nombre "${this.recipeForm.value.title?.trim()}". No se puede repetir el mismo nombre.`;
+      this.errorMessage = `Ya existe una receta con el nombre "${cleanTitle}". No se permite repetir el mismo nombre.`;
       return;
     }
 
     const payload = {
-      ...this.recipeForm.value,
+      ...rawVal,
+      title: cleanTitle,
+      ingredients: cleanIngredients,
+      instructions: cleanInstructions,
+      calories: Number(rawVal.calories),
+      protein: Number(rawVal.protein),
+      carbohydrates: Number(rawVal.carbohydrates),
+      fats: Number(rawVal.fats),
+      fiber: rawVal.fiber !== null && rawVal.fiber !== '' && rawVal.fiber !== undefined ? Number(rawVal.fiber) : 0,
+      sodium: rawVal.sodium !== null && rawVal.sodium !== '' && rawVal.sodium !== undefined ? Number(rawVal.sodium) : 0,
+      servings: rawVal.servings ? Number(rawVal.servings) : 1,
+      prep_time_minutes: rawVal.prep_time_minutes !== null && rawVal.prep_time_minutes !== '' ? Number(rawVal.prep_time_minutes) : 0,
+      cook_time_minutes: rawVal.cook_time_minutes !== null && rawVal.cook_time_minutes !== '' ? Number(rawVal.cook_time_minutes) : 0,
       assigned_patient_ids: this.recipeSelectedPatients(),
     };
 
@@ -159,7 +214,8 @@ export class ModalRecetaComponent implements OnChanges {
           this.cerrar();
         },
         error: (err: any) => {
-          this.errorMessage = err?.error?.detail || 'Error al actualizar receta';
+          const msg = err?.error?.detail || 'Error al actualizar receta';
+          this.errorMessage = typeof msg === 'string' ? msg : JSON.stringify(msg);
         },
       });
     } else {
@@ -169,7 +225,8 @@ export class ModalRecetaComponent implements OnChanges {
           this.cerrar();
         },
         error: (err: any) => {
-          this.errorMessage = err?.error?.detail || 'Error al guardar receta';
+          const msg = err?.error?.detail || 'Error al guardar receta';
+          this.errorMessage = typeof msg === 'string' ? msg : JSON.stringify(msg);
         },
       });
     }
