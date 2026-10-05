@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BackupSetting, BackupSettingUpdate, BackupLog, BackupRestoreResponse } from '../models/backup.model';
+import { TokenService } from './token.service';
 
 @Injectable({
   providedIn: 'root',
@@ -15,7 +16,10 @@ export class BackupService {
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private tokenService: TokenService,
+  ) {}
 
   getSettings(): Observable<BackupSetting> {
     return this.http.get<BackupSetting>(`${this.apiUrl}/settings`).pipe(
@@ -75,8 +79,28 @@ export class BackupService {
   }
 
   downloadBackup(filename: string): void {
-    const downloadUrl = `${this.apiUrl}/download/${encodeURIComponent(filename)}`;
-    window.open(downloadUrl, '_blank');
+    this.isLoading.set(true);
+    const token = this.tokenService.getAccessToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    const downloadUrl = `${this.apiUrl}/download/${encodeURIComponent(filename)}${query}`;
+
+    this.http.get(downloadUrl, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        this.isLoading.set(false);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err?.error?.detail || 'Error al descargar la copia de seguridad.');
+      },
+    });
   }
 
   restoreBackup(file: File): Observable<BackupRestoreResponse> {
