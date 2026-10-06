@@ -37,6 +37,7 @@ import {
   ReportQueryResponse,
   VoiceReportSummaryResponse,
   VoiceReportSummaryRequest,
+  VoiceQueryGuideItem,
 } from '../../core/models/report.model';
 import { AIRecommendationResponse } from '../../core/models/ai-recommendation.model';
 import { PlanIaModalComponent } from '../planes-nutricionales/plan-ia-modal.component';
@@ -148,6 +149,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isSpeakingVoiceSummary = signal<boolean>(false);
   isPausedVoiceSummary = signal<boolean>(false);
   private speechRecognition: any = null;
+
+  // Modal de Guía de Consultas por Voz Preparadas (Gemini IA)
+  showVoiceQueriesGuideModal = signal<boolean>(false);
+  activeVoiceGuideCategory = signal<string>('all');
+  copiedVoiceQueryIndex = signal<number | null>(null);
 
   // Módulo de Copias de Seguridad (Backup)
   backupForm: FormGroup;
@@ -279,6 +285,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   newAppointmentAlert = signal<string | null>(null);
   private pollingTimer: any = null;
 
+  // Modal para Notificación por Tenant a Pacientes (Mobile)
+  showSendTenantNotificationModal = signal<boolean>(false);
+  isSendingTenantNotification = signal<boolean>(false);
+  tenantNotificationSuccess = signal<string | null>(null);
+  tenantNotificationError = signal<string | null>(null);
+  tenantNotifForm: FormGroup;
+
   constructor(
     private fb: FormBuilder,
     private route: ActivatedRoute,
@@ -381,6 +394,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       evolution_notes: [''],
       clinical_goals: [''],
     });
+
+    this.tenantNotifForm = this.fb.group({
+      recipient_type: ['ALL', [Validators.required]],
+      patient_id: [''],
+      type: ['SEGUIMIENTO_DIETA', [Validators.required]],
+      title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(150)]],
+      message: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(1000)]],
+    });
   }
 
   ngOnInit(): void {
@@ -397,6 +418,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadRecipes();
     this.loadNotificationCount();
     this.loadAppointments();
+    this.loadPatients();
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
 
     // Escuchar parametro tab de navegacion o redireccion de pago PayPal
@@ -520,6 +542,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeDeletePatient();
     this.closeAiAssistant();
     this.closeRestoreModal();
+    this.closeVoiceQueriesGuideModal();
+    this.closeSendTenantNotificationModal();
   }
 
   setActiveTab(tab: string): void {
@@ -2217,6 +2241,110 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  // --- MÉTODOS DE NOTIFICACIONES POR TENANT A PACIENTES (MÓVIL) ---
+  openSendTenantNotificationModal(patientId?: string): void {
+    if (!this.patientService.patients() || this.patientService.patients().length === 0) {
+      this.loadPatients();
+    }
+    this.tenantNotificationSuccess.set(null);
+    this.tenantNotificationError.set(null);
+    this.isSendingTenantNotification.set(false);
+
+    if (patientId) {
+      this.tenantNotifForm.patchValue({
+        recipient_type: 'SINGLE',
+        patient_id: patientId,
+        type: 'SEGUIMIENTO_DIETA',
+        title: 'Seguimiento de Dieta & Hábitos',
+        message: 'Hola, te recordamos registrar tus comidas y consumo de agua en la app NutriSalud. ¡Tu especialista está atento a tu avance!',
+      });
+    } else {
+      this.tenantNotifForm.patchValue({
+        recipient_type: 'ALL',
+        patient_id: '',
+        type: 'AVISO_CLINICA',
+        title: 'Aviso de tu Clínica Nutricional',
+        message: 'Estimado paciente, te recordamos mantener tus hábitos al día y revisar tus nuevas metas en la app NutriSalud.',
+      });
+    }
+
+    this.showSendTenantNotificationModal.set(true);
+  }
+
+  closeSendTenantNotificationModal(): void {
+    this.showSendTenantNotificationModal.set(false);
+    this.isSendingTenantNotification.set(false);
+    this.tenantNotificationSuccess.set(null);
+    this.tenantNotificationError.set(null);
+  }
+
+  onNotificationRecipientTypeChange(type: 'ALL' | 'SINGLE'): void {
+    this.tenantNotifForm.patchValue({ recipient_type: type });
+    if (type === 'ALL') {
+      this.tenantNotifForm.patchValue({ patient_id: '' });
+    }
+  }
+
+  submitTenantNotification(): void {
+    if (this.tenantNotifForm.invalid) {
+      this.tenantNotifForm.markAllAsTouched();
+      this.tenantNotificationError.set('Por favor completa todos los campos requeridos.');
+      return;
+    }
+
+    const { recipient_type, patient_id, title, message, type } = this.tenantNotifForm.value;
+
+    if (recipient_type === 'SINGLE' && !patient_id) {
+      this.tenantNotificationError.set('Debes seleccionar al paciente destinatario.');
+      return;
+    }
+
+    this.isSendingTenantNotification.set(true);
+    this.tenantNotificationError.set(null);
+    this.tenantNotificationSuccess.set(null);
+
+    if (recipient_type === 'ALL') {
+      this.notificationService.broadcastTenantNotification({
+        title,
+        message,
+        type,
+      }).subscribe({
+        next: (res) => {
+          this.isSendingTenantNotification.set(false);
+          this.tenantNotificationSuccess.set(res.message || 'Notificaciones emitidas exitosamente a los pacientes de la clínica.');
+          this.loadNotifications();
+          setTimeout(() => {
+            this.closeSendTenantNotificationModal();
+          }, 2000);
+        },
+        error: (err) => {
+          this.isSendingTenantNotification.set(false);
+          this.tenantNotificationError.set(err?.error?.detail || 'Error al emitir notificación por broadcast a los pacientes.');
+        },
+      });
+    } else {
+      this.notificationService.sendNotification({
+        user_id: patient_id,
+        title,
+        message,
+        type,
+      }).subscribe({
+        next: () => {
+          this.isSendingTenantNotification.set(false);
+          this.tenantNotificationSuccess.set('Notificación enviada exitosamente al dispositivo móvil del paciente.');
+          this.loadNotifications();
+          setTimeout(() => {
+            this.closeSendTenantNotificationModal();
+          }, 2000);
+        },
+        error: (err) => {
+          this.isSendingTenantNotification.set(false);
+          this.tenantNotificationError.set(err?.error?.detail || 'Error al enviar notificación individual al paciente.');
+        },
+      });
+    }
+  }
+
   pollPendingAppointmentsAndNotifications(): void {
     this.loadNotificationCount();
     const tenantId = this.isOrgAdmin()
@@ -2850,6 +2978,350 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.voiceTranscript.set(prompt);
     this.processVoiceReportCommand(prompt);
   }
+
+  // --- GUÍA DE CONSULTAS POR VOZ PREPARADAS (GEMINI IA) ---
+  openVoiceQueriesGuideModal(): void {
+    this.activeVoiceGuideCategory.set('all');
+    this.copiedVoiceQueryIndex.set(null);
+    this.showVoiceQueriesGuideModal.set(true);
+  }
+
+  closeVoiceQueriesGuideModal(): void {
+    this.showVoiceQueriesGuideModal.set(false);
+    this.copiedVoiceQueryIndex.set(null);
+  }
+
+  filterVoiceGuideCategory(category: string): void {
+    this.activeVoiceGuideCategory.set(category);
+  }
+
+  getFilteredVoiceQueries(): VoiceQueryGuideItem[] {
+    const cat = this.activeVoiceGuideCategory();
+    if (cat === 'all') {
+      return this.voiceQueriesCatalog;
+    }
+    return this.voiceQueriesCatalog.filter((q) => q.category === cat);
+  }
+
+  executePreparedVoiceQuery(command: string): void {
+    this.closeVoiceQueriesGuideModal();
+    this.voiceTranscript.set(command);
+    this.processVoiceReportCommand(command);
+  }
+
+  copyVoiceQueryText(text: string, idx: number): void {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.copiedVoiceQueryIndex.set(idx);
+        setTimeout(() => this.copiedVoiceQueryIndex.set(null), 2500);
+      });
+    } else {
+      this.copiedVoiceQueryIndex.set(idx);
+      setTimeout(() => this.copiedVoiceQueryIndex.set(null), 2500);
+    }
+  }
+
+  voiceQueriesCatalog: VoiceQueryGuideItem[] = [
+    // Pacientes & Clientes
+    {
+      id: 'pat-1',
+      category: 'patients',
+      categoryLabel: 'Pacientes',
+      categoryIcon: '👥',
+      title: 'Pacientes Activos y Contacto',
+      command: 'Reporte de pacientes activos con fecha de registro y contacto',
+      description: 'Obtiene el listado de clientes activos vinculados a tu clínica con nombre, teléfono y correo para seguimiento directo.',
+      entity: 'patients',
+      suggestedColumns: ['full_name', 'email', 'phone', 'is_active', 'created_at'],
+      filterBadge: 'Activos',
+    },
+    {
+      id: 'pat-2',
+      category: 'patients',
+      categoryLabel: 'Pacientes',
+      categoryIcon: '👥',
+      title: 'Pacientes Sin Nutricionista Asignado',
+      command: 'Listar pacientes sin especialista asignado',
+      description: 'Identifica pacientes de tu clínica que aún no cuentan con profesional asignado para distribuirlos en consulta.',
+      entity: 'patients',
+      suggestedColumns: ['full_name', 'email', 'phone', 'is_active', 'created_at'],
+      filterBadge: 'Sin Asignar',
+    },
+    {
+      id: 'pat-3',
+      category: 'patients',
+      categoryLabel: 'Pacientes',
+      categoryIcon: '👥',
+      title: 'Pacientes Registrados Recientes',
+      command: 'Pacientes registrados este mes con correo y teléfono',
+      description: 'Auditoría cronológica de nuevos registros para llamadas de inducción o bienvenida en el centro médico.',
+      entity: 'patients',
+      suggestedColumns: ['full_name', 'email', 'phone', 'created_at'],
+      filterBadge: 'Nuevos',
+    },
+    {
+      id: 'pat-4',
+      category: 'patients',
+      categoryLabel: 'Pacientes',
+      categoryIcon: '👥',
+      title: 'Padrón General de Clientes',
+      command: 'Reporte completo de clientes con estado y fecha de registro',
+      description: 'Visión integral del padrón de usuarios registrados en el tenant con estado activo o inactivo.',
+      entity: 'patients',
+      suggestedColumns: ['full_name', 'email', 'phone', 'is_active', 'created_at'],
+      filterBadge: 'Padrón Completo',
+    },
+
+    // Recetas & Nutrición
+    {
+      id: 'rec-1',
+      category: 'recipes',
+      categoryLabel: 'Recetas',
+      categoryIcon: '🥗',
+      title: 'Catálogo de Recetas y Macronutrientes',
+      command: 'Catálogo de recetas con calorías, proteínas y carbohidratos',
+      description: 'Listado completo de recetas exclusivas de la clínica con balance de macronutrientes para armado de planes.',
+      entity: 'recipes',
+      suggestedColumns: ['title', 'category', 'calories', 'protein', 'carbohydrates', 'fats'],
+      filterBadge: 'Macronutrientes',
+    },
+    {
+      id: 'rec-2',
+      category: 'recipes',
+      categoryLabel: 'Recetas',
+      categoryIcon: '🥗',
+      title: 'Almuerzos Altos en Proteína',
+      command: 'Recetas de almuerzo con calorías y proteínas',
+      description: 'Filtra opciones de almuerzo ricas en proteína para planes deportivos o de recomposición corporal.',
+      entity: 'recipes',
+      suggestedColumns: ['title', 'calories', 'protein', 'servings', 'difficulty'],
+      filterBadge: 'Almuerzo / Proteína',
+    },
+    {
+      id: 'rec-3',
+      category: 'recipes',
+      categoryLabel: 'Recetas',
+      categoryIcon: '🥗',
+      title: 'Desayunos Rápidos (<20 min)',
+      command: 'Recetas de desayuno con tiempo de preparación y calorías',
+      description: 'Platos matutinos rápidos para pacientes con agendas ajustadas.',
+      entity: 'recipes',
+      suggestedColumns: ['title', 'prep_time_minutes', 'cook_time_minutes', 'calories'],
+      filterBadge: 'Desayunos',
+    },
+    {
+      id: 'rec-4',
+      category: 'recipes',
+      categoryLabel: 'Recetas',
+      categoryIcon: '🥗',
+      title: 'Cenas Ligeras de Fácil Preparación',
+      command: 'Listar recetas de cena con dificultad fácil y detalle de grasas',
+      description: 'Cenas digestivas y bajas en lípidos con instrucciones sencillas para pacientes ambulatorios.',
+      entity: 'recipes',
+      suggestedColumns: ['title', 'difficulty', 'calories', 'fats', 'fiber'],
+      filterBadge: 'Cenas Fáciles',
+    },
+    {
+      id: 'rec-5',
+      category: 'recipes',
+      categoryLabel: 'Recetas',
+      categoryIcon: '🥗',
+      title: 'Snacks y Colaciones Saludables',
+      command: 'Recetas de snacks y meriendas con calorías y porciones',
+      description: 'Colaciones intermedias controladas en calorías para regular la saciedad y niveles glucémicos.',
+      entity: 'recipes',
+      suggestedColumns: ['title', 'servings', 'calories', 'protein'],
+      filterBadge: 'Snacks',
+    },
+
+    // Citas & Agenda
+    {
+      id: 'app-1',
+      category: 'appointments',
+      categoryLabel: 'Citas',
+      categoryIcon: '📅',
+      title: 'Citas Confirmadas de la Semana',
+      command: 'Reporte de citas confirmadas de esta semana',
+      description: 'Agenda confirmada de atenciones para coordinar boxes y especialistas de la clínica.',
+      entity: 'appointments',
+      suggestedColumns: ['appointment_date', 'status', 'patient_name', 'nutritionist_name', 'reason'],
+      filterBadge: 'Confirmadas',
+    },
+    {
+      id: 'app-2',
+      category: 'appointments',
+      categoryLabel: 'Citas',
+      categoryIcon: '📅',
+      title: 'Citas Pendientes de Confirmación',
+      command: 'Citas pendientes de confirmación con fecha y paciente',
+      description: 'Citas solicitadas desde la app móvil por clientes que esperan aprobación de la clínica.',
+      entity: 'appointments',
+      suggestedColumns: ['appointment_date', 'status', 'patient_name', 'reason'],
+      filterBadge: 'Pendientes',
+    },
+    {
+      id: 'app-3',
+      category: 'appointments',
+      categoryLabel: 'Citas',
+      categoryIcon: '📅',
+      title: 'Citas Canceladas y Motivos',
+      command: 'Historial de citas canceladas con motivo y fecha',
+      description: 'Monitoreo de cancelaciones con motivo para optimizar asistencia y reprogramaciones.',
+      entity: 'appointments',
+      suggestedColumns: ['appointment_date', 'patient_name', 'status', 'cancellation_reason'],
+      filterBadge: 'Canceladas',
+    },
+    {
+      id: 'app-4',
+      category: 'appointments',
+      categoryLabel: 'Citas',
+      categoryIcon: '📅',
+      title: 'Agenda Mensual por Especialista',
+      command: 'Agenda de citas del mes con estado y especialista',
+      description: 'Resumen consolidado del flujo de atenciones y carga horaria del equipo nutricional.',
+      entity: 'appointments',
+      suggestedColumns: ['appointment_date', 'status', 'patient_name', 'nutritionist_name'],
+      filterBadge: 'Mensual',
+    },
+
+    // Pagos & Caja
+    {
+      id: 'pay-1',
+      category: 'payments',
+      categoryLabel: 'Pagos & Caja',
+      categoryIcon: '💳',
+      title: 'Cobros de Suscripciones',
+      command: 'Reporte de pagos y cobros de suscripciones',
+      description: 'Relación de ingresos por mensualidades y planes de suscripción de la clínica.',
+      entity: 'payments',
+      suggestedColumns: ['customer_name', 'concept', 'amount', 'currency', 'status', 'payment_date'],
+      filterBadge: 'Suscripciones',
+    },
+    {
+      id: 'pay-2',
+      category: 'payments',
+      categoryLabel: 'Pagos & Caja',
+      categoryIcon: '💳',
+      title: 'Ingresos de Caja Completados',
+      command: 'Ingresos de caja completados con método de pago y monto',
+      description: 'Cierre de caja con transacciones completadas (PayPal y Efectivo de sucursal).',
+      entity: 'payments',
+      suggestedColumns: ['customer_name', 'amount', 'payment_method', 'status', 'payment_date'],
+      filterBadge: 'Completados',
+    },
+    {
+      id: 'pay-3',
+      category: 'payments',
+      categoryLabel: 'Pagos & Caja',
+      categoryIcon: '💳',
+      title: 'Cobros Pendientes en Pasarela',
+      command: 'Cobros pendientes de aprobación por PayPal',
+      description: 'Órdenes de pago creadas que aguardan aprobación o confirmación del paciente.',
+      entity: 'payments',
+      suggestedColumns: ['customer_name', 'concept', 'amount', 'status', 'payment_date'],
+      filterBadge: 'Pendientes',
+    },
+    {
+      id: 'pay-4',
+      category: 'payments',
+      categoryLabel: 'Pagos & Caja',
+      categoryIcon: '💳',
+      title: 'Balance Financiero por Monto',
+      command: 'Reporte financiero de cobros ordenado por monto',
+      description: 'Auditoría financiera de ingresos totales ordenados por volumen monetario.',
+      entity: 'payments',
+      suggestedColumns: ['customer_name', 'concept', 'amount', 'payment_method', 'status'],
+      filterBadge: 'Financiero',
+    },
+
+    // Fichas Clínicas
+    {
+      id: 'cli-1',
+      category: 'clinical_records',
+      categoryLabel: 'Fichas Clínicas',
+      categoryIcon: '📋',
+      title: 'Fichas Clínicas y Metas Terapéuticas',
+      command: 'Reporte de fichas clínicas con diagnósticos y objetivos nutricionales',
+      description: 'Historial patológico, diagnósticos de ingreso y objetivos terapéuticos trazados.',
+      entity: 'clinical_records',
+      suggestedColumns: ['patient_name', 'diagnosis', 'clinical_goals', 'created_at'],
+      filterBadge: 'Diagnósticos',
+    },
+    {
+      id: 'cli-2',
+      category: 'clinical_records',
+      categoryLabel: 'Fichas Clínicas',
+      categoryIcon: '📋',
+      title: 'Evolución Médica y Notas Recientes',
+      command: 'Pacientes con evolución clínica y notas de seguimiento',
+      description: 'Notas médicas de evolución clínica para evaluación del progreso nutricional.',
+      entity: 'clinical_records',
+      suggestedColumns: ['patient_name', 'diagnosis', 'evolution_notes', 'updated_at'],
+      filterBadge: 'Evolución',
+    },
+    {
+      id: 'cli-3',
+      category: 'clinical_records',
+      categoryLabel: 'Fichas Clínicas',
+      categoryIcon: '📋',
+      title: 'Diagnósticos Clínicos Actualizados',
+      command: 'Historial de diagnósticos clínicos actualizados este mes',
+      description: 'Auditoría de diagnósticos revisados durante el mes en curso.',
+      entity: 'clinical_records',
+      suggestedColumns: ['patient_name', 'clinical_goals', 'created_at'],
+      filterBadge: 'Historial',
+    },
+
+    // Bitácora de Auditoría
+    {
+      id: 'act-1',
+      category: 'activity_logs',
+      categoryLabel: 'Bitácora',
+      categoryIcon: '🔒',
+      title: 'Bitácora de Auditoría Reciente',
+      command: 'Bitácora de auditoría y movimientos recientes',
+      description: 'Trazabilidad de acciones registradas por los usuarios autorizados de tu clínica.',
+      entity: 'activity_logs',
+      suggestedColumns: ['user_name', 'action', 'details', 'module', 'created_at'],
+      filterBadge: 'Auditoría',
+    },
+    {
+      id: 'act-2',
+      category: 'activity_logs',
+      categoryLabel: 'Bitácora',
+      categoryIcon: '🔒',
+      title: 'Accesos e Inicios de Sesión',
+      command: 'Registro de accesos e inicios de sesión del sistema',
+      description: 'Control de seguridad sobre inicios de sesión y accesos al entorno de la organización.',
+      entity: 'activity_logs',
+      suggestedColumns: ['user_name', 'action', 'details', 'created_at'],
+      filterBadge: 'Seguridad',
+    },
+    {
+      id: 'act-3',
+      category: 'activity_logs',
+      categoryLabel: 'Bitácora',
+      categoryIcon: '🔒',
+      title: 'Auditoría de Gestión de Recetas',
+      command: 'Movimientos de creación y edición de recetas en el sistema',
+      description: 'Registro forense de altas, bajas y modificaciones en el recetario del tenant.',
+      entity: 'activity_logs',
+      suggestedColumns: ['user_name', 'action', 'details', 'created_at'],
+      filterBadge: 'Recetario',
+    },
+    {
+      id: 'act-4',
+      category: 'activity_logs',
+      categoryLabel: 'Bitácora',
+      categoryIcon: '🔒',
+      title: 'Auditoría de Caja y Cobros',
+      command: 'Auditoría de cobros y transacciones de caja de la clínica',
+      description: 'Registro de cada cobro registrado o validado en la caja de la sucursal.',
+      entity: 'activity_logs',
+      suggestedColumns: ['user_name', 'action', 'details', 'created_at'],
+      filterBadge: 'Caja & Cobros',
+    },
+  ];
 
   // Locución / Lectura por Voz de Resumen con Gemini (TTS)
   requestVoiceSummary(): void {

@@ -1071,6 +1071,15 @@
           <p class="page-subtitle">Alertas en tiempo real de citas programadas, confirmaciones y actualizaciones</p>
         </div>
         <div class="header-actions">
+          @if (!isClient()) {
+            <button (click)="openSendTenantNotificationModal()" class="btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span>Notificar a Pacientes (Móvil)</span>
+            </button>
+          }
           @if (unreadNotificationCount() > 0) {
             <button (click)="markAllNotificationsAsRead()" class="btn-outline">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2496,6 +2505,13 @@
           <p class="page-subtitle">Gestión interactiva de pacientes, vinculación con especialistas y prescripción asistida por IA</p>
         </div>
         <div class="header-actions">
+          <button (click)="openSendTenantNotificationModal()" class="btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span>Notificar a Pacientes (Móvil)</span>
+          </button>
           <button (click)="loadPatients()" class="btn-outline" title="Recargar lista de clientes">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="23 4 23 10 17 10"></polyline>
@@ -2646,6 +2662,19 @@
                         </svg>
                         <span>Plan IA</span>
                       </button>
+
+                      <!-- Botón Notificar al Móvil -->
+                      <button 
+                        (click)="openSendTenantNotificationModal(p.id)" 
+                        class="btn-outline btn-sm" 
+                        style="padding: 5px 10px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; border-color: #3b82f6; color: #3b82f6;"
+                        title="Enviar notificación personalizada al móvil del paciente (seguimiento de dieta, cita, recordatorio)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span>Notificar</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -2725,23 +2754,41 @@
       }
 
       <!-- Card: Asistente de Voz para Reportes Dinámicos con Gemini IA -->
-      <div class="card mb-4" style="padding: 22px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(32, 100, 67, 0.05)); border: 1.5px solid rgba(124, 58, 237, 0.25); border-radius: 16px; position: relative; overflow: hidden;">
+      <div class="card mb-4 voice-report-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
           <div>
-            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(124, 58, 237, 0.12); color: #7C3AED; border-radius: 20px; font-size: 0.76rem; font-weight: 700; margin-bottom: 8px;">
-              <span>REPORTE POR VOZ</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+              <span class="voice-badge-category">
+                REPORTE POR VOZ
+              </span>
+              <span class="voice-badge-filter">
+                🔒 {{ isSaasAdmin() ? 'ALCANCE: GLOBAL SAAS' : 'DATOS EXCLUSIVOS: ' + (getTenantName(authService.currentUser()?.tenant_id) || 'MI CLÍNICA') }}
+              </span>
             </div>
-            <h2 style="font-size: 1.18rem; font-weight: 800; color: var(--color-text-title); margin: 0 0 4px 0;">
+            <h2 style="font-size: 1.18rem; font-weight: 800; color: var(--text-primary); margin: 0 0 4px 0;">
               Solicitar y Consultar Reportes por Voz
             </h2>
-            <p style="font-size: 0.85rem; color: var(--color-text-muted); margin: 0; max-width: 650px;">
-              Presiona el micrófono y di en voz alta qué reporte deseas generar. El sistema interpretará tu comando, seleccionará la entidad, columnas y filtros automáticamente.
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; max-width: 650px;">
+              Presiona el micrófono y di en voz alta qué reporte deseas generar, o abre <strong>Consultas Definidas</strong> para ver ejemplos preparados. El sistema interpretará tu comando aislando estrictamente la información de tu clínica.
             </p>
           </div>
 
-          <!-- Botón de Grabación por Voz -->
-          <div style="display: flex; align-items: center; gap: 12px;">
+          <!-- Botones de Acción de Voz -->
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <button 
+              type="button"
+              (click)="openVoiceQueriesGuideModal()"
+              class="btn-voice-catalog" 
+              title="Abrir catálogo interactivo de consultas definidas por voz">
+              <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+              </svg>
+              <span>Consultas Definidas</span>
+            </button>
+
+            <button 
+              type="button"
               (click)="toggleVoiceRecording()" 
               [disabled]="isProcessingVoice()"
               class="btn-primary" 
@@ -2783,7 +2830,7 @@
 
         <!-- Sugerencias Rápidas de Voz -->
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <span style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted);">Sugerencias rápidas:</span>
+          <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">Sugerencias rápidas:</span>
           <button (click)="selectVoiceSuggestion('Reporte de citas confirmadas de esta semana')" class="btn-outline btn-sm" style="font-size: 0.75rem; border-radius: 14px; padding: 3px 10px;">
             Citas confirmadas
           </button>
@@ -2802,8 +2849,8 @@
         </div>
 
         @if (geminiVoiceExplanation()) {
-          <div style="margin-top: 14px; padding: 10px 14px; background: rgba(124, 58, 237, 0.08); border-left: 3px solid #7C3AED; border-radius: 6px; font-size: 0.85rem; color: var(--color-text-title); display: flex; align-items: center; gap: 8px;">
-            <span style="font-weight: 700; color: #7C3AED;">Reporte:</span>
+          <div style="margin-top: 14px; padding: 10px 14px; background: var(--voice-command-bg); border-left: 3px solid var(--voice-accent); border-radius: 6px; font-size: 0.85rem; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 700; color: var(--voice-accent);">Reporte:</span>
             <span>{{ geminiVoiceExplanation() }}</span>
           </div>
         }
@@ -3072,6 +3119,30 @@
       @if (backupError()) {
         <div class="alert alert-error mb-3">{{ backupError() }}</div>
       }
+
+      <!-- Card: Alcance y Privacidad de Copias de Seguridad Multi-Tenant -->
+      <div class="card mb-4" style="padding: 16px 20px; border-left: 4px solid var(--color-primary); background: rgba(32, 100, 67, 0.05); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-radius: 12px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(32, 100, 67, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            🛡️
+          </div>
+          <div>
+            <strong style="color: var(--color-text-title); font-size: 0.98rem; display: block;">
+              {{ isSaasAdmin() ? 'Respaldo Global del Ecosistema SaaS' : 'Respaldo Aislado y Exclusivo de su Clínica: ' + (getTenantName(authService.currentUser()?.tenant_id) || 'Mi Clínica') }}
+            </strong>
+            <p style="margin: 3px 0 0 0; font-size: 0.83rem; color: var(--color-text-muted); max-width: 720px;">
+              {{ isSaasAdmin() 
+                ? 'Como Administrador SaaS Global, sus copias de seguridad abarcan todas las organizaciones, suscripciones y datos de la plataforma.' 
+                : 'Por arquitectura de seguridad y privacidad multi-tenant, sus respaldos solo contienen los pacientes, recetas, citas, caja, bitácora y fichas pertenecientes a su propia clínica (' + (getTenantName(authService.currentUser()?.tenant_id) || 'Mi Clínica') + '). Ninguna otra clínica puede ver o restaurar su información.' }}
+            </p>
+          </div>
+        </div>
+        <div>
+          <span style="display: inline-block; background: rgba(32, 100, 67, 0.15); color: #206443; font-weight: 700; font-size: 0.78rem; padding: 6px 12px; border-radius: 20px; text-transform: uppercase;">
+            {{ isSaasAdmin() ? 'ALCANCE: GLOBAL SAAS' : 'ALCANCE: TENANT PRIVADO' }}
+          </span>
+        </div>
+      </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
         <!-- Card 1: Configuración de Copias Automáticas -->
@@ -3855,6 +3926,320 @@
               <span>{{ isExportingPaymentPdf() ? 'Generando PDF...' : 'Exportar Detalle (PDF)' }}</span>
             </button>
           </div>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: GUÍA DE CONSULTAS POR VOZ PREPARADAS (GEMINI IA)       -->
+    <!-- ============================================================= -->
+    @if (showVoiceQueriesGuideModal()) {
+      <div class="modal-backdrop" (click)="closeVoiceQueriesGuideModal()">
+        <div class="modal-content voice-guide-modal-content" (click)="$event.stopPropagation()">
+          <!-- Encabezado Modal -->
+          <div class="voice-guide-header">
+            <div>
+              <div class="voice-guide-tag">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+                <span>ASISTENTE DE VOZ GEMINI IA</span>
+              </div>
+              <h3 class="voice-guide-title">
+                Instrucciones y Consultas Definidas por Voz
+              </h3>
+              <p class="voice-guide-desc">
+                Puedes dictar cualquiera de estas frases mediante el botón <strong>"Dictar por Voz"</strong> o hacer clic en <strong>"▶ Ejecutar Consulta"</strong> para aplicarla de inmediato. Cada consulta se ejecuta estrictamente sobre los datos de tu clínica.
+              </p>
+            </div>
+            <button class="modal-close" (click)="closeVoiceQueriesGuideModal()" title="Cerrar ventana">✕</button>
+          </div>
+
+          <!-- Selector de Categorías (Pills) -->
+          <div class="voice-guide-categories">
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('all')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'all'">
+              ✨ Todas ({{ voiceQueriesCatalog.length }})
+            </button>
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('patients')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'patients'">
+              👥 Pacientes & Clientes
+            </button>
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('recipes')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'recipes'">
+              🥗 Recetas & Nutrición
+            </button>
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('appointments')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'appointments'">
+              📅 Citas & Agenda
+            </button>
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('payments')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'payments'">
+              💳 Pagos & Caja
+            </button>
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('clinical_records')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'clinical_records'">
+              📋 Fichas Clínicas
+            </button>
+            <button 
+              type="button" 
+              (click)="filterVoiceGuideCategory('activity_logs')" 
+              class="voice-cat-pill" 
+              [class.active]="activeVoiceGuideCategory() === 'activity_logs'">
+              🔒 Bitácora & Auditoría
+            </button>
+          </div>
+
+          <!-- Lista / Grilla de Consultas Definidas -->
+          <div class="voice-guide-body">
+            @for (item of getFilteredVoiceQueries(); track item.id; let idx = $index) {
+              <div class="voice-query-card">
+                <div class="voice-card-top">
+                  <div class="voice-card-identity">
+                    <span class="voice-card-icon">{{ item.categoryIcon }}</span>
+                    <strong class="voice-card-title">{{ item.title }}</strong>
+                  </div>
+                  <div class="voice-card-badges">
+                    <span class="voice-badge-category">
+                      {{ item.categoryLabel }}
+                    </span>
+                    @if (item.filterBadge) {
+                      <span class="voice-badge-filter">
+                        {{ item.filterBadge }}
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <!-- Frase de Dictado por Voz -->
+                <div class="voice-command-box">
+                  <div class="voice-command-text">
+                    "{{ item.command }}"
+                  </div>
+                  <button 
+                    type="button" 
+                    (click)="copyVoiceQueryText(item.command, idx)"
+                    class="btn-copy-phrase"
+                    title="Copiar texto de la instrucción">
+                    {{ copiedVoiceQueryIndex() === idx ? '✓ Copiado' : 'Copiar Frase' }}
+                  </button>
+                </div>
+
+                <p class="voice-card-desc">
+                  {{ item.description }}
+                </p>
+
+                <!-- Pie de Card con Columnas y Botón de Ejecución -->
+                <div class="voice-card-footer">
+                  <div class="voice-card-columns">
+                    <strong>Campos sugeridos:</strong> {{ item.suggestedColumns.join(', ') }}
+                  </div>
+                  <button 
+                    type="button" 
+                    (click)="executePreparedVoiceQuery(item.command)" 
+                    class="btn-execute-query" 
+                    title="Ejecutar esta consulta directamente">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span>Ejecutar Consulta</span>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Pie del Modal -->
+          <div class="voice-guide-footer">
+            <span class="voice-guide-footer-tip">
+              💡 <em>Consejo: Puedes decir estas mismas frases usando el micrófono en cualquier momento.</em>
+            </span>
+            <button type="button" class="btn-outline" (click)="closeVoiceQueriesGuideModal()">
+              Cerrar Guía
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ============================================================= -->
+    <!-- MODAL: EMITIR NOTIFICACIÓN A PACIENTES (CLIENTES MÓVIL)       -->
+    <!-- ============================================================= -->
+    @if (showSendTenantNotificationModal()) {
+      <div class="modal-backdrop" (click)="closeSendTenantNotificationModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 680px; width: 95%;">
+          <div class="modal-header">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; background: rgba(59, 130, 246, 0.12); color: #2563eb; border-radius: 20px; font-size: 0.74rem; font-weight: 700; margin-bottom: 6px;">
+                <span>📱 VINCULACIÓN CON APP MÓVIL</span>
+              </div>
+              <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--color-text-title);">
+                Emitir Notificación a Pacientes
+              </h3>
+            </div>
+            <button class="modal-close" (click)="closeSendTenantNotificationModal()">✕</button>
+          </div>
+
+          <p style="font-size: 0.84rem; color: var(--color-text-muted); margin: 0 0 16px 0; line-height: 1.45;">
+            Envía alertas al dispositivo móvil de tus pacientes vinculados. Las notificaciones se aíslan estrictamente para tu clínica (<strong>{{ getMyOrgName() }}</strong>).
+          </p>
+
+          @if (tenantNotificationSuccess()) {
+            <div class="alert alert-success mb-3">{{ tenantNotificationSuccess() }}</div>
+          }
+          @if (tenantNotificationError()) {
+            <div class="alert alert-error mb-3">{{ tenantNotificationError() }}</div>
+          }
+
+          <form [formGroup]="tenantNotifForm" (ngSubmit)="submitTenantNotification()" class="modal-form">
+            <!-- Selector de Destinatario: Todos o Paciente Individual -->
+            <div class="form-group mb-3">
+              <label class="form-label" style="font-weight: 700; font-size: 0.88rem;">Destinatarios *</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+                <label 
+                  [style.border-color]="tenantNotifForm.get('recipient_type')?.value === 'ALL' ? 'var(--color-primary)' : 'var(--color-border)'"
+                  [style.background]="tenantNotifForm.get('recipient_type')?.value === 'ALL' ? 'rgba(32, 100, 67, 0.06)' : 'transparent'"
+                  style="border: 2px solid; border-radius: 10px; padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                  <input 
+                    type="radio" 
+                    value="ALL" 
+                    formControlName="recipient_type" 
+                    (change)="onNotificationRecipientTypeChange('ALL')"
+                    style="accent-color: var(--color-primary);" />
+                  <div>
+                    <strong style="display: block; font-size: 0.88rem; color: var(--color-text-title);">Toda la Clínica</strong>
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">A todos mis pacientes</span>
+                  </div>
+                </label>
+
+                <label 
+                  [style.border-color]="tenantNotifForm.get('recipient_type')?.value === 'SINGLE' ? 'var(--color-primary)' : 'var(--color-border)'"
+                  [style.background]="tenantNotifForm.get('recipient_type')?.value === 'SINGLE' ? 'rgba(32, 100, 67, 0.06)' : 'transparent'"
+                  style="border: 2px solid; border-radius: 10px; padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                  <input 
+                    type="radio" 
+                    value="SINGLE" 
+                    formControlName="recipient_type" 
+                    (change)="onNotificationRecipientTypeChange('SINGLE')"
+                    style="accent-color: var(--color-primary);" />
+                  <div>
+                    <strong style="display: block; font-size: 0.88rem; color: var(--color-text-title);">Paciente Específico</strong>
+                    <span style="font-size: 0.75rem; color: var(--color-text-muted);">Mensaje individual</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Selector de Paciente si es SINGLE -->
+            @if (tenantNotifForm.get('recipient_type')?.value === 'SINGLE') {
+              <div class="form-group mb-3">
+                <label class="form-label" style="font-weight: 700; font-size: 0.86rem;">Seleccionar Paciente *</label>
+                <select formControlName="patient_id" class="input-field form-control">
+                  <option value="">-- Elige un paciente de tu clínica --</option>
+                  @for (p of patientService.patients(); track p.id) {
+                    <option [value]="p.id">{{ p.full_name }} ({{ p.email }})</option>
+                  }
+                </select>
+                @if (tenantNotifForm.get('patient_id')?.touched && !tenantNotifForm.get('patient_id')?.value) {
+                  <span class="text-danger text-xs mt-1">Debes seleccionar al paciente destinatario.</span>
+                }
+              </div>
+            }
+
+            <!-- Tipo de Notificación -->
+            <div class="form-group mb-3">
+              <label class="form-label" style="font-weight: 700; font-size: 0.86rem;">Tipo de Notificación *</label>
+              <select formControlName="type" class="input-field form-control">
+                <option value="SEGUIMIENTO_DIETA">🥗 Seguimiento de Dieta & Hábitos Diarios</option>
+                <option value="RECORDATORIO_CITA">📅 Recordatorio de Cita Nutricional</option>
+                <option value="AVISO_CLINICA">📢 Aviso General de la Clínica</option>
+                <option value="PLAN">📋 Actualización de Plan Nutricional</option>
+                <option value="RECETA">🍲 Nueva Receta Recomendada</option>
+              </select>
+            </div>
+
+            <!-- Título -->
+            <div class="form-group mb-3">
+              <label class="form-label" style="font-weight: 700; font-size: 0.86rem;">Título del Mensaje *</label>
+              <input 
+                type="text" 
+                formControlName="title" 
+                placeholder="Ej: Recordatorio de Dieta o Consulta de Seguimiento" 
+                class="input-field form-control" 
+                maxlength="150" 
+              />
+            </div>
+
+            <!-- Mensaje -->
+            <div class="form-group mb-3">
+              <label class="form-label" style="font-weight: 700; font-size: 0.86rem;">Cuerpo del Mensaje (Texto que verá el cliente en su móvil) *</label>
+              <textarea 
+                formControlName="message" 
+                rows="4" 
+                placeholder="Escribe las instrucciones de seguimiento, recordatorio de cita o mensaje motivacional..." 
+                class="input-field form-control"
+                maxlength="1000"
+                style="resize: vertical;"></textarea>
+            </div>
+
+            <!-- Vista Previa Móvil -->
+            <div class="mobile-preview-box">
+              <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px;">
+                Vista Previa en Dispositivo Móvil
+              </span>
+              <div class="mobile-preview-bubble">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--color-primary-light); color: var(--color-success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem;">
+                  🔔
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <strong class="mobile-preview-title">
+                    {{ tenantNotifForm.get('title')?.value || 'Título de Notificación' }}
+                  </strong>
+                  <p class="mobile-preview-text">
+                    {{ tenantNotifForm.get('message')?.value || 'Aquí se mostrará el mensaje enviado al móvil...' }}
+                  </p>
+                  <span class="mobile-preview-meta">NutriSalud • {{ getMyOrgName() }} • Ahora</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 1px solid var(--color-border);">
+              <button type="button" class="btn-outline" (click)="closeSendTenantNotificationModal()">
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                class="btn-primary" 
+                [disabled]="isSendingTenantNotification() || tenantNotifForm.invalid"
+                style="display: inline-flex; align-items: center; gap: 6px; background: #2563eb;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <span>{{ isSendingTenantNotification() ? 'Emitiendo al Móvil...' : 'Enviar al Móvil' }}</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     }
