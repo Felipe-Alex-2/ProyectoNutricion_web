@@ -38,4 +38,14 @@ export class NotificationService {
   }): Observable<Notification> {
     return this.http.post<Notification>(`${this.apiUrl}/send`, payload);
   }
+
+  broadcastTenantNotification(payload: {
+    title: string;
+    message: string;
+    type?: string;
+    patient_ids?: string[];
+    reference_id?: string;
+  }): Observable<{ sent_count: number; message: string }> {
+    return this.http.post<{ sent_count: number; message: string }>(`${this.apiUrl}/broadcast-tenant`, payload);
+  }
 }

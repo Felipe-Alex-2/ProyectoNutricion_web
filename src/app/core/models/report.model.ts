@@ -54,3 +54,17 @@ export interface VoiceReportSummaryResponse {
   summary_text: string;
   bullet_points: string[];
 }
+
+export interface VoiceQueryGuideItem {
+  id: string;
+  category: 'patients' | 'recipes' | 'appointments' | 'payments' | 'clinical_records' | 'activity_logs';
+  categoryLabel: string;
+  categoryIcon: string;
+  title: string;
+  command: string;
+  description: string;
+  entity: string;
+  suggestedColumns: string[];
+  filterBadge?: string;
+}
+
