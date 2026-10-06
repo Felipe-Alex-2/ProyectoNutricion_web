@@ -6,6 +6,7 @@ import {
   ReportEntityMeta,
   ReportQueryRequest,
   ReportQueryResponse,
+  VoiceReportCommandRequest,
   VoiceReportCommandResponse,
   VoiceReportSummaryRequest,
   VoiceReportSummaryResponse,
