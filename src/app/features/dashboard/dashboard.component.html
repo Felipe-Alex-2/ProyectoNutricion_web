@@ -2920,6 +2920,7 @@
               type="date" 
               [value]="reportStartDate()" 
               (input)="reportStartDate.set($any($event.target).value)" 
+              (change)="generateReportPreview()"
               class="input-field form-control" 
             />
           </div>
@@ -2929,6 +2930,18 @@
               type="date" 
               [value]="reportEndDate()" 
               (input)="reportEndDate.set($any($event.target).value)" 
+              (change)="generateReportPreview()"
+              class="input-field form-control" 
+            />
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 4px;">Estado / Condición</label>
+            <input 
+              type="text" 
+              [value]="reportStatusFilter()" 
+              (input)="reportStatusFilter.set($any($event.target).value)" 
+              (keyup.enter)="generateReportPreview()"
+              placeholder="Ej: CONFIRMED, Activo, Desayuno..." 
               class="input-field form-control" 
             />
           </div>
@@ -2938,13 +2951,14 @@
               type="text" 
               [value]="reportSearch()" 
               (input)="reportSearch.set($any($event.target).value)" 
+              (keyup.enter)="generateReportPreview()"
               placeholder="Buscar en el reporte..." 
               class="input-field form-control" 
             />
           </div>
         </div>
 
-        <div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
           <button 
             (click)="generateReportPreview()" 
             class="btn-primary" 
@@ -2953,11 +2967,26 @@
             @if (isLoadingReport()) {
               <span>Cargando datos...</span>
             } @else {
-              <span>Generar Vista Previa</span>
+              <span>Generar / Actualizar Vista Previa</span>
             }
+          </button>
+          <button 
+            (click)="clearReportFilters()" 
+            type="button"
+            class="btn-outline" 
+            [disabled]="isLoadingReport()">
+            <span>Limpiar Filtros</span>
           </button>
         </div>
       </div>
+
+      <!-- Indicador de carga cuando no hay datos previos -->
+      @if (isLoadingReport() && !reportPreviewData()) {
+        <div class="card mb-4" style="padding: 40px; text-align: center;">
+          <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid rgba(32, 100, 67, 0.2); border-radius: 50%; border-top-color: var(--color-primary); animation: spin 1s ease-in-out infinite; margin-bottom: 12px;"></div>
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; margin: 0;">Consultando datos del reporte...</p>
+        </div>
+      }
 
       <!-- Vista previa del Reporte -->
       @if (reportPreviewData(); as report) {
@@ -3061,7 +3090,7 @@
                 @for (row of report.rows; track $index) {
                   <tr>
                     @for (col of report.columns; track col.key) {
-                      <td>{{ row[col.key] || '-' }}</td>
+                      <td>{{ (row[col.key] !== null && row[col.key] !== undefined && row[col.key] !== '') ? row[col.key] : '-' }}</td>
                     }
                   </tr>
                 } @empty {

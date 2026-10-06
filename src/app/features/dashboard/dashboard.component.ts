@@ -2736,7 +2736,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const current = this.selectedReportEntity();
           const target = entities.find((e) => e.entity === current) ? current : entities[0].entity;
           this.onReportEntityChange(target);
+        } else {
+          this.generateReportPreview();
         }
+      },
+      error: () => {
+        this.generateReportPreview();
       },
     });
   }
@@ -2749,7 +2754,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else {
       this.selectedReportColumns.set([]);
     }
-    this.reportPreviewData.set(null);
+    this.generateReportPreview();
   }
 
   toggleReportColumn(colKey: string): void {
@@ -2760,17 +2765,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return [...cols, colKey];
       }
     });
+    this.generateReportPreview();
   }
 
   selectAllReportColumns(): void {
     const ent = this.reportService.entities().find((e) => e.entity === this.selectedReportEntity());
     if (ent) {
       this.selectedReportColumns.set(ent.available_columns.map((c) => c.key));
+      this.generateReportPreview();
     }
   }
 
   deselectAllReportColumns(): void {
     this.selectedReportColumns.set([]);
+    this.generateReportPreview();
+  }
+
+  clearReportFilters(): void {
+    this.reportStartDate.set('');
+    this.reportEndDate.set('');
+    this.reportStatusFilter.set('');
+    this.reportSearch.set('');
+    this.generateReportPreview();
   }
 
   generateReportPreview(): void {
