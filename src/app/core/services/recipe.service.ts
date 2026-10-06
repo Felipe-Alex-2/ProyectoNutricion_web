@@ -16,12 +16,13 @@ export class RecipeService {
 
   constructor(private http: HttpClient) {}
 
-  loadRecipes(category?: string): Observable<Recipe[]> {
+  loadRecipes(category?: string, tenantId?: string): Observable<Recipe[]> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
     const params: any = {};
     if (category) params.category = category;
+    if (tenantId) params.tenant_id = tenantId;
 
     return this.http.get<Recipe[]>(this.apiUrl, { params }).pipe(
       tap({

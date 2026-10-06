@@ -1088,6 +1088,20 @@
         </div>
       </header>
 
+      @if (isSaasAdmin()) {
+        <div class="filters-bar mb-3">
+          <div class="filter-field">
+            <label>Organización:</label>
+            <select (change)="onNotificationTenantChange($event)" class="select-input">
+              <option value="">Todas las Organizaciones (Modo Global)</option>
+              @for (t of tenants(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+              }
+            </select>
+          </div>
+        </div>
+      }
+
       @if (isLoadingNotifications()) {
         <div class="card" style="padding: 3rem; text-align: center;">
           <div class="spinner"></div>
@@ -1647,6 +1661,20 @@
           <span class="badge-tag">{{ patientLinks().length }} registros</span>
         </div>
 
+        @if (isSaasAdmin()) {
+          <div class="filters-bar" style="padding: 12px 20px 0 20px; margin: 0;">
+            <div class="filter-field">
+              <label>Organización:</label>
+              <select (change)="onLinkTenantChange($event)" class="select-input">
+                <option value="">Todas las Organizaciones (Modo Global)</option>
+                @for (t of tenants(); track t.id) {
+                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+
         <div class="table-responsive mt-3">
           <table class="data-table">
             <thead>
@@ -1721,6 +1749,20 @@
         }
         @if (recipeError()) {
           <div class="alert alert-error mt-3">{{ recipeError() }}</div>
+        }
+
+        @if (isSaasAdmin()) {
+          <div class="filters-bar mt-3">
+            <div class="filter-field">
+              <label>Organización:</label>
+              <select (change)="onRecipeTenantChange($event)" class="select-input">
+                <option value="">Todas las Organizaciones (Modo Global)</option>
+                @for (t of tenants(); track t.id) {
+                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+                }
+              </select>
+            </div>
+          </div>
         }
 
         <!-- Filtros de categoría -->
@@ -2138,6 +2180,20 @@
         </div>
       </div>
 
+      @if (isSaasAdmin()) {
+        <div class="filters-bar mb-3">
+          <div class="filter-field">
+            <label>Organización:</label>
+            <select (change)="onAppointmentTenantChange($event)" class="select-input">
+              <option value="">Todas las Organizaciones (Modo Global)</option>
+              @for (t of tenants(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+              }
+            </select>
+          </div>
+        </div>
+      }
+
       <!-- Filtros de Estado -->
       <div class="pos-filters-bar mb-3">
         <button 
@@ -2465,6 +2521,20 @@
       <!-- Automatizaciones RPA Clínicas e Inteligencia Artificial -->
       <app-panel-automatizaciones [patients]="patientService.patients()" />
 
+      @if (isSaasAdmin()) {
+        <div class="filters-bar mb-3">
+          <div class="filter-field">
+            <label>Organización:</label>
+            <select (change)="onPatientTenantChange($event)" class="select-input">
+              <option value="">Todas las Organizaciones (Modo Global)</option>
+              @for (t of tenants(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+              }
+            </select>
+          </div>
+        </div>
+      }
+
       <!-- Filtros de búsqueda -->
       <div class="card search-filter-card mb-4" style="padding: 16px 20px;">
         <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
@@ -2638,6 +2708,20 @@
       }
       @if (reportError()) {
         <div class="alert alert-error mb-3">{{ reportError() }}</div>
+      }
+
+      @if (isSaasAdmin()) {
+        <div class="filters-bar" style="margin-bottom: 1.25rem;">
+          <div class="filter-field">
+            <label>Organización:</label>
+            <select (change)="onReportTenantChange($event)" class="select-input">
+              <option value="">Todas las Organizaciones (Modo Global)</option>
+              @for (t of tenants(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+              }
+            </select>
+          </div>
+        </div>
       }
 
       <!-- Card: Asistente de Voz para Reportes Dinámicos con Gemini IA -->
@@ -2967,6 +3051,20 @@
           </button>
         </div>
       </header>
+
+      @if (isSaasAdmin()) {
+        <div class="filters-bar mb-3">
+          <div class="filter-field">
+            <label>Organización:</label>
+            <select (change)="onBackupTenantChange($event)" class="select-input">
+              <option value="">Todas las Organizaciones (Modo Global)</option>
+              @for (t of tenants(); track t.id) {
+                <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
+              }
+            </select>
+          </div>
+        </div>
+      }
 
       @if (backupSuccess()) {
         <div class="alert alert-success mb-3">{{ backupSuccess() }}</div>

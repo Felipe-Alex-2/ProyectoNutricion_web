@@ -69,8 +69,10 @@ export class ReportService {
     });
   }
 
-  sendVoiceCommand(transcript: string): Observable<VoiceReportCommandResponse> {
-    return this.http.post<VoiceReportCommandResponse>(`${this.apiUrl}/voice-command`, { transcript });
+  sendVoiceCommand(transcript: string, tenantId?: string): Observable<VoiceReportCommandResponse> {
+    const body: VoiceReportCommandRequest = { transcript };
+    if (tenantId) body.tenant_id = tenantId;
+    return this.http.post<VoiceReportCommandResponse>(`${this.apiUrl}/voice-command`, body);
   }
 
   getVoiceSummary(req: VoiceReportSummaryRequest): Observable<VoiceReportSummaryResponse> {

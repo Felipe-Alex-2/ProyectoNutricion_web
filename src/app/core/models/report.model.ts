@@ -21,6 +21,7 @@ export interface ReportQueryRequest {
   sort_by?: string;
   sort_order?: string;
   limit?: number;
+  tenant_id?: string;
 }
 
 export interface ReportQueryResponse {
@@ -34,6 +35,7 @@ export interface ReportQueryResponse {
 
 export interface VoiceReportCommandRequest {
   transcript: string;
+  tenant_id?: string;
 }
 
 export interface VoiceReportCommandResponse {

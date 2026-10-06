@@ -21,8 +21,10 @@ export class BackupService {
     private tokenService: TokenService,
   ) {}
 
-  getSettings(): Observable<BackupSetting> {
-    return this.http.get<BackupSetting>(`${this.apiUrl}/settings`).pipe(
+  getSettings(tenantId?: string): Observable<BackupSetting> {
+    const params: Record<string, string> = {};
+    if (tenantId) params['tenant_id'] = tenantId;
+    return this.http.get<BackupSetting>(`${this.apiUrl}/settings`, { params }).pipe(
       tap({
         next: (s) => this.settings.set(s),
         error: (err) => this.errorMessage.set(err?.error?.detail || 'Error al cargar ajustes de backup'),
@@ -30,9 +32,11 @@ export class BackupService {
     );
   }
 
-  updateSettings(data: BackupSettingUpdate): Observable<BackupSetting> {
+  updateSettings(data: BackupSettingUpdate, tenantId?: string): Observable<BackupSetting> {
     this.isLoading.set(true);
-    return this.http.put<BackupSetting>(`${this.apiUrl}/settings`, data).pipe(
+    const params: Record<string, string> = {};
+    if (tenantId) params['tenant_id'] = tenantId;
+    return this.http.put<BackupSetting>(`${this.apiUrl}/settings`, data, { params }).pipe(
       tap({
         next: (s) => {
           this.settings.set(s);
@@ -46,9 +50,11 @@ export class BackupService {
     );
   }
 
-  exportManual(): Observable<BackupLog> {
+  exportManual(tenantId?: string): Observable<BackupLog> {
     this.isLoading.set(true);
-    return this.http.post<BackupLog>(`${this.apiUrl}/export`, {}).pipe(
+    const params: Record<string, string> = {};
+    if (tenantId) params['tenant_id'] = tenantId;
+    return this.http.post<BackupLog>(`${this.apiUrl}/export`, {}, { params }).pipe(
       tap({
         next: (log) => {
           this.history.update((curr) => [log, ...curr]);
@@ -62,9 +68,11 @@ export class BackupService {
     );
   }
 
-  getHistory(): Observable<BackupLog[]> {
+  getHistory(tenantId?: string): Observable<BackupLog[]> {
     this.isLoading.set(true);
-    return this.http.get<BackupLog[]>(`${this.apiUrl}/history`).pipe(
+    const params: Record<string, string> = {};
+    if (tenantId) params['tenant_id'] = tenantId;
+    return this.http.get<BackupLog[]>(`${this.apiUrl}/history`, { params }).pipe(
       tap({
         next: (logs) => {
           this.history.set(logs);

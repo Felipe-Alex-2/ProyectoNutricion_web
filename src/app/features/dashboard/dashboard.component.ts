@@ -92,6 +92,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   patientDeleteModalOpen = signal<boolean>(false);
   patientSearch = signal<string>('');
   patientStatusFilter = signal<string>('');
+  patientFilterTenant = signal<string>('');
   patientSuccess = signal<string | null>(null);
   patientError = signal<string | null>(null);
 
@@ -131,6 +132,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   reportPreviewData = signal<ReportQueryResponse | null>(null);
   isLoadingReport = signal<boolean>(false);
   isExportingReport = signal<boolean>(false);
+  reportFilterTenant = signal<string>('');
   reportMessage = signal<string | null>(null);
   reportError = signal<string | null>(null);
 
@@ -149,6 +151,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Módulo de Copias de Seguridad (Backup)
   backupForm: FormGroup;
+  backupFilterTenant = signal<string>('');
   backupSuccess = signal<string | null>(null);
   backupError = signal<string | null>(null);
   selectedRestoreFile: File | null = null;
@@ -207,6 +210,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   lastGeneratedLink = signal<PatientLink | null>(null);
   linkSuccess = signal<string | null>(null);
   linkError = signal<string | null>(null);
+  linkFilterTenant = signal<string>('');
   claimSuccess = signal<string | null>(null);
   claimError = signal<string | null>(null);
 
@@ -217,6 +221,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   recipeSuccess = signal<string | null>(null);
   recipeError = signal<string | null>(null);
   recipeCategoryFilter = signal<string>('');
+  recipeFilterTenant = signal<string>('');
   recipeSelectedPatients = signal<string[]>([]);
   recipeForm: FormGroup;
 
@@ -255,6 +260,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoadingAppointments = signal<boolean>(false);
   appointmentSuccess = signal<string | null>(null);
   appointmentError = signal<string | null>(null);
+  appointmentFilterTenant = signal<string>('');
   cancelModalOpen = signal<boolean>(false);
   appointmentToCancel = signal<Appointment | null>(null);
   cancelReason = signal<string>('');
@@ -269,6 +275,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   notifications = signal<Notification[]>([]);
   unreadNotificationCount = signal<number>(0);
   isLoadingNotifications = signal<boolean>(false);
+  notificationFilterTenant = signal<string>('');
   newAppointmentAlert = signal<string | null>(null);
   private pollingTimer: any = null;
 
@@ -1207,9 +1214,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // --- Sprint 1: Vinculación Paciente (WhatsApp) ---
+  onLinkTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.linkFilterTenant.set(val);
+    this.loadPatientLinks();
+  }
+
   loadPatientLinks(): void {
     this.isLoadingLinks.set(true);
-    this.patientLinkService.getLinks().subscribe({
+    const tenantId = this.isSaasAdmin() && this.linkFilterTenant() ? this.linkFilterTenant() : undefined;
+    this.patientLinkService.getLinks(tenantId).subscribe({
       next: (res) => {
         this.patientLinks.set(res);
         this.isLoadingLinks.set(false);
@@ -1259,9 +1273,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // --- MÉTODOS DE RECETAS NUTRICIONALES (WEB) ---
+  onRecipeTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.recipeFilterTenant.set(val);
+    this.loadRecipes();
+  }
+
   loadRecipes(category?: string): void {
     const cat = category !== undefined ? category : this.recipeCategoryFilter();
-    this.recipeService.loadRecipes(cat || undefined).subscribe();
+    const tenantId = this.isSaasAdmin() && this.recipeFilterTenant() ? this.recipeFilterTenant() : undefined;
+    this.recipeService.loadRecipes(cat || undefined, tenantId).subscribe();
   }
 
   filterRecipesByCategory(cat: string): void {
@@ -1404,6 +1425,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       carbohydrates: Number(rawVal.carbohydrates),
       fats: Number(rawVal.fats),
       assigned_patient_ids: this.recipeSelectedPatients(),
+      tenant_id: this.isSaasAdmin() && this.recipeFilterTenant() ? this.recipeFilterTenant() : undefined,
     };
 
     if (editing) {
@@ -1878,14 +1900,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ==========================================
   // MÉTODOS DE CITAS MÉDICAS / NUTRICIONALES
   // ==========================================
+  onAppointmentTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.appointmentFilterTenant.set(val);
+    this.loadAppointments();
+  }
+
   loadAppointments(): void {
     this.isLoadingAppointments.set(true);
     this.appointmentError.set(null);
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : undefined;
+      : (this.isSaasAdmin() && this.appointmentFilterTenant() ? this.appointmentFilterTenant() : undefined);
 
-    this.appointmentService.getAppointments('ALL', tenantId).subscribe({
+    this.appointmentService.getAppointments(this.selectedAppointmentStatus(), tenantId).subscribe({
       next: (data) => {
         this.appointments.set(data);
         this.isLoadingAppointments.set(false);
@@ -1902,7 +1930,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadNutritionists(): void {
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : undefined;
+      : (this.isSaasAdmin() && this.appointmentFilterTenant() ? this.appointmentFilterTenant() : undefined);
 
     this.appointmentService.getNutritionists(tenantId).subscribe({
       next: (data) => {
@@ -2144,9 +2172,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  onNotificationTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.notificationFilterTenant.set(val);
+    this.loadNotifications();
+  }
+
   loadNotifications(): void {
     this.isLoadingNotifications.set(true);
-    this.notificationService.getMyNotifications(50).subscribe({
+    const tenantId = this.isSaasAdmin() && this.notificationFilterTenant() ? this.notificationFilterTenant() : undefined;
+    this.notificationService.getMyNotifications(50, tenantId).subscribe({
       next: (list) => {
         this.notifications.set(list);
         this.isLoadingNotifications.set(false);
@@ -2186,7 +2221,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadNotificationCount();
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : undefined;
+      : (this.isSaasAdmin() && this.appointmentFilterTenant() ? this.appointmentFilterTenant() : undefined);
 
     this.appointmentService.getAppointments('ALL', tenantId).subscribe({
       next: (data) => {
@@ -2243,9 +2278,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ==========================================
   // MÓDULO DE CLIENTES / PACIENTES
   // ==========================================
+  onPatientTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.patientFilterTenant.set(val);
+    this.loadPatients();
+  }
+
   loadPatients(): void {
     const filterActive = this.patientStatusFilter() === '' ? undefined : this.patientStatusFilter() === 'true';
-    this.patientService.getPatients(this.patientSearch(), filterActive).subscribe();
+    const tenantId = this.isSaasAdmin() && this.patientFilterTenant() ? this.patientFilterTenant() : undefined;
+    this.patientService.getPatients(this.patientSearch(), filterActive, tenantId).subscribe();
   }
 
   openEditPatient(patient: PatientListItem): void {
@@ -2612,6 +2654,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       status: this.reportStatusFilter() || undefined,
       search: this.reportSearch() || undefined,
       limit: 200,
+      tenant_id: this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined,
     };
     this.isLoadingReport.set(true);
     this.reportError.set(null);
@@ -2636,6 +2679,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       status: this.reportStatusFilter() || undefined,
       search: this.reportSearch() || undefined,
       limit: 500,
+      tenant_id: this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined,
     };
     this.isExportingReport.set(true);
     this.reportService.exportExcel(req).subscribe({
@@ -2663,6 +2707,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       status: this.reportStatusFilter() || undefined,
       search: this.reportSearch() || undefined,
       limit: 500,
+      tenant_id: this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined,
     };
     this.isExportingReport.set(true);
     this.reportService.exportPdf(req).subscribe({
@@ -2747,6 +2792,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isRecordingVoice.set(false);
   }
 
+  onReportTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.reportFilterTenant.set(val);
+    this.generateReportPreview();
+  }
+
   processVoiceReportCommand(text?: string): void {
     const transcript = (text || this.voiceTranscript()).trim();
     if (!transcript) {
@@ -2758,7 +2809,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.reportError.set(null);
     this.geminiVoiceExplanation.set(null);
 
-    this.reportService.sendVoiceCommand(transcript).subscribe({
+    const tenantId = this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined;
+    this.reportService.sendVoiceCommand(transcript, tenantId).subscribe({
       next: (res) => {
         this.isProcessingVoice.set(false);
         this.geminiVoiceExplanation.set(res.explanation);
@@ -2891,8 +2943,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ==========================================
   // MÓDULO DE COPIAS DE SEGURIDAD (BACKUP)
   // ==========================================
+  onBackupTenantChange(event: Event): void {
+    const val = (event.target as HTMLSelectElement).value;
+    this.backupFilterTenant.set(val);
+    this.loadBackupData();
+  }
+
   loadBackupData(): void {
-    this.backupService.getSettings().subscribe({
+    const tenantId = this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
+    this.backupService.getSettings(tenantId).subscribe({
       next: (s) => {
         this.backupForm.patchValue({
           auto_backup_enabled: s.auto_backup_enabled,
@@ -2901,11 +2960,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         });
       },
     });
-    this.backupService.getHistory().subscribe();
+    this.backupService.getHistory(tenantId).subscribe();
   }
 
   saveBackupSettings(): void {
-    this.backupService.updateSettings(this.backupForm.value).subscribe({
+    const tenantId = this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
+    this.backupService.updateSettings(this.backupForm.value, tenantId).subscribe({
       next: () => {
         this.backupSuccess.set('Configuración de copias de seguridad actualizada.');
         setTimeout(() => this.backupSuccess.set(null), 3500);
@@ -2918,7 +2978,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   createManualBackup(): void {
-    this.backupService.exportManual().subscribe({
+    const tenantId = this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
+    this.backupService.exportManual(tenantId).subscribe({
       next: (log) => {
         this.backupSuccess.set(`Copia de seguridad manual generada: ${log.filename} (${log.file_size_bytes} bytes).`);
         setTimeout(() => this.backupSuccess.set(null), 4000);

@@ -42,6 +42,7 @@ export interface RecipeCreate {
   ingredients: string;
   instructions: string;
   assigned_patient_ids?: string[];
+  tenant_id?: string;
 }
 
 export interface RecipeUpdate extends Partial<RecipeCreate> {

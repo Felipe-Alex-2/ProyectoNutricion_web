@@ -12,8 +12,11 @@ export class NotificationService {
 
   constructor(private http: HttpClient) {}
 
-  getMyNotifications(limit: number = 50): Observable<Notification[]> {
-    const params = new HttpParams().set('limit', limit.toString());
+  getMyNotifications(limit: number = 50, tenantId?: string): Observable<Notification[]> {
+    let params = new HttpParams().set('limit', limit.toString());
+    if (tenantId) {
+      params = params.set('tenant_id', tenantId);
+    }
     return this.http.get<Notification[]>(this.apiUrl, { params });
   }
 

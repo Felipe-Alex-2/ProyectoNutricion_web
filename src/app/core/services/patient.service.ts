@@ -17,7 +17,7 @@ export class PatientService {
 
   constructor(private http: HttpClient) {}
 
-  getPatients(search?: string, isActive?: boolean): Observable<PatientListItem[]> {
+  getPatients(search?: string, isActive?: boolean, tenantId?: string): Observable<PatientListItem[]> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
@@ -27,6 +27,9 @@ export class PatientService {
     }
     if (isActive !== undefined && isActive !== null) {
       params = params.set('is_active', String(isActive));
+    }
+    if (tenantId) {
+      params = params.set('tenant_id', tenantId);
     }
 
     return this.http.get<PatientListItem[]>(`${this.apiUrl}/patients`, { params }).pipe(
