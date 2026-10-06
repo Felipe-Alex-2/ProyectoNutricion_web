@@ -18,6 +18,10 @@ export class TenantService {
     });
   }
 
+  getPublicTenants(): Observable<Tenant[]> {
+    return this.http.get<Tenant[]>(`${this.apiUrl}/public`);
+  }
+
   getTenant(id: string): Observable<Tenant> {
     return this.http.get<Tenant>(`${this.apiUrl}/${id}`);
   }
