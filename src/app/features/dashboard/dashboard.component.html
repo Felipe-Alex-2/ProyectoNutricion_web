@@ -2498,6 +2498,11 @@
     <!-- TAB: MÓDULO DE CLIENTES / PACIENTES (MÓDULO 2) -->
     <!-- ============================================================= -->
     @if (activeTab() === 'clientes') {
+      <nav aria-label="Páginas de pacientes" class="patient-pagination">
+        <button class="btn-outline" (click)="previousPatientPage()" [disabled]="patientPageOffset() === 0 || patientService.isLoading()">Anterior</button>
+        <span>Página {{ patientPageOffset() / patientPageSize + 1 }}</span>
+        <button class="btn-outline" (click)="nextPatientPage()" [disabled]="patientService.patients().length < patientPageSize || patientService.isLoading()">Siguiente</button>
+      </nav>
       <header class="workspace-header">
         <div>
           <div class="header-tag">Módulo 2 • Pacientes</div>
@@ -2535,7 +2540,9 @@
       }
 
       <!-- Automatizaciones RPA Clínicas e Inteligencia Artificial -->
-      <app-panel-automatizaciones [patients]="patientService.patients()" />
+      @defer (when activeTab() === "clientes") {
+<app-panel-automatizaciones [patients]="patientService.patients()" />
+}
 
       @if (isSaasAdmin()) {
         <div class="filters-bar mb-3">
@@ -3225,6 +3232,7 @@
           </form>
         </div>
 
+        @if (isSaasAdmin()) {
         <!-- Card 2: Restaurar Copia de Seguridad -->
         <div class="card" style="padding: 24px;">
           <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
@@ -3238,7 +3246,7 @@
           </div>
 
           <p style="font-size: 0.85rem; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 16px;">
-            Permite restaurar la base de datos completa a partir de un respaldo generado por NutriSalud. Se verificará automáticamente el checksum SHA-256 para garantizar la integridad.
+            Permite restaurar la base de datos completa a partir de un respaldo generado por NutriSalud. El respaldo debe estar cifrado por NutriSalud y conservar la clave de recuperación. Los registros existentes se actualizan y los faltantes se agregan.
           </p>
 
           <div style="border: 2px dashed var(--color-border); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; background: rgba(0,0,0,0.01);">
@@ -3254,6 +3262,7 @@
             }
           </div>
         </div>
+        }
       </div>
 
       <!-- Tabla de Historial de Copias de Seguridad -->
@@ -3329,12 +3338,14 @@
     <!-- ============================================================= -->
     <!-- MODAL: CANCELAR CITA CON MOTIVO (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-modal-cancelar-cita
+    @defer (when cancelModalOpen()) {
+<app-modal-cancelar-cita
       [isOpen]="cancelModalOpen()"
       [appointment]="appointmentToCancel()"
       (closed)="closeCancelAppointmentModal()"
       (cancelled)="onAppointmentCancelled($event)"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: REGISTRAR / EDITAR TENANT -->
@@ -3772,64 +3783,77 @@
     <!-- ============================================================= -->
     <!-- MODAL: REGISTRAR / EDITAR RECETA CON FOTO Y MACROS (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-modal-receta
+    @defer (when recipeModalOpen()) {
+<app-modal-receta
       [isOpen]="recipeModalOpen()"
       [editingRecipe]="editingRecipe()"
-      [orgUsers]="orgUsers()"
+      [patients]="patientService.patients()"
+      [tenantId]="recipeFilterTenant() || authService.currentUser()?.tenant_id"
       [prefillData]="prefillRecipeData()"
       (closed)="closeRecipeModal()"
       (saved)="onRecipeSaved($event)"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: EDITAR CLIENTE / PACIENTE (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-modal-editar-paciente
+    @defer (when patientEditModalOpen()) {
+<app-modal-editar-paciente
       [isOpen]="patientEditModalOpen()"
       [patient]="editingPatient()"
       (closed)="closeEditPatient()"
       (saved)="onPatientUpdated()"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: DESACTIVAR / ELIMINAR CLIENTE (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-modal-desactivar-paciente
+    @defer (when patientDeleteModalOpen()) {
+<app-modal-desactivar-paciente
       [isOpen]="patientDeleteModalOpen()"
       [patient]="deletingPatient()"
       (closed)="closeDeletePatient()"
       (deactivated)="onPatientDeactivated($event)"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: ASISTENTE INTELIGENTE IA DE RECOMENDACIÓN NUTRICIONAL (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-modal-asistente-ia-recetas
+    @defer (when aiModalOpen()) {
+<app-modal-asistente-ia-recetas
       [isOpen]="aiModalOpen()"
       [patient]="selectedPatientForAi()"
       (closed)="closeAiAssistant()"
       (recipeAssigned)="loadRecipes()"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: GENERADOR Y VISOR DE PLANES NUTRICIONALES IA (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-plan-ia-modal
+    @defer (when aiPlanModalOpen()) {
+<app-plan-ia-modal
       [isOpen]="aiPlanModalOpen()"
       [patient]="selectedPatientForAiPlan()"
       (closed)="closeAiPlanModal()"
       (createRecipeFromPlan)="onCreateRecipeFromPlan($event)"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: CONFIRMAR RESTAURACIÓN DE COPIA DE SEGURIDAD (MODULARIZADO) -->
     <!-- ============================================================= -->
-    <app-modal-restaurar-backup
-      [isOpen]="restoreModalOpen()"
+    @defer (when restoreModalOpen()) {
+<app-modal-restaurar-backup
+      [isOpen]="restoreModalOpen() && isSaasAdmin()"
       [restoreFile]="selectedRestoreFile"
       (closed)="closeRestoreModal()"
       (restored)="onBackupRestored($event)"
     />
+}
 
     <!-- ============================================================= -->
     <!-- MODAL: DETALLE DE PAGO / FACTURA DE TRANSACCIÓN -->

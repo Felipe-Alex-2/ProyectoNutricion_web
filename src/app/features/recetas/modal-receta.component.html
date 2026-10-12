@@ -115,6 +115,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <div>
               <h4 style="margin: 0; font-size: 0.9rem; font-weight: 700;">Asignar Receta a Pacientes</h4>
+              <small>Busca y selecciona pacientes; la selección se conserva al cambiar de página.</small>
               <small style="color: var(--color-text-muted, #64748b);">Selecciona los pacientes que verán esta receta en su App Móvil.</small>
             </div>
             <div style="display: flex; gap: 6px;">
@@ -123,9 +124,14 @@
             </div>
           </div>
 
+          <input type="search" placeholder="Buscar paciente por nombre o correo" (input)="searchPatients($event)" />
+          <div style="display: flex; gap: 8px; margin: 8px 0;">
+            <button type="button" (click)="loadPatients(patientOffset - 50)" [disabled]="patientOffset === 0 || patientsLoading">Anterior</button>
+            <button type="button" (click)="loadPatients(patientOffset + 50)" [disabled]="patients.length < 50 || patientsLoading">Siguiente</button>
+          </div>
           <div style="max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
-            @for (user of orgUsers; track user.id) {
-              @if (user.role_id === 'CLIENTE') {
+            @for (user of patients; track user.id) {
+              @if (user.is_active) {
                 <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.02); cursor: pointer;">
                   <input type="checkbox" [checked]="recipeSelectedPatients().includes(user.id)" (change)="togglePatient(user.id)" style="width: 16px; height: 16px;" />
                   <span style="font-size: 0.85rem; font-weight: 600;">{{ user.full_name }}</span>

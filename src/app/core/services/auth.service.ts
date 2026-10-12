@@ -34,9 +34,7 @@ export class AuthService {
     private tokenService: TokenService,
     private router: Router
   ) {
-    if (this.tokenService.hasToken()) {
-      this.loadCurrentUser().subscribe();
-    }
+
   }
 
   register(payload: RegisterRequest): Observable<User> {
@@ -72,9 +70,11 @@ export class AuthService {
   loadCurrentUser(): Observable<User | null> {
     return this.http.get<User>(`${this.baseUrl}/users/me`).pipe(
       tap((user) => this.currentUserSignal.set(user)),
-      catchError(() => {
-        this.tokenService.clearTokens();
-        this.currentUserSignal.set(null);
+      catchError((error) => {
+        if (error.status === 401) {
+          this.tokenService.clearTokens();
+          this.currentUserSignal.set(null);
+        }
         return of(null);
       })
     );
@@ -89,7 +89,7 @@ export class AuthService {
   logout(): void {
     const token = this.tokenService.getAccessToken();
     if (token) {
-      this.http.post<MessageResponse>(`${this.baseUrl}/auth/logout`, {}).subscribe({
+      this.http.post<MessageResponse>(`${this.baseUrl}/auth/logout`, {refresh_token: this.tokenService.getRefreshToken()}).subscribe({
         next: () => {},
         error: () => {},
       });

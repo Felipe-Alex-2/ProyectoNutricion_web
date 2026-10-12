@@ -1,9 +1,10 @@
+import { PatientService } from '../../core/services/patient.service';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RecipeService } from '../../core/services/recipe.service';
 import { Recipe } from '../../core/models/recipe.model';
-import { User } from '../../core/models/user.model';
+import { PatientListItem } from '../../core/models/user.model';
 
 @Component({
   selector: 'app-modal-receta',
@@ -15,7 +16,26 @@ import { User } from '../../core/models/user.model';
 export class ModalRecetaComponent implements OnChanges {
   @Input() isOpen: boolean = false;
   @Input() editingRecipe: Recipe | null = null;
-  @Input() orgUsers: User[] = [];
+  @Input() patients: PatientListItem[] = [];
+  @Input() tenantId?: string;
+  patientOffset = 0;
+  patientSearch = '';
+  patientsLoading = false;
+  private patientSearchVersion = 0;
+
+  loadPatients(offset = 0): void {
+    this.patientOffset = offset;
+    this.patientsLoading = true;
+    const version = ++this.patientSearchVersion;
+    this.patientService.searchPatients(this.patientSearch, this.editingRecipe?.tenant_id || this.tenantId, offset).subscribe({
+      next: patients => { if (version === this.patientSearchVersion) { this.patients = patients; this.patientsLoading = false; } },
+      error: () => { if (version === this.patientSearchVersion) { this.patientsLoading = false; this.errorMessage = 'No se pudieron cargar los pacientes.'; } }
+    });
+  }
+  searchPatients(event: Event): void {
+    this.patientSearch = (event.target as HTMLInputElement).value;
+    this.loadPatients();
+  }
   @Input() prefillData: any = null;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<{ isEdit: boolean; title: string }>();
@@ -26,7 +46,8 @@ export class ModalRecetaComponent implements OnChanges {
 
   constructor(
     private fb: FormBuilder,
-    public recipeService: RecipeService
+    public recipeService: RecipeService,
+    private patientService: PatientService
   ) {
     this.recipeForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
@@ -50,6 +71,8 @@ export class ModalRecetaComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen'] && this.isOpen) {
+      this.patientSearch = '';
+      this.loadPatients();
       this.errorMessage = null;
       if (this.editingRecipe) {
         this.recipeForm.patchValue({
@@ -128,7 +151,7 @@ export class ModalRecetaComponent implements OnChanges {
 
   selectAllPatients(all: boolean): void {
     if (all) {
-      const allClients = this.orgUsers.filter((u) => u.role_id === 'CLIENTE').map((u) => u.id);
+      const allClients = this.patients.map((u) => u.id);
       this.recipeSelectedPatients.set(allClients);
     } else {
       this.recipeSelectedPatients.set([]);

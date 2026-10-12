@@ -1,4 +1,5 @@
-import { Component, HostListener, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, signal, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -68,6 +69,9 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
   styleUrls: ['./dashboard.component.css'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
+  readonly patientPageSize = 50;
+  readonly patientPageOffset = signal(0);
   isEditing = signal<boolean>(false);
   editForm: FormGroup;
   updateSuccess = signal<string | null>(null);
@@ -355,7 +359,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
       phone: ['+591 73683564'],
-      password: ['Nutri2026!'],
+      password: [''],
       role_id: ['NUTRICIONISTA', [Validators.required]],
       tenant_id: ['', [Validators.required]],
     });
@@ -405,26 +409,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const user = this.authService.currentUser();
-    if (user) {
+    this.authService.loadCurrentUser().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(user => {
+      if (!user) return;
       this.populateForm(user);
-    }
-    this.loadTenants();
-    this.loadRoles();
-    this.loadPermissions();
-    this.loadOrgUsers();
-    this.loadPatientLinks();
-    this.loadActivityLogs();
-    this.loadRecipes();
-    this.loadNotificationCount();
-    this.loadAppointments();
-    this.loadPatients();
+      this.loadNotificationCount();
+      this.loadAppointments();
+      if (!this.isClient()) this.loadTenants();
+      this.setActiveTab(this.route.snapshot.queryParams['tab'] || 'principal');
+    });
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
 
     // Escuchar parametro tab de navegacion o redireccion de pago PayPal
-    this.route.queryParams.subscribe((params) => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       if (params['tab']) {
-        this.activeTab.set(params['tab']);
+        if (this.authService.currentUser()) this.setActiveTab(params['tab']);
         if (params['tab'] === 'pagos') {
           this.loadPaymentData();
           if (params['payment_success']) {
@@ -437,7 +435,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Polling en tiempo real para citas pendientes y notificaciones (cada 12s)
     this.pollingTimer = setInterval(() => {
-      this.pollPendingAppointmentsAndNotifications();
+      if (!document.hidden && this.authService.isAuthenticated()) {
+        this.pollPendingAppointmentsAndNotifications();
+      }
     }, 12000);
   }
 
@@ -547,6 +547,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   setActiveTab(tab: string): void {
+    if (!this.authService.currentUser()) return;
+    if (this.isClient() && ['clientes', 'historial-clinico', 'reportes', 'backup'].includes(tab)) tab = 'principal';
+    if (tab === 'backup' && !this.isSaasAdmin() && !this.isOrgAdmin()) tab = 'principal';
     // Cerrar automáticamente cualquier modal abierto al salir o cambiar de vista
     this.closeAllModals();
 
@@ -589,8 +592,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (tab === 'sprint1-vinculacion') {
       this.loadPatientLinks();
     }
+    if (tab === 'recetas') { this.loadRecipes(); if (!this.isClient()) this.loadPatients(); }
+    if (tab === 'historial-clinico') this.loadPatients();
     if (tab === 'suscripcion') {
-      this.loadPaymentData();
+      if (!this.isClient()) this.loadPaymentData();
       this.loadSubscriptionData();
     }
     if (tab === 'citas') {
@@ -1056,6 +1061,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openUserModal(): void {
+    this.loadRoles();
     this.editingUser.set(null);
     const defaultTenant = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || ''
@@ -1065,7 +1071,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       full_name: '',
       email: '',
       phone: '+591 73683564',
-      password: 'Nutri2026!',
+      password: '',
       role_id: 'NUTRICIONISTA',
       tenant_id: defaultTenant,
     });
@@ -1075,6 +1081,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openEditUserModal(user: User): void {
+    this.loadRoles();
     this.editingUser.set(user);
     this.orgUserForm.patchValue({
       full_name: user.full_name,
@@ -1315,6 +1322,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openRecipeModal(recipe?: Recipe): void {
+    this.loadPatients();
     this.recipeSuccess.set(null);
     this.recipeError.set(null);
 
@@ -1386,8 +1394,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   selectAllPatientsForRecipe(select: boolean): void {
     if (select) {
-      const allPatientIds = this.orgUsers()
-        .filter((u) => u.role_id === 'CLIENTE')
+      const allPatientIds = this.patientService.patients()
         .map((u) => u.id);
       this.recipeSelectedPatients.set(allPatientIds);
     } else {
@@ -2412,10 +2419,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadPatients();
   }
 
-  loadPatients(): void {
+  previousPatientPage(): void {
+    this.patientPageOffset.update(value => Math.max(0, value - this.patientPageSize));
+    this.loadPatients(false);
+  }
+  nextPatientPage(): void {
+    this.patientPageOffset.update(value => value + this.patientPageSize);
+    this.loadPatients(false);
+  }
+  loadPatients(resetPage = true): void {
+    if (this.isClient()) return;
+    if (resetPage) this.patientPageOffset.set(0);
     const filterActive = this.patientStatusFilter() === '' ? undefined : this.patientStatusFilter() === 'true';
     const tenantId = this.isSaasAdmin() && this.patientFilterTenant() ? this.patientFilterTenant() : undefined;
-    this.patientService.getPatients(this.patientSearch(), filterActive, tenantId).subscribe();
+    this.patientService.getPatients(this.patientSearch(), filterActive, tenantId, this.patientPageSize, this.patientPageOffset()).subscribe({error: () => {}});
   }
 
   openEditPatient(patient: PatientListItem): void {

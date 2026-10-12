@@ -17,11 +17,17 @@ export class PatientService {
 
   constructor(private http: HttpClient) {}
 
-  getPatients(search?: string, isActive?: boolean, tenantId?: string): Observable<PatientListItem[]> {
+  searchPatients(search = '', tenantId?: string, offset = 0): Observable<PatientListItem[]> {
+    let params = new HttpParams().set('limit', 50).set('offset', offset).set('search', search).set('is_active', true);
+    if (tenantId) params = params.set('tenant_id', tenantId);
+    return this.http.get<PatientListItem[]>(`${this.apiUrl}/patients`, {params});
+  }
+
+  getPatients(search?: string, isActive?: boolean, tenantId?: string, limit = 50, offset = 0): Observable<PatientListItem[]> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    let params = new HttpParams();
+    let params = new HttpParams().set('limit', limit).set('offset', offset);
     if (search && search.trim()) {
       params = params.set('search', search.trim());
     }

@@ -88,9 +88,7 @@ export class BackupService {
 
   downloadBackup(filename: string): void {
     this.isLoading.set(true);
-    const token = this.tokenService.getAccessToken();
-    const query = token ? `?token=${encodeURIComponent(token)}` : '';
-    const downloadUrl = `${this.apiUrl}/download/${encodeURIComponent(filename)}${query}`;
+    const downloadUrl = `${this.apiUrl}/download/${encodeURIComponent(filename)}`;
 
     this.http.get(downloadUrl, { responseType: 'blob' }).subscribe({
       next: (blob) => {
