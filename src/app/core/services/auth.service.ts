@@ -5,6 +5,7 @@ import { Observable, tap, catchError, throwError, of, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TokenService } from './token.service';
 import { User, UserUpdate } from '../models/user.model';
+import { WorkspaceContextService } from './workspace-context.service';
 import {
   LoginRequest,
   RegisterRequest,
@@ -32,10 +33,9 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private tokenService: TokenService,
-    private router: Router
-  ) {
-
-  }
+    private router: Router,
+    private workspace: WorkspaceContextService,
+  ) {}
 
   register(payload: RegisterRequest): Observable<User> {
     this.isLoadingSignal.set(true);
@@ -48,7 +48,7 @@ export class AuthService {
       catchError((error) => {
         this.isLoadingSignal.set(false);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -58,44 +58,66 @@ export class AuthService {
       tap((res) => {
         this.tokenService.saveTokens(res.access_token, res.refresh_token);
         this.currentUserSignal.set(res.user);
+        this.workspace.setUser(res.user);
         this.isLoadingSignal.set(false);
       }),
       catchError((error) => {
         this.isLoadingSignal.set(false);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
   loadCurrentUser(): Observable<User | null> {
     return this.http.get<User>(`${this.baseUrl}/users/me`).pipe(
-      tap((user) => this.currentUserSignal.set(user)),
+      tap((user) => {
+        this.currentUserSignal.set(user);
+        this.workspace.setUser(user);
+      }),
       catchError((error) => {
         if (error.status === 401) {
           this.tokenService.clearTokens();
           this.currentUserSignal.set(null);
+          this.workspace.setUser(null);
         }
         return of(null);
-      })
+      }),
     );
   }
 
   updateProfile(payload: UserUpdate): Observable<User> {
-    return this.http.put<User>(`${this.baseUrl}/users/me`, payload).pipe(
-      tap((updated) => this.currentUserSignal.set(updated))
+    return this.http
+      .put<User>(`${this.baseUrl}/users/me`, payload)
+      .pipe(tap((updated) => this.currentUserSignal.set(updated)));
+  }
+
+  updateWorkspace(payload: {
+    tenant_id: string | null;
+    branch_id: string | null;
+  }): Observable<User> {
+    return this.http.put<User>(`${this.baseUrl}/users/me/workspace`, payload).pipe(
+      tap((user) => {
+        this.currentUserSignal.set(user);
+        this.workspace.setUser(user);
+      }),
     );
   }
 
   logout(): void {
     const token = this.tokenService.getAccessToken();
     if (token) {
-      this.http.post<MessageResponse>(`${this.baseUrl}/auth/logout`, {refresh_token: this.tokenService.getRefreshToken()}).subscribe({
-        next: () => {},
-        error: () => {},
-      });
+      this.http
+        .post<MessageResponse>(`${this.baseUrl}/auth/logout`, {
+          refresh_token: this.tokenService.getRefreshToken(),
+        })
+        .subscribe({
+          next: () => {},
+          error: () => {},
+        });
     }
     this.tokenService.clearTokens();
     this.currentUserSignal.set(null);
+    this.workspace.setUser(null);
     try {
       sessionStorage.removeItem('nutrisalud_activity_logs');
       localStorage.removeItem('nutrisalud_activity_logs');
@@ -110,26 +132,27 @@ export class AuthService {
       catchError((error) => {
         this.isLoadingSignal.set(false);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
   resetPassword(token: string, new_password: string): Observable<MessageResponse> {
     this.isLoadingSignal.set(true);
-    return this.http.post<MessageResponse>(`${this.baseUrl}/auth/reset-password`, { token, new_password }).pipe(
-      tap(() => this.isLoadingSignal.set(false)),
-      catchError((error) => {
-        this.isLoadingSignal.set(false);
-        return throwError(() => error);
-      })
-    );
+    return this.http
+      .post<MessageResponse>(`${this.baseUrl}/auth/reset-password`, { token, new_password })
+      .pipe(
+        tap(() => this.isLoadingSignal.set(false)),
+        catchError((error) => {
+          this.isLoadingSignal.set(false);
+          return throwError(() => error);
+        }),
+      );
   }
 
   verifyDeveloperKey(developerKey: string): Observable<{ valid: boolean; message: string }> {
     return this.http.post<{ valid: boolean; message: string }>(
       `${this.baseUrl}/auth/verify-developer-key`,
-      { developer_key: developerKey }
+      { developer_key: developerKey },
     );
   }
 }
-

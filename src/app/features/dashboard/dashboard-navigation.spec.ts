@@ -73,7 +73,9 @@ describe('Exclusive staff navigation', () => {
     fixture.detectChanges();
   });
   afterEach(() => {
+    flushRequests();
     fixture.destroy();
+    flushRequests();
     http.verify();
   });
   it('renders Dashboard directly and the four authorized packages without repeating notifications', () => {

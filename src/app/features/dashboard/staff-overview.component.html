@@ -4,7 +4,7 @@
     <p>Agenda, pacientes y actividad de tu espacio de trabajo.</p>
   </div>
   <div class="ns-actions">
-    @if (isSaas()) {
+    @if (isSaas() && !auth.currentUser()?.active_tenant_id) {
       <label class="tenant-label"
         >Organización<select
           class="ns-input"

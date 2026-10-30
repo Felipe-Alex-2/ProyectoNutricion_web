@@ -5,6 +5,7 @@ export interface Tenant {
   phone?: string;
   email?: string;
   address?: string;
+  department_code?: string;
   logo_url?: string;
   description?: string;
   is_active: boolean;
@@ -14,6 +15,9 @@ export interface Tenant {
 }
 
 export interface TenantCreate {
+  department_code?: string;
+  initial_province_code?: string;
+  initial_municipality_code?: string;
   name: string;
   code: string;
   phone?: string;
@@ -25,6 +29,7 @@ export interface TenantCreate {
 }
 
 export interface TenantUpdate {
+  department_code?: string;
   name?: string;
   phone?: string;
   email?: string;

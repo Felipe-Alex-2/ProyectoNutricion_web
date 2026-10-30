@@ -1,4 +1,8 @@
 export interface User {
+  active_tenant_id?: string;
+  active_branch_id?: string;
+  active_tenant_name?: string;
+  active_branch_name?: string;
   id: string;
   email: string;
   full_name: string;
@@ -26,6 +30,7 @@ export interface UserUpdate {
 }
 
 export interface OrganizationUserCreate {
+  branch_id?: string;
   email: string;
   full_name: string;
   phone?: string;

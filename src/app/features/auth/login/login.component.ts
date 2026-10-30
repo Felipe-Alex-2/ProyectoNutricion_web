@@ -2,10 +2,18 @@ import { AuthShellComponent } from '../auth-shell.component';
 import { IconComponent } from '../../../shared/ui/icon.component';
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { WorkspaceSelectorComponent } from '../../../shared/ui/workspace-selector.component';
 
 export function passwordComplexityValidator(control: AbstractControl): ValidationErrors | null {
   const value = control.value;
@@ -35,7 +43,14 @@ export function passwordComplexityValidator(control: AbstractControl): Validatio
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthShellComponent, IconComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    AuthShellComponent,
+    IconComponent,
+    WorkspaceSelectorComponent,
+  ],
   templateUrl: './login.component.html',
   styleUrls: ['../auth-form.css'],
 })
@@ -43,12 +58,16 @@ export class LoginComponent {
   loginForm: FormGroup;
   errorMessage = signal<string | null>(null);
   showPassword = signal<boolean>(false);
+  chooseWorkspace = signal(false);
+  enterWorkspace() {
+    void this.router.navigate(['/dashboard']);
+  }
 
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
     public themeService: ThemeService,
-    private router: Router
+    private router: Router,
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -80,7 +99,7 @@ export class LoginComponent {
         this.errorMessage.set('Por favor, ingrese un correo electrónico válido.');
       } else if (passwordControl?.hasError('passwordComplexity')) {
         this.errorMessage.set(
-          'La contraseña debe tener al menos 8 caracteres, una letra mayúscula, una minúscula, un número y un carácter especial.'
+          'La contraseña debe tener al menos 8 caracteres, una letra mayúscula, una minúscula, un número y un carácter especial.',
         );
       } else {
         this.errorMessage.set('Por favor, verifique los datos ingresados.');
@@ -92,8 +111,9 @@ export class LoginComponent {
     const { email, password } = this.loginForm.value;
 
     this.authService.login({ email: email.trim(), password }).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
+      next: (result) => {
+        if (result.user.role_id === 'CLIENTE') this.enterWorkspace();
+        else this.chooseWorkspace.set(true);
       },
       error: (err) => {
         const detail = err?.error?.detail;
@@ -108,4 +128,3 @@ export class LoginComponent {
     });
   }
 }
-

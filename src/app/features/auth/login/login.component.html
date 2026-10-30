@@ -7,77 +7,83 @@
   @if (errorMessage()) {
     <div class="auth-alert error" role="alert" id="login-error">{{ errorMessage() }}</div>
   }
-  <form
-    [formGroup]="loginForm"
-    (ngSubmit)="onSubmit()"
-    class="auth-form"
-    [attr.aria-busy]="authService.isLoading()"
-  >
-    <div class="auth-field">
-      <label for="login-email">Correo electrónico</label>
-      <div class="auth-input-wrap">
-        <ns-icon name="email" /><input
-          class="auth-input"
-          id="login-email"
-          type="email"
-          formControlName="email"
-          placeholder="tu@correo.com"
-          autocomplete="username"
-          [attr.aria-invalid]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid"
-          aria-describedby="login-email-error"
-        />
-      </div>
-      @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
-        <span class="auth-error" id="login-email-error">Ingresa un correo electrónico válido.</span>
-      }
-    </div>
-    <div class="auth-field">
-      <div class="label-row">
-        <label for="login-password">Contraseña</label
-        ><a class="forgot-link" routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
-      </div>
-      <div class="auth-input-wrap">
-        <ns-icon name="lock" /><input
-          class="auth-input"
-          id="login-password"
-          [type]="showPassword() ? 'text' : 'password'"
-          formControlName="password"
-          placeholder="Tu contraseña"
-          autocomplete="current-password"
-          [attr.aria-invalid]="
-            loginForm.get('password')?.touched && loginForm.get('password')?.invalid
-          "
-          aria-describedby="login-password-error"
-        /><button
-          class="password-toggle"
-          type="button"
-          (click)="togglePassword()"
-          [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-          [attr.aria-pressed]="showPassword()"
-        >
-          <ns-icon name="eye" />
-        </button>
-      </div>
-      @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
-        <span class="auth-error" id="login-password-error">{{
-          loginForm.get('password')?.hasError('required')
-            ? 'Ingresa tu contraseña.'
-            : 'Usa al menos 8 caracteres, mayúscula, minúscula, número y símbolo.'
-        }}</span>
-      }
-    </div>
-    <button
-      type="submit"
-      class="ns-btn ns-btn-primary auth-submit"
-      [disabled]="authService.isLoading()"
+  @if (chooseWorkspace()) {
+    <app-workspace-selector (saved)="enterWorkspace()" />
+  } @else {
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="onSubmit()"
+      class="auth-form"
+      [attr.aria-busy]="authService.isLoading()"
     >
-      @if (authService.isLoading()) {
-        <span class="auth-loading" aria-hidden="true"></span>Ingresando…
-      } @else {
-        Ingresar a mi espacio<ns-icon name="arrow" />
-      }
-    </button>
-  </form>
+      <div class="auth-field">
+        <label for="login-email">Correo electrónico</label>
+        <div class="auth-input-wrap">
+          <ns-icon name="email" /><input
+            class="auth-input"
+            id="login-email"
+            type="email"
+            formControlName="email"
+            placeholder="tu@correo.com"
+            autocomplete="username"
+            [attr.aria-invalid]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid"
+            aria-describedby="login-email-error"
+          />
+        </div>
+        @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
+          <span class="auth-error" id="login-email-error"
+            >Ingresa un correo electrónico válido.</span
+          >
+        }
+      </div>
+      <div class="auth-field">
+        <div class="label-row">
+          <label for="login-password">Contraseña</label
+          ><a class="forgot-link" routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="auth-input-wrap">
+          <ns-icon name="lock" /><input
+            class="auth-input"
+            id="login-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Tu contraseña"
+            autocomplete="current-password"
+            [attr.aria-invalid]="
+              loginForm.get('password')?.touched && loginForm.get('password')?.invalid
+            "
+            aria-describedby="login-password-error"
+          /><button
+            class="password-toggle"
+            type="button"
+            (click)="togglePassword()"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="showPassword()"
+          >
+            <ns-icon name="eye" />
+          </button>
+        </div>
+        @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
+          <span class="auth-error" id="login-password-error">{{
+            loginForm.get('password')?.hasError('required')
+              ? 'Ingresa tu contraseña.'
+              : 'Usa al menos 8 caracteres, mayúscula, minúscula, número y símbolo.'
+          }}</span>
+        }
+      </div>
+      <button
+        type="submit"
+        class="ns-btn ns-btn-primary auth-submit"
+        [disabled]="authService.isLoading()"
+      >
+        @if (authService.isLoading()) {
+          <span class="auth-loading" aria-hidden="true"></span>Ingresando…
+        } @else {
+          Ingresar a mi espacio<ns-icon name="arrow" />
+        }
+      </button>
+    </form>
+  }
   <p class="auth-alternative">
     ¿Es tu primera vez aquí?<a routerLink="/register">Crea tu cuenta</a>
   </p>

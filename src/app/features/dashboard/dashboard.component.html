@@ -160,6 +160,14 @@
         </div>
         <div class="ns-actions">
           <button
+            type="button"
+            class="ns-btn"
+            (click)="setActiveTab('perfil')"
+            aria-label="Cambiar espacio de trabajo desde mi perfil"
+          >
+            <ns-icon name="building" /><span>{{ workspaceLabel() }}</span>
+          </button>
+          <button
             class="ns-icon-btn"
             (click)="setActiveTab('notificaciones')"
             [attr.aria-label]="'Notificaciones: ' + unreadNotificationCount() + ' sin leer'"
@@ -218,6 +226,7 @@
       @if (activeTab() === 'perfil') {
         <div class="card edit-profile-card">
           <h2 class="card-title">Editar Información Personal</h2>
+          <app-workspace-selector (saved)="workspaceChanged()" />
           <form [formGroup]="editForm" (ngSubmit)="onSaveProfile()" class="edit-form">
             <div class="form-group mb-3">
               <label class="form-label">Nombre Completo *</label>
@@ -723,15 +732,12 @@
               </div>
               <div>
                 <label class="pos-field-label" style="margin-bottom: 2px">Empresa de cobro</label>
-                <select
-                  class="form-control pos-tenant-select"
-                  [value]="selectedPaymentTenantId()"
-                  (change)="onPaymentTenantChange($any($event.target).value)"
-                >
-                  @for (t of tenants(); track t.id) {
-                    <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                  }
-                </select>
+                <p>
+                  {{
+                    authService.currentUser()?.active_tenant_name ||
+                      'Selecciona empresa y sucursal en tu perfil'
+                  }}
+                </p>
               </div>
             </div>
 
@@ -780,18 +786,13 @@
             </div>
 
             <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" class="pos-form">
-              <label for="payment-branch">Sucursal del cobro</label
-              ><select
-                id="payment-branch"
-                class="form-control"
-                [value]="selectedPaymentBranchId()"
-                (change)="selectedPaymentBranchId.set($any($event.target).value)"
-              >
-                <option value="">Selecciona una sucursal</option>
-                @for (branch of paymentBranches(); track branch.id) {
-                  <option [value]="branch.id">{{ branch.name }}</option>
-                }
-              </select>
+              <label for="payment-branch">Sucursal del cobro</label>
+              <p id="payment-branch">
+                {{
+                  authService.currentUser()?.active_branch_name ||
+                    'Selecciona una sucursal concreta en tu perfil antes de cobrar'
+                }}
+              </p>
               <!-- Customer info -->
               <div class="form-group">
                 <label class="pos-field-label"
@@ -1456,19 +1457,7 @@
           </div>
         </header>
 
-        @if (isSaasAdmin()) {
-          <div class="filters-bar mb-3">
-            <div class="filter-field">
-              <label>Organización:</label>
-              <select (change)="onNotificationTenantChange($event)" class="select-input">
-                <option value="">Todas las Organizaciones (Modo Global)</option>
-                @for (t of tenants(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                }
-              </select>
-            </div>
-          </div>
-        }
+        <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
         @if (isLoadingNotifications()) {
           <div class="card" style="padding: 3rem; text-align: center">
@@ -1737,6 +1726,10 @@
                 <p class="tenant-desc">{{ tenant.description || 'Sin descripción registrada' }}</p>
 
                 <div class="tenant-meta-list">
+                  <div class="meta-item">
+                    <span class="meta-label">Departamento:</span>
+                    <span class="meta-val">{{ departmentLabel(tenant.department_code) }}</span>
+                  </div>
                   <div class="meta-item">
                     <span class="meta-label">Teléfono:</span>
                     <span class="meta-val">{{ tenant.phone || 'No especificado' }}</span>
@@ -2052,17 +2045,7 @@
 
         <!-- Filter Controls -->
         <div class="filters-bar">
-          @if (isSaasAdmin()) {
-            <div class="filter-field">
-              <label>Organización:</label>
-              <select (change)="onFilterTenantChange($event)" class="select-input">
-                <option value="">Todas las Organizaciones (Modo Global)</option>
-                @for (t of tenants(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                }
-              </select>
-            </div>
-          }
+          <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
           <div class="filter-field">
             <label>Filtrar por Rol:</label>
@@ -2351,19 +2334,7 @@
             <span class="badge-tag">{{ patientLinks().length }} registros</span>
           </div>
 
-          @if (isSaasAdmin()) {
-            <div class="filters-bar" style="padding: 12px 20px 0 20px; margin: 0">
-              <div class="filter-field">
-                <label>Organización:</label>
-                <select (change)="onLinkTenantChange($event)" class="select-input">
-                  <option value="">Todas las Organizaciones (Modo Global)</option>
-                  @for (t of tenants(); track t.id) {
-                    <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                  }
-                </select>
-              </div>
-            </div>
-          }
+          <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
           <div class="table-responsive mt-3">
             <table class="data-table">
@@ -2470,19 +2441,7 @@
             <div class="alert alert-error mt-3">{{ recipeError() }}</div>
           }
 
-          @if (isSaasAdmin()) {
-            <div class="filters-bar mt-3">
-              <div class="filter-field">
-                <label>Organización:</label>
-                <select (change)="onRecipeTenantChange($event)" class="select-input">
-                  <option value="">Todas las Organizaciones (Modo Global)</option>
-                  @for (t of tenants(); track t.id) {
-                    <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                  }
-                </select>
-              </div>
-            </div>
-          }
+          <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
           <!-- Filtros de categoría -->
           <div class="filter-bar mt-3">
@@ -3244,19 +3203,7 @@
           </div>
         </div>
 
-        @if (isSaasAdmin()) {
-          <div class="filters-bar mb-3">
-            <div class="filter-field">
-              <label>Organización:</label>
-              <select (change)="onAppointmentTenantChange($event)" class="select-input">
-                <option value="">Todas las Organizaciones (Modo Global)</option>
-                @for (t of tenants(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                }
-              </select>
-            </div>
-          </div>
-        }
+        <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
         <!-- Filtros de Estado -->
         <div class="pos-filters-bar mb-3">
@@ -3771,19 +3718,7 @@
           <app-panel-automatizaciones [patients]="patientService.patients()" />
         }
 
-        @if (isSaasAdmin()) {
-          <div class="filters-bar mb-3">
-            <div class="filter-field">
-              <label>Organización:</label>
-              <select (change)="onPatientTenantChange($event)" class="select-input">
-                <option value="">Todas las Organizaciones (Modo Global)</option>
-                @for (t of tenants(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                }
-              </select>
-            </div>
-          </div>
-        }
+        <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
         <!-- Filtros de búsqueda -->
         <div class="card search-filter-card mb-4" style="padding: 16px 20px">
@@ -4150,28 +4085,12 @@
           <div class="alert alert-error mb-3">{{ reportError() }}</div>
         }
 
-        @if (isSaasAdmin()) {
-          <div class="filters-bar" style="margin-bottom: 1.25rem">
-            <div class="filter-field">
-              <label>Organización:</label>
-              <select
-                [value]="reportFilterTenant()"
-                (change)="onReportTenantChange($event)"
-                class="select-input"
-              >
-                <option value="">Todas las Organizaciones (Modo Global)</option>
-                @for (t of tenants(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                }
-              </select>
-            </div>
-          </div>
-        }
+        <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
         <section class="card" style="padding: 20px; margin-bottom: 20px">
           <h2>Alcance y tipo de análisis</h2>
           <div class="filters-bar">
-            @if (isSaasAdmin()) {
+            @if (isSaasAdmin() && !authService.currentUser()?.active_tenant_id) {
               <label
                 >Comparar empresas
                 <select
@@ -4192,25 +4111,27 @@
                 </select></label
               >
             }
-            <label
-              >Sucursales
-              <select
-                class="select-input"
-                multiple
-                size="3"
-                aria-label="Sucursales del reporte, selección múltiple"
-                (change)="setReportBranches($event)"
+            @if (isSaasAdmin() && !authService.currentUser()?.active_branch_id) {
+              <label
+                >Sucursales
+                <select
+                  class="select-input"
+                  multiple
+                  size="3"
+                  aria-label="Sucursales del reporte, selección múltiple"
+                  (change)="setReportBranches($event)"
+                >
+                  @for (branch of reportBranches(); track branch.id) {
+                    <option
+                      [value]="branch.id"
+                      [selected]="reportAnalysisOptions().branch_ids?.includes(branch.id)"
+                    >
+                      {{ getTenantName(branch.tenant_id) }} · {{ branch.name }}
+                    </option>
+                  }
+                </select></label
               >
-                @for (branch of reportBranches(); track branch.id) {
-                  <option
-                    [value]="branch.id"
-                    [selected]="reportAnalysisOptions().branch_ids?.includes(branch.id)"
-                  >
-                    {{ getTenantName(branch.tenant_id) }} · {{ branch.name }}
-                  </option>
-                }
-              </select></label
-            >
+            }
             <label
               >Agrupar<select
                 class="select-input"
@@ -5183,19 +5104,7 @@
           </div>
         </header>
 
-        @if (isSaasAdmin()) {
-          <div class="filters-bar mb-3">
-            <div class="filter-field">
-              <label>Organización:</label>
-              <select (change)="onBackupTenantChange($event)" class="select-input">
-                <option value="">Selecciona una empresa</option>
-                @for (t of tenants(); track t.id) {
-                  <option [value]="t.id">{{ t.name }} ({{ t.code }})</option>
-                }
-              </select>
-            </div>
-          </div>
-        }
+        <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
 
         @if (backupSuccess()) {
           <div class="alert alert-success mb-3">{{ backupSuccess() }}</div>
@@ -5663,6 +5572,18 @@
             }
 
             <form [formGroup]="tenantForm" (ngSubmit)="onSaveTenant()" class="modal-form">
+              <app-location-picker
+                label="Departamento de la empresa"
+                [options]="boliviaDepartments"
+                [value]="tenantForm.get('department_code')?.value || ''"
+                (valueChange)="tenantForm.get('department_code')?.setValue($event)"
+              />
+              @if (
+                tenantForm.get('department_code')?.touched &&
+                tenantForm.get('department_code')?.invalid
+              ) {
+                <p role="alert">Selecciona un departamento de la lista.</p>
+              }
               <div class="form-group">
                 <label>Nombre de la Sucursal / Clínica *</label>
                 <input
@@ -5945,7 +5866,11 @@
                   @if (isOrgAdmin()) {
                     <input type="text" [value]="getMyOrgName()" class="input-field" disabled />
                   } @else {
-                    <select formControlName="tenant_id" class="input-field select-input">
+                    <select
+                      formControlName="tenant_id"
+                      class="input-field select-input"
+                      (change)="loadOrgUserBranches()"
+                    >
                       @for (t of tenants(); track t.id) {
                         <option [value]="t.id">{{ t.name }}</option>
                       }
@@ -5953,6 +5878,19 @@
                   }
                 </div>
 
+                <div class="form-group">
+                  <label for="staff-member-branch">Sucursal asignada *</label>
+                  <select
+                    id="staff-member-branch"
+                    formControlName="branch_id"
+                    class="input-field select-input"
+                  >
+                    <option value="">Selecciona una sucursal</option>
+                    @for (branch of orgUserBranches(); track branch.id) {
+                      <option [value]="branch.id">{{ branch.name }}</option>
+                    }
+                  </select>
+                </div>
                 <div class="form-group">
                   <label>Rol Asignado *</label>
                   <select formControlName="role_id" class="input-field select-input">

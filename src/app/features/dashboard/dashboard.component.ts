@@ -12,6 +12,8 @@ import {
   computed,
   DestroyRef,
   inject,
+  QueryList,
+  ViewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -78,6 +80,9 @@ import { ModalRecetaComponent } from '../recetas/modal-receta.component';
 import { ModalAsistenteIaRecetasComponent } from '../recetas/modal-asistente-ia-recetas.component';
 import { ModalCancelarCitaComponent } from '../citas/modal-cancelar-cita.component';
 import { CompanyManagerComponent } from './company-manager.component';
+import { LocationPickerComponent } from '../../shared/ui/location-picker.component';
+import { BOLIVIA_LOCATIONS } from '../../core/data/bolivia-locations';
+import { WorkspaceSelectorComponent } from '../../shared/ui/workspace-selector.component';
 import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaurar-backup.component';
 
 @Component({
@@ -85,6 +90,8 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
   standalone: true,
   imports: [
     CompanyManagerComponent,
+    WorkspaceSelectorComponent,
+    LocationPickerComponent,
     CommonModule,
     RouterLink,
     IconComponent,
@@ -106,6 +113,19 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
   styleUrls: ['./dashboard.component.css', './dashboard-soft.css'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  @ViewChildren(CompanyManagerComponent) companyManagers!: QueryList<CompanyManagerComponent>;
+  readonly boliviaDepartments = BOLIVIA_LOCATIONS;
+  workspaceLabel(): string {
+    const user = this.authService.currentUser();
+    return `${user?.active_tenant_name || (this.isSaasAdmin() ? 'Todas las empresas' : this.getTenantName(user?.tenant_id))} · ${user?.active_branch_name || (this.isSaasAdmin() ? 'Todas las sucursales' : 'Selecciona una sucursal')}`;
+  }
+  workspaceChanged(): void {
+    // Recreate all services and discard pending UI responses/caches from the former scope.
+    window.location.assign('/dashboard');
+  }
+  departmentLabel(code?: string): string {
+    return this.boliviaDepartments.find((d) => d.code === code)?.name || 'Sin registrar';
+  }
   private readonly destroyRef = inject(DestroyRef);
   private readonly navigationRouter = inject(Router);
   readonly patientPageSize = 50;
@@ -248,6 +268,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
   editingUser = signal<User | null>(null);
   orgUserForm: FormGroup;
   userFilterTenant = signal<string>('');
+  orgUserBranches = signal<{ id: string; name: string; tenant_id: string; code: string }[]>([]);
+  loadOrgUserBranches(preferred = ''): void {
+    const company = this.orgUserForm.value.tenant_id;
+    this.orgUserBranches.set([]);
+    this.orgUserForm.patchValue({ branch_id: '' });
+    if (!company) return;
+    this.tenantService.getBranches(company).subscribe({
+      next: (rows) => {
+        if (this.orgUserForm.value.tenant_id !== company) return;
+        const active = this.authService.currentUser()?.active_branch_id;
+        const choices = active ? rows.filter((b) => b.id === active) : rows;
+        this.orgUserBranches.set(choices);
+        this.orgUserForm.patchValue({
+          branch_id:
+            choices.find((b) => b.id === preferred)?.id ||
+            choices.find((b) => b.id === active)?.id ||
+            (choices.length === 1 ? choices[0].id : ''),
+        });
+      },
+      error: () => this.userError.set('No se pudieron cargar las sucursales de la empresa.'),
+    });
+  }
   userFilterRole = signal<string>('');
   userSuccess = signal<string | null>(null);
   userError = signal<string | null>(null);
@@ -387,6 +429,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     this.tenantForm = this.fb.group({
+      department_code: ['', Validators.required],
       name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(250)]],
       code: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(20)]],
       phone: ['+591 73683564'],
@@ -396,6 +439,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     this.orgUserForm = this.fb.group({
+      branch_id: ['', Validators.required],
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
       phone: ['+591 73683564'],
@@ -460,6 +504,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return;
         }
         if (this.isClient()) return;
+        const company = user.active_tenant_id || (this.isSaasAdmin() ? '' : user.tenant_id) || '';
+        for (const filter of [
+          this.patientFilterTenant,
+          this.reportFilterTenant,
+          this.backupFilterTenant,
+          this.userFilterTenant,
+          this.linkFilterTenant,
+          this.recipeFilterTenant,
+          this.appointmentFilterTenant,
+          this.notificationFilterTenant,
+          this.selectedPaymentTenantId,
+        ])
+          filter.set(company);
+        this.selectedPaymentBranchId.set(user.active_branch_id || user.branch_id || '');
         this.populateForm(user);
         this.loadNotificationCount();
         this.loadAppointments();
@@ -820,6 +878,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   openTenantModal(): void {
     this.editingTenant.set(null);
     this.tenantForm.reset({
+      department_code: '',
       name: '',
       code: '',
       phone: '+591 73683564',
@@ -835,6 +894,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   openEditTenantModal(tenant: Tenant): void {
     this.editingTenant.set(tenant);
     this.tenantForm.patchValue({
+      department_code: tenant.department_code || '',
       name: tenant.name,
       code: tenant.code,
       phone: tenant.phone || '+591 73683564',
@@ -925,6 +985,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: (updated) => {
           this.tenantSuccess.set(`Sucursal "${updated.name}" actualizada exitosamente.`);
           this.loadTenants();
+          this.companyManagers.forEach((manager) => manager.load());
           setTimeout(() => this.closeTenantModal(), 1200);
         },
         error: (err) => {
@@ -1158,7 +1219,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.editingUser.set(null);
     const defaultTenant = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || ''
-      : this.tenants()[0]?.id || '';
+      : this.authService.currentUser()?.active_tenant_id || this.tenants()[0]?.id || '';
 
     this.orgUserForm.reset({
       full_name: '',
@@ -1168,6 +1229,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       role_id: 'NUTRICIONISTA',
       tenant_id: defaultTenant,
     });
+    this.loadOrgUserBranches();
     this.userSuccess.set(null);
     this.userError.set(null);
     this.userModalOpen.set(true);
@@ -1184,6 +1246,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       role_id: user.role_id,
       tenant_id: user.tenant_id || this.tenants()[0]?.id || '',
     });
+    this.loadOrgUserBranches(user.branch_id || '');
     this.userSuccess.set(null);
     this.userError.set(null);
     this.userModalOpen.set(true);
@@ -1232,6 +1295,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         phone: this.orgUserForm.value.phone,
         role_id: this.orgUserForm.value.role_id,
         tenant_id: this.orgUserForm.value.tenant_id,
+        branch_id: this.orgUserForm.value.branch_id,
       };
       if (
         this.isSaasAdmin() &&

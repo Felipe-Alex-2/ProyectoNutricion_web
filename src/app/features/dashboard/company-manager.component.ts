@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { BOLIVIA_LOCATIONS } from '../../core/data/bolivia-locations';
+import { LocationPickerComponent } from '../../shared/ui/location-picker.component';
 @Component({
   selector: 'app-company-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LocationPickerComponent],
   template: ` <section class="company-panel">
     <h2>{{ superadmin ? 'Empresas y sucursales' : 'Sucursales de tu empresa' }}</h2>
     <p>Cada empresa mantiene separados sus pacientes, cobros, planes y reportes.</p>
@@ -58,6 +60,12 @@ import { environment } from '../../../environments/environment';
           <label
             >Código único<input name="code" [(ngModel)]="company.code" required minlength="2"
           /></label>
+          <app-location-picker
+            label="Departamento de la empresa"
+            [options]="locations"
+            [value]="company.department_code"
+            (valueChange)="changeDepartment($event)"
+          />
           <label
             >Administrador responsable<select
               name="administrator"
@@ -77,43 +85,105 @@ import { environment } from '../../../environments/environment';
               required
               minlength="2"
           /></label>
-          <button [disabled]="busy()">Crear empresa y asignar administrador</button>
+          <app-location-picker
+            label="Provincia de la primera sucursal"
+            [options]="provinces(company.department_code)"
+            [disabled]="!company.department_code"
+            [value]="company.initial_province_code"
+            (valueChange)="
+              company.initial_province_code = $event; company.initial_municipality_code = ''
+            "
+          />
+          <app-location-picker
+            label="Municipio de la primera sucursal"
+            [options]="municipalities(company.department_code, company.initial_province_code)"
+            [disabled]="!company.initial_province_code"
+            [(value)]="company.initial_municipality_code"
+          />
+          <button
+            [disabled]="
+              busy() ||
+              !company.department_code ||
+              !company.initial_province_code ||
+              !company.initial_municipality_code
+            "
+          >
+            Crear empresa y asignar administrador
+          </button>
         </form>
       </details>
     }
-    <label
-      >Empresa<select
-        name="selectedCompany"
-        [(ngModel)]="selected"
-        (ngModelChange)="loadBranches()"
+    @if (superadmin) {
+      <label
+        >Empresa<select
+          name="selectedCompany"
+          [(ngModel)]="selected"
+          (ngModelChange)="loadBranches()"
+        >
+          <option value="">Selecciona una empresa</option>
+          @for (c of companies(); track c.id) {
+            <option [value]="c.id">{{ c.name }} · {{ departmentName(c.department_code) }}</option>
+          }
+        </select></label
       >
-        <option value="">Selecciona una empresa</option>
-        @for (c of companies(); track c.id) {
-          <option [value]="c.id">{{ c.name }}</option>
-        }
-      </select></label
-    >
+    } @else {
+      <p><strong>Empresa:</strong> {{ companies()[0]?.name || 'Sin empresa asignada' }}</p>
+    }
     @if (selected) {
+      <p><strong>Departamento:</strong> {{ departmentName(selectedDepartment()) }}</p>
+      @if (!selectedDepartment()) {
+        <p role="status">
+          El superadmin debe editar esta empresa y registrar su departamento antes de ubicar sus
+          sucursales.
+        </p>
+      }
       <ul>
         @for (b of branches(); track b.id) {
           <li>
-            <strong>{{ b.name }}</strong> · {{ b.code }}
+            <strong>{{ b.name }}</strong> · {{ b.code }} · {{ branchLocation(b) }}
             @if (b.address) {
               · {{ b.address }}
             }
+            <button
+              type="button"
+              [disabled]="busy() || !selectedDepartment()"
+              (click)="editBranch(b)"
+            >
+              Editar ubicación y datos
+            </button>
           </li>
         } @empty {
           <li>Sin sucursales registradas.</li>
         }
       </ul>
       <form (ngSubmit)="createBranch()">
-        <h3>Nueva sucursal</h3>
+        <h3>{{ editingBranch ? 'Editar sucursal' : 'Nueva sucursal' }}</h3>
         <label
           >Nombre<input name="branchName" [(ngModel)]="branch.name" required minlength="2" /></label
         ><label
           >Código<input name="branchCode" [(ngModel)]="branch.code" required minlength="2" /></label
-        ><label>Dirección<input name="branchAddress" [(ngModel)]="branch.address" /></label
-        ><button [disabled]="busy()">Crear sucursal</button>
+        ><label>Dirección<input name="branchAddress" [(ngModel)]="branch.address" /></label>
+        <app-location-picker
+          label="Provincia"
+          [options]="provinces(selectedDepartment())"
+          [disabled]="!selectedDepartment()"
+          [value]="branch.province_code"
+          (valueChange)="branch.province_code = $event; branch.municipality_code = ''"
+        />
+        <app-location-picker
+          label="Municipio"
+          [options]="municipalities(selectedDepartment(), branch.province_code)"
+          [disabled]="!branch.province_code"
+          [(value)]="branch.municipality_code"
+        />
+        <button [disabled]="busy() || !branch.province_code || !branch.municipality_code">
+          {{ editingBranch ? 'Guardar sucursal' : 'Crear sucursal' }}
+        </button>
+        @if (editingBranch) {
+          <button type="button" (click)="resetBranch()" [disabled]="busy()">
+            Cancelar edición
+          </button>
+        }
       </form>
     }
   </section>`,
@@ -191,15 +261,63 @@ export class CompanyManagerComponent implements OnInit {
   error = signal('');
   message = signal('');
   selected = '';
+  editingBranch = '';
+  resetBranch() {
+    this.editingBranch = '';
+    this.branch = { name: '', code: '', address: '', province_code: '', municipality_code: '' };
+  }
+  editBranch(branch: any) {
+    this.editingBranch = branch.id;
+    this.branch = {
+      name: branch.name,
+      code: branch.code,
+      address: branch.address || '',
+      province_code: branch.province_code || '',
+      municipality_code: branch.municipality_code || '',
+    };
+  }
+  readonly locations = BOLIVIA_LOCATIONS;
+  private readonly empty = [];
+  provinces(department: string) {
+    return this.locations.find((d) => d.code === department)?.provinces || this.empty;
+  }
+  municipalities(department: string, province: string) {
+    return (
+      this.provinces(department).find((p) => p.code === province)?.municipalities || this.empty
+    );
+  }
+  selectedDepartment() {
+    return this.companies().find((c) => c.id === this.selected)?.department_code || '';
+  }
+  departmentName(code: string) {
+    return this.locations.find((d) => d.code === code)?.name || 'Sin departamento registrado';
+  }
+  branchLocation(branch: any) {
+    const province = this.provinces(this.selectedDepartment()).find(
+      (p) => p.code === branch.province_code,
+    );
+    const municipality = province?.municipalities.find((m) => m.code === branch.municipality_code);
+    return province && municipality
+      ? `${province.name} · ${municipality.name}`
+      : 'Ubicación pendiente';
+  }
+  changeDepartment(code: string) {
+    this.company.department_code = code;
+    this.company.initial_province_code = '';
+    this.company.initial_municipality_code = '';
+  }
   company = {
     name: '',
     code: '',
     administrator_id: '',
     initial_branch_name: 'Sucursal principal',
     initial_branch_code: 'PRINCIPAL',
+    department_code: '',
+    initial_province_code: '',
+    initial_municipality_code: '',
   };
   admin = { full_name: '', email: '', password: '' };
-  branch = { name: '', code: '', address: '' };
+  branch = { name: '', code: '', address: '', province_code: '', municipality_code: '' };
   private api = environment.apiUrl;
   constructor(private http: HttpClient) {}
   ngOnInit() {
@@ -246,6 +364,14 @@ export class CompanyManagerComponent implements OnInit {
   }
   createCompany() {
     if (this.busy()) return;
+    if (
+      !this.company.department_code ||
+      !this.company.initial_province_code ||
+      !this.company.initial_municipality_code
+    ) {
+      this.error.set('Selecciona departamento, provincia y municipio.');
+      return;
+    }
     this.busy.set(true);
     this.error.set('');
     this.http.post<any>(`${this.api}/tenants`, this.company).subscribe({
@@ -258,6 +384,9 @@ export class CompanyManagerComponent implements OnInit {
           administrator_id: '',
           initial_branch_name: 'Sucursal principal',
           initial_branch_code: 'PRINCIPAL',
+          department_code: '',
+          initial_province_code: '',
+          initial_municipality_code: '',
         };
         this.message.set('Empresa creada con su administrador y primera sucursal.');
         this.load();
@@ -268,6 +397,7 @@ export class CompanyManagerComponent implements OnInit {
     });
   }
   loadBranches() {
+    this.resetBranch();
     this.branches.set([]);
     const selected = this.selected;
     if (!selected) return;
@@ -280,13 +410,21 @@ export class CompanyManagerComponent implements OnInit {
   }
   createBranch() {
     if (this.busy() || !this.selected) return;
+    if (!this.branch.province_code || !this.branch.municipality_code) {
+      this.error.set('Selecciona provincia y municipio de la sucursal.');
+      return;
+    }
     this.busy.set(true);
     this.error.set('');
-    this.http.post(`${this.api}/branches`, { ...this.branch, tenant_id: this.selected }).subscribe({
+    const payload = { ...this.branch, tenant_id: this.selected };
+    const request = this.editingBranch
+      ? this.http.put(`${this.api}/branches/${this.editingBranch}`, payload)
+      : this.http.post(`${this.api}/branches`, payload);
+    request.subscribe({
       next: () => {
         this.busy.set(false);
-        this.branch = { name: '', code: '', address: '' };
-        this.message.set('Sucursal creada.');
+        this.branch = { name: '', code: '', address: '', province_code: '', municipality_code: '' };
+        this.message.set(this.editingBranch ? 'Sucursal actualizada.' : 'Sucursal creada.');
         this.loadBranches();
       },
       error: (e) => this.fail(e),
