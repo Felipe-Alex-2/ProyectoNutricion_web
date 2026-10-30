@@ -109,12 +109,19 @@ export class BackupService {
     });
   }
 
-  restoreBackup(file: File): Observable<BackupRestoreResponse> {
+  previewBackup(file: File, tenantId: string): Observable<BackupPreview> {
+    const body = new FormData(); body.append("file", file);
+    return this.http.post<BackupPreview>(`${this.apiUrl}/preview`, body, {params: {tenant_id: tenantId}});
+  }
+
+  restoreBackup(file: File, password: string, reviewToken: string, tenantId: string): Observable<BackupRestoreResponse> {
     this.isLoading.set(true);
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('password', password);
+    formData.append('review_token', reviewToken);
 
-    return this.http.post<BackupRestoreResponse>(`${this.apiUrl}/restore`, formData).pipe(
+    return this.http.post<BackupRestoreResponse>(`${this.apiUrl}/restore`, formData, {params: {tenant_id: tenantId}}).pipe(
       tap({
         next: () => this.isLoading.set(false),
         error: (err) => {
@@ -125,3 +132,5 @@ export class BackupService {
     );
   }
 }
+
+export interface BackupPreview { review_token: string; missing: number; existing: number; skipped: number; tables: {table:string; label:string; in_file:number; missing:number; existing:number; skipped:number}[]; warnings: {table:string; id:string; reason:string}[]; }

@@ -1,0 +1,647 @@
+:host {
+  display: block;
+  background: var(--bg-page);
+  min-height: 100vh;
+}
+.portal-shell > .ns-topbar {
+  position: relative;
+  z-index: 20;
+}
+.ns-topnav {
+  gap: 0;
+}
+.ns-topnav button {
+  font-size: 12px;
+  padding: 10px 12px;
+}
+.account-wrapper {
+  position: relative;
+}
+.account-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 5px;
+}
+.account-avatar {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.account-dropdown {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  width: 235px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+  padding: 8px;
+}
+.account-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+  font-size: 12px;
+}
+.account-dropdown button:hover {
+  background: var(--surface-inset);
+}
+.account-dropdown button:last-child {
+  border-top: 1px solid var(--border-color);
+  border-radius: 0 0 12px 12px;
+  color: var(--color-danger);
+}
+.patient-hero {
+  padding-block: 54px;
+  gap: 64px;
+}
+.patient-hero h1 {
+  font-size: clamp(32px, 3.4vw, 48px);
+}
+.today-card {
+  padding: 28px;
+}
+.today-card .ns-section-heading h2 {
+  font-size: 16px;
+}
+.goal-card h3 {
+  font-size: 22px;
+  line-height: 1.4;
+  letter-spacing: -0.6px;
+  margin-bottom: 9px;
+}
+.goal-card p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.today-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+  margin-top: 14px;
+}
+.today-grid strong {
+  display: block;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+.today-grid small {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+.ns-section-heading h2 {
+  font-size: 20px;
+}
+.patient-feature h3 {
+  font-size: 16px;
+  margin-bottom: 11px;
+}
+.patient-feature p {
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 0;
+  min-height: 36px;
+  text-align: left;
+}
+.text-link ns-icon {
+  width: 15px;
+  height: 15px;
+}
+.text-link:hover {
+  text-decoration: underline;
+}
+.connection-card {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.connection-card > .ns-feature-icon {
+  margin: 0;
+  flex-shrink: 0;
+}
+.connection-card > div {
+  flex: 1;
+}
+.connection-card h2 {
+  font-size: 17px;
+  margin-bottom: 7px;
+}
+.connection-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.pairing-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.pairing-form label {
+  font-size: 11px;
+}
+.pairing-form input {
+  max-width: 180px;
+}
+.page-heading {
+  padding: 38px 0 27px;
+}
+.page-heading h1 {
+  font-size: 32px;
+  letter-spacing: -1px;
+  line-height: 1.3;
+  margin: 15px 0 8px;
+}
+.page-heading p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.macro-grid span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+}
+.macro-grid strong {
+  display: block;
+  font-size: 25px;
+  margin-top: 8px;
+}
+.macro-grid small {
+  font-size: 12px;
+  font-weight: 500;
+}
+.plan-notes {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 20px 0;
+  color: var(--text-secondary);
+}
+.meals {
+  margin-top: 22px;
+}
+.meals h3 {
+  font-size: 15px;
+}
+.food-line {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 13px;
+  align-items: center;
+}
+.food-line:last-child {
+  border: 0;
+}
+.food-line small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.food-line strong {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.spaced {
+  margin-top: 26px;
+}
+.day-switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.day-switch button {
+  border: 1px solid var(--border-color);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  border-radius: 99px;
+  padding: 10px 16px;
+  font-size: 12px;
+}
+.day-switch .active {
+  background: #087f75;
+  color: #fff;
+  border-color: #087f75;
+}
+.recipe-card img {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  border-radius: 17px;
+  margin-bottom: 18px;
+}
+.recipe-card h3 {
+  margin: 12px 0 8px;
+  font-size: 16px;
+}
+.recipe-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.recipe-detail h3 {
+  font-size: 15px;
+  margin: 20px 0 10px;
+}
+.recipe-detail p {
+  white-space: pre-line;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+.stack-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.stack-form > .ns-btn {
+  align-self: flex-start;
+}
+.appointment-item {
+  margin-bottom: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.appointment-item h3 {
+  font-size: 14px;
+  margin: 12px 0 5px;
+}
+.appointment-item p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 4px 0;
+}
+.health-form fieldset {
+  border: 0;
+  min-width: 0;
+}
+.health-form legend,
+.health-form h2 {
+  font-size: 18px;
+  margin: 5px 0 23px;
+  font-weight: 700;
+}
+.health-form h2 {
+  margin-top: 34px;
+}
+.health-form textarea {
+  min-height: 85px;
+}
+.health-form .ns-btn {
+  margin-top: 15px;
+}
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.checkbox-field input {
+  accent-color: var(--color-primary);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.assistant-layout {
+  grid-template-columns: 1.65fr 1fr;
+}
+.chat-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chat-heading h2 {
+  font-size: 16px;
+}
+.chat-heading p {
+  font-size: 11px;
+}
+.chat-messages {
+  max-height: 460px;
+  min-height: 260px;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+.chat-message {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: var(--surface-inset);
+  margin: 12px 36px 12px 0;
+}
+.chat-message.mine {
+  background: var(--color-primary-light);
+  margin: 12px 0 12px 36px;
+}
+.chat-message span {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+.chat-message p {
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 5px;
+}
+.chat-input {
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+}
+.chat-input textarea {
+  min-height: 75px;
+}
+.chat-input .ns-btn {
+  margin-top: 12px;
+  float: right;
+}
+.chat-input::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+.assistant-side {
+  align-self: start;
+}
+.assistant-side h2 {
+  font-size: 21px;
+  letter-spacing: -0.6px;
+}
+.assistant-side > p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--text-secondary);
+  margin: 16px 0 24px;
+}
+.assistant-side .ns-inset {
+  margin-top: 26px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.assistant-side .ns-inset p {
+  margin-top: 12px;
+  line-height: 1.8;
+}
+.photo-upload {
+  margin: 25px 0;
+  padding: 25px;
+  border: 1px dashed var(--color-primary);
+  border-radius: 18px;
+  background: var(--color-primary-light);
+}
+.photo-upload input {
+  background: var(--bg-card);
+  font-size: 12px;
+}
+.photo-upload span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border-top: 1px solid var(--border-color);
+  padding: 23px 0;
+}
+.notification-item > .ns-feature-icon {
+  margin: 0;
+  flex-shrink: 0;
+}
+.notification-item > div {
+  flex: 1;
+  min-width: 0;
+}
+.notification-item h3 {
+  font-size: 14px;
+  margin-bottom: 7px;
+}
+.notification-item p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.notification-item small {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: block;
+  margin-top: 9px;
+}
+.notification-item.unread h3::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  margin-right: 7px;
+}
+.subscription-card .ns-stat-value {
+  display: block;
+  margin: 18px 0 8px;
+}
+.subscription-card h2 {
+  font-size: 19px;
+}
+.subscription-card small {
+  font-size: 13px;
+}
+.subscription-card ul {
+  list-style: none;
+  margin: 24px 0;
+}
+.subscription-card li {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  align-items: flex-start;
+  color: var(--text-secondary);
+  padding: 7px 0;
+}
+.subscription-card li ns-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary);
+}
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 0;
+  border-top: 1px solid var(--border-color);
+}
+.receipt-item strong {
+  font-size: 13px;
+}
+.receipt-item p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 5px 0;
+}
+.profile-form {
+  max-width: 700px;
+}
+.ns-footer {
+  margin-top: 50px;
+}
+.account-name {
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ns-table {
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .portal-shell > .ns-topbar {
+    flex-wrap: wrap;
+    padding-block: 16px;
+    gap: 12px;
+  }
+  .portal-shell > .ns-topbar .ns-topnav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .patient-hero {
+    gap: 24px;
+  }
+  .connection-card {
+    flex-wrap: wrap;
+  }
+  .pairing-form {
+    width: 100%;
+  }
+  .pairing-form label {
+    flex: 1;
+  }
+  .pairing-form input {
+    max-width: none;
+  }
+  .macro-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .patient-hero {
+    padding-block: 35px;
+  }
+  .account-name {
+    display: none;
+  }
+  .account-actions {
+    gap: 6px;
+  }
+  .account-trigger {
+    gap: 5px;
+  }
+  .connection-card {
+    gap: 14px;
+  }
+  .pairing-form {
+    flex-wrap: wrap;
+  }
+  .pairing-form .ns-btn {
+    width: 100%;
+  }
+  .page-heading h1 {
+    font-size: 28px;
+  }
+  .assistant-layout {
+    grid-template-columns: 1fr;
+  }
+  .notification-item {
+    flex-wrap: wrap;
+  }
+  .notification-item .ns-btn {
+    margin-left: 60px;
+    font-size: 11px;
+  }
+  .receipt-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .macro-grid {
+    gap: 10px;
+  }
+  .macro-grid .ns-inset {
+    padding: 16px;
+  }
+  .macro-grid strong {
+    font-size: 22px;
+  }
+  .ns-topnav button {
+    font-size: 11px;
+    padding: 10px 9px;
+  }
+  .today-grid .ns-inset {
+    padding: 17px 13px;
+  }
+}
+
+@media (max-width: 700px) {
+  .portal-shell > .ns-topbar .ns-brand {
+    font-size: 16px;
+    gap: 8px;
+  }
+  .portal-shell > .ns-topbar .ns-brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 13px;
+  }
+  .portal-shell > .ns-topbar .ns-brand small {
+    font-size: 7.5px;
+    letter-spacing: 1.1px;
+  }
+  .ns-topnav button {
+    font-size: 10.5px;
+    padding: 10px 6px;
+    min-height: 44px;
+  }
+}

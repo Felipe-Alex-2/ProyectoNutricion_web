@@ -362,3 +362,6 @@
     margin-top: 0;
   }
 }
+
+.top-brand { text-decoration: none; color: var(--text-primary); }
+.auth-card { border-radius: 28px; box-shadow: var(--card-shadow); }

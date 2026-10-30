@@ -100,7 +100,7 @@ export class AuthService {
       sessionStorage.removeItem('nutrisalud_activity_logs');
       localStorage.removeItem('nutrisalud_activity_logs');
     } catch (_) {}
-    this.router.navigate(['/login']);
+    this.router.navigate(['/']);
   }
 
   forgotPassword(email: string): Observable<MessageResponse> {

@@ -1,7 +1,21 @@
-import { Component, HostListener, OnInit, OnDestroy, signal, DestroyRef, inject } from '@angular/core';
+import { StaffNavigationComponent } from './staff-navigation.component';
+import { canOpenStaffTab } from './staff-navigation.model';
+import { IconComponent } from '../../shared/ui/icon.component';
+import { StaffOverviewComponent } from './staff-overview.component';
+import { ClientPortalComponent } from '../client/client-portal.component';
+import {
+  Component,
+  HostListener,
+  OnInit,
+  OnDestroy,
+  signal,
+  computed,
+  DestroyRef,
+  inject,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -20,11 +34,24 @@ import { ClinicalService } from '../../core/services/clinical.service';
 import { SubscriptionService } from '../../core/services/subscription.service';
 import { PaymentService } from '../../core/services/payment.service';
 import { Recipe } from '../../core/models/recipe.model';
-import { PatientAnamnesis, ClinicalRecord, NutritionalPlanModel } from '../../core/models/clinical.model';
+import {
+  PatientAnamnesis,
+  ClinicalRecord,
+  NutritionalPlanModel,
+} from '../../core/models/clinical.model';
 import { AIPlanService } from '../../core/services/ai-plan.service';
-import { SubscriptionPlan, Subscription, SubscriptionHistory } from '../../core/models/subscription.model';
+import {
+  SubscriptionPlan,
+  Subscription,
+  SubscriptionHistory,
+} from '../../core/models/subscription.model';
 import { Payment, PaymentStats } from '../../core/models/payment.model';
-import { Appointment, AppointmentCreate, AppointmentCancel, Nutritionist } from '../../core/models/appointment.model';
+import {
+  Appointment,
+  AppointmentCreate,
+  AppointmentCancel,
+  Nutritionist,
+} from '../../core/models/appointment.model';
 import { AppointmentService } from '../../core/services/appointment.service';
 import { Notification } from '../../core/models/notification.model';
 import { NotificationService } from '../../core/services/notification.service';
@@ -35,6 +62,7 @@ import { PatientListItem, UserUpdate } from '../../core/models/user.model';
 import { BackupSetting, BackupLog } from '../../core/models/backup.model';
 import {
   ReportEntityMeta,
+  ReportQueryRequest,
   ReportQueryResponse,
   VoiceReportSummaryResponse,
   VoiceReportSummaryRequest,
@@ -48,13 +76,20 @@ import { ModalDesactivarPacienteComponent } from '../pacientes/modal-desactivar-
 import { ModalRecetaComponent } from '../recetas/modal-receta.component';
 import { ModalAsistenteIaRecetasComponent } from '../recetas/modal-asistente-ia-recetas.component';
 import { ModalCancelarCitaComponent } from '../citas/modal-cancelar-cita.component';
+import { CompanyManagerComponent } from './company-manager.component';
 import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaurar-backup.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    CompanyManagerComponent,
     CommonModule,
+    RouterLink,
+    IconComponent,
+    StaffOverviewComponent,
+    StaffNavigationComponent,
+    ClientPortalComponent,
     ReactiveFormsModule,
     PlanIaModalComponent,
     PanelAutomatizacionesComponent,
@@ -66,19 +101,23 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
     ModalRestaurarBackupComponent,
   ],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css'],
+  styleUrls: ['./dashboard.component.css', './dashboard-soft.css'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly navigationRouter = inject(Router);
   readonly patientPageSize = 50;
   readonly patientPageOffset = signal(0);
-  isEditing = signal<boolean>(false);
+  readonly isEditing = computed(() => this.activeTab() === 'perfil');
   editForm: FormGroup;
   updateSuccess = signal<string | null>(null);
   updateError = signal<string | null>(null);
 
   // Estados interactivos para navegación principal: Menú Principal y Bitácora
   activeTab = signal<string>('principal');
+  mobileMenuOpen = signal(false);
+  compactViewport = signal(window.innerWidth <= 800);
+  sessionError = signal('');
   waterIntake = signal<number>(1200);
 
   // Bitácora de Actividades (Auditoría) con Llave de Seguridad Confidencial
@@ -128,6 +167,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   automationResult = signal<any | null>(null);
 
   // Módulo de Reportes Dinámicos
+  reportAnalysisOptions = signal<Partial<ReportQueryRequest>>({});
+  reportBranches = signal<{ id: string; name: string; tenant_id: string }[]>([]);
+  paymentBranches = signal<{ id: string; name: string; tenant_id: string }[]>([]);
+  selectedPaymentBranchId = signal('');
+  private reportRequestVersion = 0;
   selectedReportEntity = signal<string>('patients');
   selectedReportColumns = signal<string[]>([]);
   reportStartDate = signal<string>('');
@@ -167,12 +211,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedRestoreFile: File | null = null;
   restoreModalOpen = signal<boolean>(false);
   isRestoringBackup = signal<boolean>(false);
-
-  // Acordeón Sprint 1
-  sprint1Expanded = signal<boolean>(true);
-
-  // Acordeón Sprint 2
-  sprint2Expanded = signal<boolean>(false);
 
   // Sprint 1: Tenants (CRUD)
   tenants = signal<Tenant[]>([]);
@@ -315,7 +353,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public patientService: PatientService,
     public backupService: BackupService,
     public reportService: ReportService,
-    public aiPlanService: AIPlanService
+    public aiPlanService: AIPlanService,
   ) {
     this.editForm = this.fb.group({
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
@@ -409,24 +447,38 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.authService.loadCurrentUser().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(user => {
-      if (!user) return;
-      this.populateForm(user);
-      this.loadNotificationCount();
-      this.loadAppointments();
-      if (!this.isClient()) this.loadTenants();
-      this.setActiveTab(this.route.snapshot.queryParams['tab'] || 'principal');
-    });
+    this.authService
+      .loadCurrentUser()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((user) => {
+        if (!user) {
+          this.sessionError.set(
+            'No pudimos cargar tu sesión. Comprueba la conexión e intenta de nuevo.',
+          );
+          return;
+        }
+        if (this.isClient()) return;
+        this.populateForm(user);
+        this.loadNotificationCount();
+        this.loadAppointments();
+        if (!this.isClient()) this.loadTenants();
+        this.setActiveTab(this.route.snapshot.queryParams['tab'] || 'principal', false);
+      });
     this.activityLogService.recordActivity('ACCESO', 'Acceso a la plataforma web', 'AUTH');
 
     // Escuchar parametro tab de navegacion o redireccion de pago PayPal
     this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const requested = params['tab'] || 'principal';
+      const target = ['pagos', 'suscripciones'].includes(requested) ? 'suscripcion' : requested;
+      if (this.authService.currentUser() && !this.isClient() && this.activeTab() !== target)
+        this.setActiveTab(target, false);
       if (params['tab']) {
-        if (this.authService.currentUser()) this.setActiveTab(params['tab']);
-        if (params['tab'] === 'pagos') {
+        if (params['tab'] === 'pagos' && !this.isClient()) {
           this.loadPaymentData();
           if (params['payment_success']) {
-            this.paymentSuccess.set('Cobro con PayPal Sandbox completado y registrado exitosamente en su cuenta.');
+            this.paymentSuccess.set(
+              'Cobro con PayPal Sandbox completado y registrado exitosamente en su cuenta.',
+            );
             setTimeout(() => this.paymentSuccess.set(null), 5000);
           }
         }
@@ -435,13 +487,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Polling en tiempo real para citas pendientes y notificaciones (cada 12s)
     this.pollingTimer = setInterval(() => {
-      if (!document.hidden && this.authService.isAuthenticated()) {
+      if (!document.hidden && this.authService.isAuthenticated() && !this.isClient()) {
         this.pollPendingAppointmentsAndNotifications();
       }
     }, 12000);
   }
 
+  reloadSession(): void {
+    window.location.reload();
+  }
+
   ngOnDestroy(): void {
+    this.cancelVoiceActivity();
     if (this.pollingTimer) {
       clearInterval(this.pollingTimer);
       this.pollingTimer = null;
@@ -462,24 +519,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   toggleEdit(): void {
-    this.isEditing.update((val) => !val);
-    if (this.isEditing()) {
-      const user = this.authService.currentUser();
-      if (user) this.populateForm(user);
-    }
-    this.updateSuccess.set(null);
-    this.updateError.set(null);
+    this.setActiveTab(this.activeTab() === 'perfil' ? 'principal' : 'perfil');
   }
 
   cancelEdit(): void {
-    this.isEditing.set(false);
-    const user = this.authService.currentUser();
-    if (user) {
-      this.populateForm(user);
-    }
+    this.setActiveTab('principal');
     this.editForm.markAsPristine();
     this.editForm.markAsUntouched();
-    this.updateError.set(null);
   }
 
   onSaveProfile(): void {
@@ -503,19 +549,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.authService.updateProfile(payload).subscribe({
       next: () => {
-        this.updateSuccess.set('¡Perfil actualizado correctamente!');
-        this.isEditing.set(false);
-        this.activityLogService.recordActivity('ACTUALIZAR_PERFIL', 'Actualización de datos personales y configuración de seguridad', 'AUTH');
+        if (this.activeTab() === 'perfil') {
+          this.setActiveTab('principal');
+          this.updateSuccess.set('¡Perfil actualizado correctamente!');
+        }
+        this.activityLogService.recordActivity(
+          'ACTUALIZAR_PERFIL',
+          'Actualización de datos personales y configuración de seguridad',
+          'AUTH',
+        );
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.updateError.set(typeof detail === 'string' ? detail : 'Error al actualizar el perfil');
+        if (this.activeTab() === 'perfil')
+          this.updateError.set(
+            typeof detail === 'string' ? detail : 'Error al actualizar el perfil',
+          );
       },
     });
   }
 
   isClient(): boolean {
-    return this.authService.currentUser()?.role_id === 'CLIENTE';
+    return ['CLIENTE', 'PACIENTE'].includes(this.authService.currentUser()?.role_id || '');
   }
 
   isNutritionist(): boolean {
@@ -527,12 +582,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return !this.isClient();
   }
 
+  @HostListener('window:resize')
+  onViewportResize(): void {
+    this.compactViewport.set(window.innerWidth <= 800);
+  }
+
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
+    this.mobileMenuOpen.set(false);
     this.closeAllModals();
   }
 
   closeAllModals(): void {
+    this.closeRecipeModal();
+    this.closeAiPlanModal();
+    this.closePaymentDetail();
     this.closeTenantUsersModal();
     this.closeTenantModal();
     this.closeRolePermissionsModal();
@@ -546,37 +610,54 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.closeSendTenantNotificationModal();
   }
 
-  setActiveTab(tab: string): void {
-    if (!this.authService.currentUser()) return;
-    if (this.isClient() && ['clientes', 'historial-clinico', 'reportes', 'backup'].includes(tab)) tab = 'principal';
-    if (tab === 'backup' && !this.isSaasAdmin() && !this.isOrgAdmin()) tab = 'principal';
-    // Cerrar automáticamente cualquier modal abierto al salir o cambiar de vista
-    this.closeAllModals();
+  navigateFromOverview(event: { tab: string; tenantId: string }): void {
+    if (this.isSaasAdmin()) {
+      this.patientFilterTenant.set(event.tenantId);
+      this.appointmentFilterTenant.set(event.tenantId);
+      this.reportFilterTenant.set(event.tenantId);
+      this.selectedPaymentTenantId.set(event.tenantId);
+    }
+    this.setActiveTab(event.tab);
+  }
 
-    // Si el usuario es cliente (paciente), impedir acceso a módulos administrativos
+  setActiveTab(tab: string, syncUrl = true): void {
+    this.mobileMenuOpen.set(false);
+    if (tab === 'pagos' || tab === 'suscripciones') tab = 'suscripcion';
+    if (!this.authService.currentUser()) return;
+    if (this.isClient() && ['clientes', 'historial-clinico', 'reportes', 'backup'].includes(tab))
+      tab = 'principal';
+    if (tab === 'backup' && !this.isSaasAdmin() && !this.isOrgAdmin()) tab = 'principal';
+    this.closeAllModals();
     if (this.isClient() && tab.startsWith('sprint1-')) {
       this.activeTab.set('principal');
       return;
     }
-
-    // Si es Nutricionista, solo puede entrar a vinculación
-    if (this.isNutritionist() && (tab === 'sprint1-tenants' || tab === 'sprint1-roles' || tab === 'sprint1-usuarios')) {
+    if (
+      this.isNutritionist() &&
+      (tab === 'sprint1-tenants' || tab === 'sprint1-roles' || tab === 'sprint1-usuarios')
+    ) {
       this.activeTab.set('sprint1-vinculacion');
       tab = 'sprint1-vinculacion';
     }
-
-    // Si es Org Admin, no puede entrar a Tenants globales ni a Roles globales
     if (this.isOrgAdmin() && (tab === 'sprint1-tenants' || tab === 'sprint1-roles')) {
       this.activeTab.set('sprint1-usuarios');
       tab = 'sprint1-usuarios';
     }
-
-    this.activeTab.set(tab);
-    if (tab === 'bitacora') {
-      if (this.bitacoraUnlocked()) {
-        this.loadActivityLogs();
-      }
+    if (!canOpenStaffTab(this.authService.currentUser()?.role_id || '', tab)) tab = 'principal';
+    if (this.activeTab() !== tab) {
+      this.reportRequestVersion++;
+      this.isLoadingReport.set(false);
+      this.isProcessingVoice.set(false);
+      this.cancelVoiceActivity();
     }
+    this.activeTab.set(tab);
+    this.updateSuccess.set(null);
+    this.updateError.set(null);
+    if (tab === 'perfil') {
+      const user = this.authService.currentUser();
+      if (user) this.populateForm(user);
+    }
+    if (tab === 'bitacora' && this.bitacoraUnlocked()) this.loadActivityLogs();
     if (tab === 'clientes') this.loadPatients();
     if (tab === 'reportes') this.loadReportConfig();
     if (tab === 'backup') this.loadBackupData();
@@ -589,35 +670,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.loadTenants();
       this.loadOrgUsers();
     }
-    if (tab === 'sprint1-vinculacion') {
-      this.loadPatientLinks();
+    if (tab === 'sprint1-vinculacion') this.loadPatientLinks();
+    if (tab === 'recetas') {
+      this.loadRecipes();
+      if (!this.isClient()) this.loadPatients();
     }
-    if (tab === 'recetas') { this.loadRecipes(); if (!this.isClient()) this.loadPatients(); }
     if (tab === 'historial-clinico') this.loadPatients();
     if (tab === 'suscripcion') {
       if (!this.isClient()) this.loadPaymentData();
       this.loadSubscriptionData();
     }
-    if (tab === 'citas') {
-      this.loadAppointments();
-    }
+    if (tab === 'citas') this.loadAppointments();
     if (tab === 'notificaciones') {
       this.loadNotifications();
       this.loadNotificationCount();
     }
-    this.activityLogService.recordActivity('NAVEGACION', `Navegación a la vista: ${this.getTabLabel(tab)}`, 'SISTEMA');
-  }
-
-  toggleSprint1Accordion(): void {
-    this.sprint1Expanded.update((v) => !v);
-  }
-
-  toggleSprint2Accordion(): void {
-    this.sprint2Expanded.update((v) => !v);
-  }
-
-  canAccessSprint2(): boolean {
-    return !this.isClient();
+    this.activityLogService.recordActivity(
+      'NAVEGACION',
+      `Navegación a la vista: ${this.getTabLabel(tab)}`,
+      'SISTEMA',
+    );
+    if (syncUrl && this.route.snapshot.queryParams['tab'] !== tab) {
+      void this.navigationRouter.navigate(['/dashboard'], { queryParams: { tab } });
+    }
   }
 
   // --- Métodos de la Bitácora ---
@@ -665,16 +740,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getTabLabel(tab: string): string {
     switch (tab) {
+      case 'perfil':
+        return 'Mi perfil';
       case 'principal':
-        return 'Menú Principal';
+        return 'Panel central';
+      case 'clientes':
+        return 'Pacientes';
+      case 'reportes':
+        return 'Reportes y analítica';
+      case 'backup':
+        return 'Copias de seguridad';
       case 'bitacora':
         return 'Bitácora';
       case 'suscripcion':
-        return 'Gestión de Suscripción';
+        return 'Caja y cobros';
       case 'notificaciones':
         return 'Notificaciones';
       case 'sprint1-tenants':
-        return 'Gestionar Tenants';
+        return 'Organizaciones';
       case 'sprint1-roles':
         return 'Gestión de Roles y Permisos';
       case 'sprint1-usuarios':
@@ -776,7 +859,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     if (!nameVal || !codeVal) {
       this.tenantForm.markAllAsTouched();
-      this.tenantError.set('No se puede crear la sucursal con campos vacios. Debe ingresar el nombre y el codigo identificador.');
+      this.tenantError.set(
+        'No se puede crear la sucursal con campos vacios. Debe ingresar el nombre y el codigo identificador.',
+      );
       return;
     }
 
@@ -788,7 +873,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     if (codeVal.length < 2) {
       this.tenantForm.get('code')?.markAsTouched();
-      this.tenantError.set('El codigo identificador de la sucursal debe tener al menos 2 caracteres.');
+      this.tenantError.set(
+        'El codigo identificador de la sucursal debe tener al menos 2 caracteres.',
+      );
       return;
     }
 
@@ -801,22 +888,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // 2. Validacion de nombres duplicados (repetidos)
     const currentEdit = this.editingTenant();
     const dupTenant = this.tenants().some(
-      (t) => t.name?.trim().toLowerCase() === nameVal.toLowerCase() && (!currentEdit || t.id !== currentEdit.id)
+      (t) =>
+        t.name?.trim().toLowerCase() === nameVal.toLowerCase() &&
+        (!currentEdit || t.id !== currentEdit.id),
     );
     if (dupTenant) {
       this.tenantError.set(
-        `Ya existe una sucursal con el nombre "${nameVal}". No se permite duplicar nombres de sucursales.`
+        `Ya existe una sucursal con el nombre "${nameVal}". No se permite duplicar nombres de sucursales.`,
       );
       return;
     }
 
     // 3. Validacion de codigo duplicado (repetido)
     const dupCode = this.tenants().some(
-      (t) => t.code?.trim().toUpperCase() === codeVal && (!currentEdit || t.id !== currentEdit.id)
+      (t) => t.code?.trim().toUpperCase() === codeVal && (!currentEdit || t.id !== currentEdit.id),
     );
     if (dupCode && !currentEdit) {
       this.tenantError.set(
-        `Ya existe una sucursal con el codigo "${codeVal}". No se permite duplicar codigos de sucursales.`
+        `Ya existe una sucursal con el codigo "${codeVal}". No se permite duplicar codigos de sucursales.`,
       );
       return;
     }
@@ -862,7 +951,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onDeleteTenant(tenant: Tenant): void {
     const confirmDelete = window.confirm(
-      `¿Estás seguro de eliminar la organización "${tenant.name}" (${tenant.code})? Esta acción no se puede deshacer.`
+      `¿Estás seguro de eliminar la organización "${tenant.name}" (${tenant.code})? Esta acción no se puede deshacer.`,
     );
     if (!confirmDelete) return;
 
@@ -935,9 +1024,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const matchesRole = !role || u.role_id === role;
       const matchesQuery =
         !q ||
-        (u.full_name?.toLowerCase().includes(q)) ||
-        (u.email?.toLowerCase().includes(q)) ||
-        (u.phone?.toLowerCase().includes(q));
+        u.full_name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.toLowerCase().includes(q);
       return matchesRole && matchesQuery;
     });
   }
@@ -948,10 +1037,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getRoleLabel(roleId?: string): string {
     switch (roleId) {
-      case 'ADMIN_SAAS':
-        return 'Administrador SaaS';
+      case 'SUPERADMIN':
+        return 'Superadministrador';
       case 'ADMIN_ORGANIZATION':
-        return 'Administrador Normal';
+        return 'Administrador de organización';
       case 'NUTRICIONISTA':
         return 'Nutricionista';
       case 'CLIENTE':
@@ -1033,7 +1122,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   isSaasAdmin(): boolean {
-    return this.authService.currentUser()?.role_id === 'ADMIN_SAAS';
+    return this.authService.currentUser()?.role_id === 'SUPERADMIN';
   }
 
   getMyOrgName(): string {
@@ -1123,11 +1212,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       (u) =>
         u.full_name?.trim().toLowerCase() === nameVal &&
         u.tenant_id === targetTenant &&
-        (!currentEdit || u.id !== currentEdit.id)
+        (!currentEdit || u.id !== currentEdit.id),
     );
     if (dupUser) {
       this.userError.set(
-        `Ya existe un usuario con el nombre "${this.orgUserForm.value.full_name?.trim()}" en esta organización. No se puede repetir el mismo nombre.`
+        `Ya existe un usuario con el nombre "${this.orgUserForm.value.full_name?.trim()}" en esta organización. No se puede repetir el mismo nombre.`,
       );
       return;
     }
@@ -1196,7 +1285,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     const confirmDelete = window.confirm(
-      `¿Estás seguro de eliminar al usuario "${user.full_name}" (${user.email})?`
+      `¿Estás seguro de eliminar al usuario "${user.full_name}" (${user.email})?`,
     );
     if (!confirmDelete) return;
 
@@ -1231,7 +1320,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getRoleBadgeClass(roleId?: string): string {
     switch (roleId) {
-      case 'ADMIN_SAAS':
+      case 'SUPERADMIN':
         return 'badge-role-saas';
       case 'ADMIN_ORGANIZATION':
         return 'badge-role-org';
@@ -1253,7 +1342,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadPatientLinks(): void {
     this.isLoadingLinks.set(true);
-    const tenantId = this.isSaasAdmin() && this.linkFilterTenant() ? this.linkFilterTenant() : undefined;
+    const tenantId =
+      this.isSaasAdmin() && this.linkFilterTenant() ? this.linkFilterTenant() : undefined;
     this.patientLinkService.getLinks(tenantId).subscribe({
       next: (res) => {
         this.patientLinks.set(res);
@@ -1291,7 +1381,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.patientLinkService.claimLink(this.claimLinkForm.value).subscribe({
       next: (res) => {
         this.claimSuccess.set(
-          `¡Vinculación completada! Ahora estás enlazado con el especialista ${res.nutritionist_name}.`
+          `¡Vinculación completada! Ahora estás enlazado con el especialista ${res.nutritionist_name}.`,
         );
         this.claimLinkForm.reset({ pairing_code: '' });
         this.loadPatientLinks();
@@ -1312,7 +1402,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadRecipes(category?: string): void {
     const cat = category !== undefined ? category : this.recipeCategoryFilter();
-    const tenantId = this.isSaasAdmin() && this.recipeFilterTenant() ? this.recipeFilterTenant() : undefined;
+    const tenantId =
+      this.isSaasAdmin() && this.recipeFilterTenant() ? this.recipeFilterTenant() : undefined;
     this.recipeService.loadRecipes(cat || undefined, tenantId).subscribe();
   }
 
@@ -1394,8 +1485,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   selectAllPatientsForRecipe(select: boolean): void {
     if (select) {
-      const allPatientIds = this.patientService.patients()
-        .map((u) => u.id);
+      const allPatientIds = this.patientService.patients().map((u) => u.id);
       this.recipeSelectedPatients.set(allPatientIds);
     } else {
       this.recipeSelectedPatients.set([]);
@@ -1413,18 +1503,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     if (!cleanTitle || !cleanIngredients || !cleanInstructions) {
       this.recipeForm.markAllAsTouched();
-      this.recipeError.set('Debe llenar todos los campos obligatorios antes de crear la receta: Nombre, Ingredientes y Cantidades, e Instrucciones de Preparación.');
+      this.recipeError.set(
+        'Debe llenar todos los campos obligatorios antes de crear la receta: Nombre, Ingredientes y Cantidades, e Instrucciones de Preparación.',
+      );
       return;
     }
 
     if (
-      rawVal.calories === null || rawVal.calories === undefined || rawVal.calories === '' ||
-      rawVal.protein === null || rawVal.protein === undefined || rawVal.protein === '' ||
-      rawVal.carbohydrates === null || rawVal.carbohydrates === undefined || rawVal.carbohydrates === '' ||
-      rawVal.fats === null || rawVal.fats === undefined || rawVal.fats === ''
+      rawVal.calories === null ||
+      rawVal.calories === undefined ||
+      rawVal.calories === '' ||
+      rawVal.protein === null ||
+      rawVal.protein === undefined ||
+      rawVal.protein === '' ||
+      rawVal.carbohydrates === null ||
+      rawVal.carbohydrates === undefined ||
+      rawVal.carbohydrates === '' ||
+      rawVal.fats === null ||
+      rawVal.fats === undefined ||
+      rawVal.fats === ''
     ) {
       this.recipeForm.markAllAsTouched();
-      this.recipeError.set('Debe llenar todos los valores nutricionales obligatorios: Calorías, Proteínas, Carbohidratos y Grasas.');
+      this.recipeError.set(
+        'Debe llenar todos los valores nutricionales obligatorios: Calorías, Proteínas, Carbohidratos y Grasas.',
+      );
       return;
     }
 
@@ -1436,12 +1538,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     const titleVal = cleanTitle.toLowerCase();
     const editing = this.editingRecipe();
-    const dupRecipe = this.recipeService.recipes().some(
-      (r: Recipe) => r.title?.trim().toLowerCase() === titleVal && (!editing || r.id !== editing.id)
-    );
+    const dupRecipe = this.recipeService
+      .recipes()
+      .some(
+        (r: Recipe) =>
+          r.title?.trim().toLowerCase() === titleVal && (!editing || r.id !== editing.id),
+      );
     if (dupRecipe) {
       this.recipeError.set(
-        `Ya existe una receta con el nombre "${cleanTitle}". No se puede repetir el mismo nombre.`
+        `Ya existe una receta con el nombre "${cleanTitle}". No se puede repetir el mismo nombre.`,
       );
       return;
     }
@@ -1456,7 +1561,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       carbohydrates: Number(rawVal.carbohydrates),
       fats: Number(rawVal.fats),
       assigned_patient_ids: this.recipeSelectedPatients(),
-      tenant_id: this.isSaasAdmin() && this.recipeFilterTenant() ? this.recipeFilterTenant() : undefined,
+      tenant_id:
+        this.isSaasAdmin() && this.recipeFilterTenant() ? this.recipeFilterTenant() : undefined,
     };
 
     if (editing) {
@@ -1464,7 +1570,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: () => {
           this.recipeSuccess.set(`Receta '${formData.title}' actualizada exitosamente.`);
           this.closeRecipeModal();
-          this.activityLogService.recordActivity('RECETA_MODIFICADA', `Se editó la receta ${formData.title}`, 'CLINICAL');
+          this.activityLogService.recordActivity(
+            'RECETA_MODIFICADA',
+            `Se editó la receta ${formData.title}`,
+            'CLINICAL',
+          );
         },
         error: (err) => {
           this.recipeError.set(err?.error?.detail || 'Error al actualizar receta');
@@ -1475,7 +1585,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: () => {
           this.recipeSuccess.set(`Receta '${formData.title}' creada con éxito.`);
           this.closeRecipeModal();
-          this.activityLogService.recordActivity('RECETA_CREADA', `Se creó la receta ${formData.title}`, 'CLINICAL');
+          this.activityLogService.recordActivity(
+            'RECETA_CREADA',
+            `Se creó la receta ${formData.title}`,
+            'CLINICAL',
+          );
         },
         error: (err) => {
           this.recipeError.set(err?.error?.detail || 'Error al crear receta');
@@ -1491,7 +1605,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: () => {
         this.recipeSuccess.set(`Receta "${title}" eliminada correctamente.`);
         this.loadRecipes();
-        this.activityLogService.recordActivity('RECETA_ELIMINADA', `Se eliminó la receta ${title}`, 'CLINICAL');
+        this.activityLogService.recordActivity(
+          'RECETA_ELIMINADA',
+          `Se eliminó la receta ${title}`,
+          'CLINICAL',
+        );
         setTimeout(() => this.recipeSuccess.set(null), 4000);
       },
       error: (err) => {
@@ -1540,7 +1658,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.activityLogService.recordActivity(
           'HISTORIAL_CLINICO',
           `Se asentó nota diagnóstica para ${patient.full_name}`,
-          'CLINICAL'
+          'CLINICAL',
         );
       },
       error: (err) => {
@@ -1605,14 +1723,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isLoadingSubscription.set(false);
         this.subscriptionError.set(
-          err?.error?.detail || 'Error al crear la orden de PayPal. Intenta de nuevo.'
+          err?.error?.detail || 'Error al crear la orden de PayPal. Intenta de nuevo.',
         );
       },
     });
   }
 
   onCancelSubscription(): void {
-    if (!confirm('¿Estás seguro de cancelar tu suscripción activa? Perderás acceso a las funcionalidades premium.')) {
+    if (
+      !confirm(
+        '¿Estás seguro de cancelar tu suscripción activa? Perderás acceso a las funcionalidades premium.',
+      )
+    ) {
       return;
     }
 
@@ -1621,7 +1743,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (sub) => {
         this.currentSubscription.set(null);
         this.subscriptionSuccess.set('Suscripción cancelada exitosamente.');
-        this.activityLogService.recordActivity('SUSCRIPCION_CANCELADA', `Se canceló la suscripción plan ${sub.plan_name}`, 'SISTEMA');
+        this.activityLogService.recordActivity(
+          'SUSCRIPCION_CANCELADA',
+          `Se canceló la suscripción plan ${sub.plan_name}`,
+          'SISTEMA',
+        );
         this.loadSubscriptionData();
       },
       error: (err) => {
@@ -1633,33 +1759,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getSubscriptionStatusClass(status: string): string {
     switch (status) {
-      case 'ACTIVE': return 'sub-status-active';
-      case 'PENDING': return 'sub-status-pending';
-      case 'CANCELLED': return 'sub-status-cancelled';
-      case 'EXPIRED': return 'sub-status-expired';
-      case 'REPLACED': return 'sub-status-replaced';
-      default: return 'sub-status-default';
+      case 'ACTIVE':
+        return 'sub-status-active';
+      case 'PENDING':
+        return 'sub-status-pending';
+      case 'CANCELLED':
+        return 'sub-status-cancelled';
+      case 'EXPIRED':
+        return 'sub-status-expired';
+      case 'REPLACED':
+        return 'sub-status-replaced';
+      default:
+        return 'sub-status-default';
     }
   }
 
   getSubscriptionStatusLabel(status: string): string {
     switch (status) {
-      case 'ACTIVE': return 'Activa';
-      case 'PENDING': return 'Pendiente';
-      case 'CANCELLED': return 'Cancelada';
-      case 'EXPIRED': return 'Expirada';
-      case 'REPLACED': return 'Reemplazada';
-      case 'FAILED': return 'Fallida';
-      default: return status;
+      case 'ACTIVE':
+        return 'Activa';
+      case 'PENDING':
+        return 'Pendiente';
+      case 'CANCELLED':
+        return 'Cancelada';
+      case 'EXPIRED':
+        return 'Expirada';
+      case 'REPLACED':
+        return 'Reemplazada';
+      case 'FAILED':
+        return 'Fallida';
+      default:
+        return status;
     }
   }
 
   getPlanDisplayName(name: string): string {
     switch (name) {
-      case 'BASICO': return 'Básico';
-      case 'PROFESIONAL': return 'Profesional';
-      case 'PREMIUM': return 'Premium';
-      default: return name;
+      case 'BASICO':
+        return 'Básico';
+      case 'PROFESIONAL':
+        return 'Profesional';
+      case 'PREMIUM':
+        return 'Premium';
+      default:
+        return name;
     }
   }
 
@@ -1699,6 +1842,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     const currentTenant = this.selectedPaymentTenantId() || undefined;
+    if (currentTenant)
+      this.tenantService.getBranches(currentTenant).subscribe({
+        next: (rows) => {
+          if (this.selectedPaymentTenantId() !== currentTenant) return;
+          this.paymentBranches.set(rows);
+          if (!rows.some((b) => b.id === this.selectedPaymentBranchId()))
+            this.selectedPaymentBranchId.set(
+              rows.find((b) => b.id === this.authService.currentUser()?.branch_id)?.id ||
+                (rows.length === 1 ? rows[0].id : ''),
+            );
+        },
+        error: () => this.paymentBranches.set([]),
+      });
     const filter = this.paymentStatusFilter() || undefined;
 
     // Cargar historial de cobros
@@ -1706,7 +1862,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (payments) => {
         if (this.paymentStatusFilter() === 'EFECTIVO') {
           this.paymentsList.set(
-            payments.filter((p) => (p.payment_method || '').toUpperCase() === 'EFECTIVO')
+            payments.filter((p) => (p.payment_method || '').toUpperCase() === 'EFECTIVO'),
           );
         } else {
           this.paymentsList.set(payments);
@@ -1751,7 +1907,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
       this.paymentError.set(
-        'Por favor completa los campos requeridos arriba: Nombre del Cliente, Concepto del Servicio y Total a cobrar.'
+        'Por favor completa los campos requeridos arriba: Nombre del Cliente, Concepto del Servicio y Total a cobrar.',
       );
       return;
     }
@@ -1780,6 +1936,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const paymentMethod = formVal.payment_method || 'PAYPAL';
     const payload = {
       tenant_id: tenantId,
+      branch_id: this.selectedPaymentBranchId() || undefined,
       customer_name: formVal.customer_name ? formVal.customer_name.trim() : '',
       customer_email: formVal.customer_email ? formVal.customer_email.trim() : null,
       concept: formVal.concept ? formVal.concept.trim() : '',
@@ -1795,13 +1952,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.activityLogService.recordActivity(
           'COBRO_CREADO',
           `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}" (${paymentMethod})`,
-          'SISTEMA'
+          'SISTEMA',
         );
 
         if (paymentMethod === 'EFECTIVO') {
           this.lastCreatedApprovalUrl.set(null);
           this.paymentSuccess.set(
-            `Cobro de $${res.amount} USD en Efectivo registrado con exito para ${res.customer_name}.`
+            `Cobro de $${res.amount} USD en Efectivo registrado con exito para ${res.customer_name}.`,
           );
           this.paymentForm.patchValue({
             customer_name: '',
@@ -1816,7 +1973,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         } else {
           this.lastCreatedApprovalUrl.set(res.approval_url || null);
           this.paymentSuccess.set(
-            'Orden generada. Redirigiendo a PayPal Sandbox para realizar el pago...'
+            'Orden generada. Redirigiendo a PayPal Sandbox para realizar el pago...',
           );
           this.loadPaymentData();
           if (res.approval_url) {
@@ -1827,7 +1984,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isCreatingPayment.set(false);
         this.paymentError.set(
-          err?.error?.detail || 'Error al procesar el cobro. Verifica tus datos o conexion.'
+          err?.error?.detail || 'Error al procesar el cobro. Verifica tus datos o conexion.',
         );
       },
     });
@@ -1843,7 +2000,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
     navigator.clipboard.writeText(url).then(() => {
       this.paymentSuccess.set(
-        'Enlace de pago copiado al portapapeles. Puede abrirlo en otra ventana para pagar con su cuenta Personal de prueba.'
+        'Enlace de pago copiado al portapapeles. Puede abrirlo en otra ventana para pagar con su cuenta Personal de prueba.',
       );
     });
   }
@@ -1900,21 +2057,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getPaymentStatusBadgeClass(status: string): string {
     switch (status) {
-      case 'COMPLETED': return 'badge-completed';
-      case 'PENDING': return 'badge-pending';
-      case 'CANCELLED': return 'badge-cancelled';
-      case 'FAILED': return 'badge-failed';
-      default: return '';
+      case 'COMPLETED':
+        return 'badge-completed';
+      case 'PENDING':
+        return 'badge-pending';
+      case 'CANCELLED':
+        return 'badge-cancelled';
+      case 'FAILED':
+        return 'badge-failed';
+      default:
+        return '';
     }
   }
 
   getPaymentStatusBadgeLabel(status: string): string {
     switch (status) {
-      case 'COMPLETED': return 'Pagado';
-      case 'PENDING': return 'Pendiente';
-      case 'CANCELLED': return 'Cancelado';
-      case 'FAILED': return 'Fallido';
-      default: return status;
+      case 'COMPLETED':
+        return 'Pagado';
+      case 'PENDING':
+        return 'Pendiente';
+      case 'CANCELLED':
+        return 'Cancelado';
+      case 'FAILED':
+        return 'Fallido';
+      default:
+        return status;
     }
   }
 
@@ -1942,7 +2109,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.appointmentError.set(null);
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : (this.isSaasAdmin() && this.appointmentFilterTenant() ? this.appointmentFilterTenant() : undefined);
+      : this.isSaasAdmin() && this.appointmentFilterTenant()
+        ? this.appointmentFilterTenant()
+        : undefined;
 
     this.appointmentService.getAppointments(this.selectedAppointmentStatus(), tenantId).subscribe({
       next: (data) => {
@@ -1961,7 +2130,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loadNutritionists(): void {
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : (this.isSaasAdmin() && this.appointmentFilterTenant() ? this.appointmentFilterTenant() : undefined);
+      : this.isSaasAdmin() && this.appointmentFilterTenant()
+        ? this.appointmentFilterTenant()
+        : undefined;
 
     this.appointmentService.getNutritionists(tenantId).subscribe({
       next: (data) => {
@@ -2018,9 +2189,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // Generador visual de bloques de 30 min (08:00 a 18:00) para disponibilidad
-  get dayScheduleSlots(): { timeSlot: string; isOccupied: boolean; appointment?: Appointment & { timeRange: string } }[] {
+  get dayScheduleSlots(): {
+    timeSlot: string;
+    isOccupied: boolean;
+    appointment?: Appointment & { timeRange: string };
+  }[] {
     const confirmed = this.confirmedScheduleAppointments;
-    const slots: { timeSlot: string; isOccupied: boolean; appointment?: Appointment & { timeRange: string } }[] = [];
+    const slots: {
+      timeSlot: string;
+      isOccupied: boolean;
+      appointment?: Appointment & { timeRange: string };
+    }[] = [];
     const pad = (n: number) => n.toString().padStart(2, '0');
 
     for (let h = 8; h < 18; h++) {
@@ -2048,9 +2227,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return slots;
   }
 
+  canCompleteAppointment(appointment: Appointment): boolean {
+    return (
+      appointment.status === 'CONFIRMED' &&
+      new Date(appointment.scheduled_at).getTime() <= Date.now()
+    );
+  }
+  completeAppointment(appointment: Appointment): void {
+    this.appointmentService.completeAppointment(appointment.id).subscribe({
+      next: (updated) => {
+        this.appointments.update((rows) => rows.map((a) => (a.id === updated.id ? updated : a)));
+      },
+      error: (e) =>
+        this.appointmentError.set(e?.error?.detail || 'No se pudo marcar la cita como atendida.'),
+    });
+  }
   confirmAppointment(appointment: Appointment): void {
     const timeFormatted = this.formatDateTime(appointment.scheduled_at);
-    if (!confirm(`¿Deseas confirmar la cita con ${appointment.patient_name || 'el paciente'} para el ${timeFormatted}?`)) {
+    if (
+      !confirm(
+        `¿Deseas confirmar la cita con ${appointment.patient_name || 'el paciente'} para el ${timeFormatted}?`,
+      )
+    ) {
       return;
     }
     this.appointmentError.set(null);
@@ -2059,7 +2257,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Pre-validación en frontend de solapamiento de 30 minutos para el mismo doctor
     const apptTime = new Date(appointment.scheduled_at).getTime();
     const conflict = this.appointments().find((a) => {
-      if (a.id === appointment.id || a.status !== 'CONFIRMED' || a.nutritionist_id !== appointment.nutritionist_id) {
+      if (
+        a.id === appointment.id ||
+        a.status !== 'CONFIRMED' ||
+        a.nutritionist_id !== appointment.nutritionist_id
+      ) {
         return false;
       }
       const existingTime = new Date(a.scheduled_at).getTime();
@@ -2070,7 +2272,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const conflictFormatted = this.formatDateTime(conflict.scheduled_at);
       const doctorName = appointment.nutritionist_name || 'El especialista';
       this.appointmentError.set(
-        `Conflicto de Horario: ${doctorName} ya tiene una cita confirmada para el ${conflictFormatted}. Cada consulta ocupa un bloque de 30 minutos.`
+        `Conflicto de Horario: ${doctorName} ya tiene una cita confirmada para el ${conflictFormatted}. Cada consulta ocupa un bloque de 30 minutos.`,
       );
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -2078,15 +2280,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     this.appointmentService.confirmAppointment(appointment.id).subscribe({
       next: (updated) => {
-        this.appointmentSuccess.set(`¡Cita confirmada con éxito! Se ha notificado a ${updated.patient_name || 'el paciente'}.`);
+        this.appointmentSuccess.set(
+          `¡Cita confirmada con éxito! Se ha notificado a ${updated.patient_name || 'el paciente'}.`,
+        );
         this.loadAppointments();
         this.loadNotificationCount();
-        this.activityLogService.recordActivity('CONFIRMAR_CITA', `Cita confirmada para ${updated.patient_name}`, 'SISTEMA');
+        this.activityLogService.recordActivity(
+          'CONFIRMAR_CITA',
+          `Cita confirmada para ${updated.patient_name}`,
+          'SISTEMA',
+        );
         setTimeout(() => this.appointmentSuccess.set(null), 6000);
       },
       error: (err) => {
         this.appointmentError.set(
-          err?.error?.detail || 'Error al confirmar la cita. El nutricionista ya se encuentra ocupado en ese horario.'
+          err?.error?.detail ||
+            'Error al confirmar la cita. El nutricionista ya se encuentra ocupado en ese horario.',
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
@@ -2123,10 +2332,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (cancelled) => {
         this.cancellingAppointment.set(false);
         this.closeCancelAppointmentModal();
-        this.appointmentSuccess.set(`La cita ha sido cancelada. Se ha enviado notificación a ${cancelled.patient_name || 'el paciente'} con el motivo especificado.`);
+        this.appointmentSuccess.set(
+          `La cita ha sido cancelada. Se ha enviado notificación a ${cancelled.patient_name || 'el paciente'} con el motivo especificado.`,
+        );
         this.loadAppointments();
         this.loadNotificationCount();
-        this.activityLogService.recordActivity('CANCELAR_CITA', `Cita cancelada para ${cancelled.patient_name}`, 'SISTEMA');
+        this.activityLogService.recordActivity(
+          'CANCELAR_CITA',
+          `Cita cancelada para ${cancelled.patient_name}`,
+          'SISTEMA',
+        );
         setTimeout(() => this.appointmentSuccess.set(null), 6000);
       },
       error: (err) => {
@@ -2162,19 +2377,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getAppointmentBadgeClass(status: string): string {
     switch (status) {
-      case 'PENDING': return 'badge-appt-pending';
-      case 'CONFIRMED': return 'badge-appt-confirmed';
-      case 'CANCELLED': return 'badge-appt-cancelled';
-      default: return '';
+      case 'PENDING':
+        return 'badge-appt-pending';
+      case 'CONFIRMED':
+        return 'badge-appt-confirmed';
+      case 'CANCELLED':
+        return 'badge-appt-cancelled';
+      default:
+        return '';
     }
   }
 
   getAppointmentBadgeLabel(status: string): string {
     switch (status) {
-      case 'PENDING': return 'Pendiente';
-      case 'CONFIRMED': return 'Confirmada';
-      case 'CANCELLED': return 'Cancelada';
-      default: return status;
+      case 'PENDING':
+        return 'Pendiente';
+      case 'CONFIRMED':
+        return 'Confirmada';
+      case 'COMPLETED':
+        return 'Atendida';
+      case 'CANCELLED':
+        return 'Cancelada';
+      default:
+        return status;
     }
   }
 
@@ -2211,7 +2436,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   loadNotifications(): void {
     this.isLoadingNotifications.set(true);
-    const tenantId = this.isSaasAdmin() && this.notificationFilterTenant() ? this.notificationFilterTenant() : undefined;
+    const tenantId =
+      this.isSaasAdmin() && this.notificationFilterTenant()
+        ? this.notificationFilterTenant()
+        : undefined;
     this.notificationService.getMyNotifications(50, tenantId).subscribe({
       next: (list) => {
         this.notifications.set(list);
@@ -2239,9 +2467,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   markAllNotificationsAsRead(): void {
     this.notificationService.markAllAsRead().subscribe({
       next: () => {
-        this.notifications.update((list) =>
-          list.map((n) => ({ ...n, is_read: true }))
-        );
+        this.notifications.update((list) => list.map((n) => ({ ...n, is_read: true })));
         this.unreadNotificationCount.set(0);
       },
       error: () => {},
@@ -2263,7 +2489,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         patient_id: patientId,
         type: 'SEGUIMIENTO_DIETA',
         title: 'Seguimiento de Dieta & Hábitos',
-        message: 'Hola, te recordamos registrar tus comidas y consumo de agua en la app NutriSalud. ¡Tu especialista está atento a tu avance!',
+        message:
+          'Hola, te recordamos registrar tus comidas y consumo de agua en la app NutriSalud. ¡Tu especialista está atento a tu avance!',
       });
     } else {
       this.tenantNotifForm.patchValue({
@@ -2271,7 +2498,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         patient_id: '',
         type: 'AVISO_CLINICA',
         title: 'Aviso de tu Clínica Nutricional',
-        message: 'Estimado paciente, te recordamos mantener tus hábitos al día y revisar tus nuevas metas en la app NutriSalud.',
+        message:
+          'Estimado paciente, te recordamos mantener tus hábitos al día y revisar tus nuevas metas en la app NutriSalud.',
       });
     }
 
@@ -2311,44 +2539,56 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.tenantNotificationSuccess.set(null);
 
     if (recipient_type === 'ALL') {
-      this.notificationService.broadcastTenantNotification({
-        title,
-        message,
-        type,
-      }).subscribe({
-        next: (res) => {
-          this.isSendingTenantNotification.set(false);
-          this.tenantNotificationSuccess.set(res.message || 'Notificaciones emitidas exitosamente a los pacientes de la clínica.');
-          this.loadNotifications();
-          setTimeout(() => {
-            this.closeSendTenantNotificationModal();
-          }, 2000);
-        },
-        error: (err) => {
-          this.isSendingTenantNotification.set(false);
-          this.tenantNotificationError.set(err?.error?.detail || 'Error al emitir notificación por broadcast a los pacientes.');
-        },
-      });
+      this.notificationService
+        .broadcastTenantNotification({
+          title,
+          message,
+          type,
+        })
+        .subscribe({
+          next: (res) => {
+            this.isSendingTenantNotification.set(false);
+            this.tenantNotificationSuccess.set(
+              res.message || 'Notificaciones emitidas exitosamente a los pacientes de la clínica.',
+            );
+            this.loadNotifications();
+            setTimeout(() => {
+              this.closeSendTenantNotificationModal();
+            }, 2000);
+          },
+          error: (err) => {
+            this.isSendingTenantNotification.set(false);
+            this.tenantNotificationError.set(
+              err?.error?.detail || 'Error al emitir notificación por broadcast a los pacientes.',
+            );
+          },
+        });
     } else {
-      this.notificationService.sendNotification({
-        user_id: patient_id,
-        title,
-        message,
-        type,
-      }).subscribe({
-        next: () => {
-          this.isSendingTenantNotification.set(false);
-          this.tenantNotificationSuccess.set('Notificación enviada exitosamente al dispositivo móvil del paciente.');
-          this.loadNotifications();
-          setTimeout(() => {
-            this.closeSendTenantNotificationModal();
-          }, 2000);
-        },
-        error: (err) => {
-          this.isSendingTenantNotification.set(false);
-          this.tenantNotificationError.set(err?.error?.detail || 'Error al enviar notificación individual al paciente.');
-        },
-      });
+      this.notificationService
+        .sendNotification({
+          user_id: patient_id,
+          title,
+          message,
+          type,
+        })
+        .subscribe({
+          next: () => {
+            this.isSendingTenantNotification.set(false);
+            this.tenantNotificationSuccess.set(
+              'Notificación enviada exitosamente al dispositivo móvil del paciente.',
+            );
+            this.loadNotifications();
+            setTimeout(() => {
+              this.closeSendTenantNotificationModal();
+            }, 2000);
+          },
+          error: (err) => {
+            this.isSendingTenantNotification.set(false);
+            this.tenantNotificationError.set(
+              err?.error?.detail || 'Error al enviar notificación individual al paciente.',
+            );
+          },
+        });
     }
   }
 
@@ -2356,7 +2596,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadNotificationCount();
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
-      : (this.isSaasAdmin() && this.appointmentFilterTenant() ? this.appointmentFilterTenant() : undefined);
+      : this.isSaasAdmin() && this.appointmentFilterTenant()
+        ? this.appointmentFilterTenant()
+        : undefined;
 
     this.appointmentService.getAppointments('ALL', tenantId).subscribe({
       next: (data) => {
@@ -2365,7 +2607,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const currentPending = this.pendingAppointmentsCount;
         if (currentPending > prevPending && prevPending >= 0) {
           this.newAppointmentAlert.set(
-            `Tienes ${currentPending} cita(s) pendiente(s) por atender.`
+            `Tienes ${currentPending} cita(s) pendiente(s) por atender.`,
           );
           setTimeout(() => this.newAppointmentAlert.set(null), 8000);
         }
@@ -2394,7 +2636,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.bitacoraKeyInput.set('');
           this.loadActivityLogs();
         } else {
-          this.bitacoraKeyError.set(res.message || 'La llave o contraseña de administrador es incorrecta.');
+          this.bitacoraKeyError.set(
+            res.message || 'La llave o contraseña de administrador es incorrecta.',
+          );
         }
       },
       error: (err: any) => {
@@ -2420,19 +2664,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   previousPatientPage(): void {
-    this.patientPageOffset.update(value => Math.max(0, value - this.patientPageSize));
+    this.patientPageOffset.update((value) => Math.max(0, value - this.patientPageSize));
     this.loadPatients(false);
   }
   nextPatientPage(): void {
-    this.patientPageOffset.update(value => value + this.patientPageSize);
+    this.patientPageOffset.update((value) => value + this.patientPageSize);
     this.loadPatients(false);
   }
   loadPatients(resetPage = true): void {
     if (this.isClient()) return;
     if (resetPage) this.patientPageOffset.set(0);
-    const filterActive = this.patientStatusFilter() === '' ? undefined : this.patientStatusFilter() === 'true';
-    const tenantId = this.isSaasAdmin() && this.patientFilterTenant() ? this.patientFilterTenant() : undefined;
-    this.patientService.getPatients(this.patientSearch(), filterActive, tenantId, this.patientPageSize, this.patientPageOffset()).subscribe({error: () => {}});
+    const filterActive =
+      this.patientStatusFilter() === '' ? undefined : this.patientStatusFilter() === 'true';
+    const tenantId =
+      this.isSaasAdmin() && this.patientFilterTenant() ? this.patientFilterTenant() : undefined;
+    this.patientService
+      .getPatients(
+        this.patientSearch(),
+        filterActive,
+        tenantId,
+        this.patientPageSize,
+        this.patientPageOffset(),
+      )
+      .subscribe({ error: () => {} });
   }
 
   openEditPatient(patient: PatientListItem): void {
@@ -2534,7 +2788,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return {
             ...curr,
             recommendations: curr.recommendations.map((r) =>
-              r.recipe_id === recipeId ? { ...r, already_assigned: true } : r
+              r.recipe_id === recipeId ? { ...r, already_assigned: true } : r,
             ),
           };
         });
@@ -2587,12 +2841,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const fatsPerMeal = Math.round(p.fats_g / mealsCount);
     const fiberPerMeal = Math.round((p.fiber_g || 25) / mealsCount);
 
-    let suggestedIngredients = '150g pechuga de pollo o tofu, 1 taza de espinacas o ensalada fresca, 1/2 taza de quinoa o arroz integral, 1 cdta de aceite de oliva';
-    let suggestedInstructions = '1. Lavar y preparar los alimentos frescos.\n2. Cocinar a la plancha o al vapor con especias naturales al gusto.\n3. Servir en plato según los macronutrientes calculados en el plan.';
+    let suggestedIngredients =
+      '150g pechuga de pollo o tofu, 1 taza de espinacas o ensalada fresca, 1/2 taza de quinoa o arroz integral, 1 cdta de aceite de oliva';
+    let suggestedInstructions =
+      '1. Lavar y preparar los alimentos frescos.\n2. Cocinar a la plancha o al vapor con especias naturales al gusto.\n3. Servir en plato según los macronutrientes calculados en el plan.';
     let suggestedCategory = 'Almuerzo';
 
     if (p.meals && p.meals.length > 0) {
-      const matchMeal = p.meals.find((m) => m.meal_name?.toLowerCase().includes('almuerzo')) || p.meals[0];
+      const matchMeal =
+        p.meals.find((m) => m.meal_name?.toLowerCase().includes('almuerzo')) || p.meals[0];
       if (matchMeal) {
         if (matchMeal.meal_name?.toLowerCase().includes('desayuno')) suggestedCategory = 'Desayuno';
         else if (matchMeal.meal_name?.toLowerCase().includes('cena')) suggestedCategory = 'Cena';
@@ -2642,14 +2899,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         patient.id,
         this.planCustomGoal() || undefined,
         this.planCalorieAdjustmentPct() || undefined,
-        this.planMealsPerDay() || 4
+        this.planMealsPerDay() || 4,
       )
       .subscribe({
         next: (draft) => {
           this.selectedPlanDraft.set(draft);
           this.isGeneratingAiPlan.set(false);
           this.aiPlanSuccess.set(
-            '¡Borrador generado con éxito con cálculo Mifflin-St Jeor y reglas de seguridad clínica!'
+            '¡Borrador generado con éxito con cálculo Mifflin-St Jeor y reglas de seguridad clínica!',
           );
         },
         error: (err: any) => {
@@ -2670,7 +2927,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (approvedPlan) => {
         this.selectedPlanDraft.set(approvedPlan);
         this.isApprovingAiPlan.set(false);
-        this.aiPlanSuccess.set('¡Plan aprobado y publicado! El paciente ahora tiene su menú de 7 días activo en la App Móvil.');
+        this.aiPlanSuccess.set(
+          '¡Plan aprobado y publicado! El paciente ahora tiene su menú de 7 días activo en la App Móvil.',
+        );
       },
       error: (err: any) => {
         this.isApprovingAiPlan.set(false);
@@ -2691,7 +2950,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.automationRunning.set(null);
         this.automationResult.set(res);
         this.automationSuccess.set(
-          `RPA Citas: ${res.message || 'Verificación completada'} (Recordatorios enviados: ${res.reminders_sent ?? 0})`
+          `RPA Citas: ${res.message || 'Verificación completada'} (Recordatorios enviados: ${res.reminders_sent ?? 0})`,
         );
         setTimeout(() => this.automationSuccess.set(null), 6000);
       },
@@ -2712,7 +2971,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.automationRunning.set(null);
         this.automationResult.set(res);
         this.automationSuccess.set(
-          `RPA Hábitos: ${res.message || 'Evaluación de hábitos completada'} (Pacientes evaluados: ${res.patients_evaluated ?? 0})`
+          `RPA Hábitos: ${res.message || 'Evaluación de hábitos completada'} (Pacientes evaluados: ${res.patients_evaluated ?? 0})`,
         );
         setTimeout(() => this.automationSuccess.set(null), 6000);
       },
@@ -2737,7 +2996,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.automationRunning.set(null);
-        this.automationError.set(err?.error?.detail || 'Error al generar resumen para nutricionista');
+        this.automationError.set(
+          err?.error?.detail || 'Error al generar resumen para nutricionista',
+        );
         setTimeout(() => this.automationError.set(null), 5000);
       },
     });
@@ -2747,6 +3008,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // MÓDULO DE REPORTES DINÁMICOS
   // ==========================================
   loadReportConfig(): void {
+    this.loadReportBranches();
     this.reportService.getEntities().subscribe({
       next: (entities) => {
         if (entities.length > 0) {
@@ -2762,15 +3024,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
     });
   }
-
   onReportEntityChange(entityKey: string): void {
+    this.reportAnalysisOptions.update((o) => ({
+      tenant_ids: o.tenant_ids,
+      branch_ids: o.branch_ids,
+    }));
     this.selectedReportEntity.set(entityKey);
     const ent = this.reportService.entities().find((e) => e.entity === entityKey);
-    if (ent) {
-      this.selectedReportColumns.set(ent.available_columns.map((c) => c.key));
-    } else {
-      this.selectedReportColumns.set([]);
-    }
+    if (ent) this.selectedReportColumns.set(ent.available_columns.map((c) => c.key));
+    else this.selectedReportColumns.set([]);
     this.generateReportPreview();
   }
 
@@ -2803,28 +3065,152 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.reportEndDate.set('');
     this.reportStatusFilter.set('');
     this.reportSearch.set('');
+    this.reportAnalysisOptions.update((o) => ({ ...o, filters: [], currency: undefined }));
     this.generateReportPreview();
   }
 
-  generateReportPreview(): void {
-    const req = {
+  savedReports = signal<any[]>([]);
+  loadSavedReports(): void {
+    this.reportService
+      .savedReports(this.isSaasAdmin() ? this.reportFilterTenant() || undefined : undefined)
+      .subscribe({
+        next: (rows) => this.savedReports.set(rows),
+        error: (e) =>
+          this.reportError.set(
+            e?.error?.detail || 'Selecciona una empresa para consultar sus reportes guardados.',
+          ),
+      });
+  }
+  currentReportRequest(): ReportQueryRequest {
+    const options = this.reportAnalysisOptions();
+    return {
+      ...options,
       entity: this.selectedReportEntity(),
-      columns: this.selectedReportColumns(),
+      columns: this.selectedReportColumns().length ? this.selectedReportColumns() : undefined,
       start_date: this.reportStartDate() || undefined,
       end_date: this.reportEndDate() || undefined,
       status: this.reportStatusFilter() || undefined,
       search: this.reportSearch() || undefined,
-      limit: 200,
-      tenant_id: this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined,
+      limit: options.limit || 500,
+      tenant_id: this.isSaasAdmin() ? this.reportFilterTenant() || undefined : undefined,
     };
+  }
+  saveCurrentReport(): void {
+    this.reportService.saveReport(this.currentReportRequest()).subscribe({
+      next: () => {
+        this.reportMessage.set(
+          'Reporte guardado. Los reportes de una empresa se incluyen en su respaldo.',
+        );
+        this.loadSavedReports();
+      },
+      error: (e) => this.reportError.set(e?.error?.detail || 'No se pudo guardar el reporte.'),
+    });
+  }
+  loadReportBranches(): void {
+    this.tenantService
+      .getBranches(
+        this.isSaasAdmin()
+          ? this.reportFilterTenant() || undefined
+          : this.authService.currentUser()?.tenant_id,
+      )
+      .subscribe({
+        next: (rows) =>
+          this.reportBranches.set(
+            this.reportAnalysisOptions().tenant_ids?.length
+              ? rows.filter((b) => this.reportAnalysisOptions().tenant_ids!.includes(b.tenant_id))
+              : rows,
+          ),
+        error: () => this.reportBranches.set([]),
+      });
+  }
+  setReportGrouping(value: string): void {
+    this.reportAnalysisOptions.update((o) => ({
+      ...o,
+      group_by: value === 'total' || !value ? null : (value as ReportQueryRequest['group_by']),
+      aggregate: !!value,
+      sort_by: value === 'month' ? 'month' : value ? 'value' : undefined,
+      sort_order: value === 'month' ? 'asc' : 'desc',
+    }));
+    this.generateReportPreview();
+  }
+  setReportMetric(value: string): void {
+    if (value === 'cancellation_rate') this.reportStatusFilter.set('');
+    this.reportAnalysisOptions.update((o) => ({
+      ...o,
+      metric: value as ReportQueryRequest['metric'],
+      aggregate: true,
+      value_field:
+        value === 'sum' || value === 'average'
+          ? this.selectedReportEntity() === 'payments'
+            ? 'amount'
+            : this.selectedReportEntity() === 'nutritional_plans'
+              ? 'daily_calories'
+              : 'calories'
+          : undefined,
+    }));
+    this.generateReportPreview();
+  }
+  setReportCompanies(event: Event): void {
+    const values = Array.from((event.target as HTMLSelectElement).selectedOptions).map(
+      (o) => o.value,
+    );
+    this.reportFilterTenant.set('');
+    this.reportAnalysisOptions.update((o) => ({ ...o, tenant_ids: values, branch_ids: [] }));
+    this.loadReportBranches();
+    this.generateReportPreview();
+  }
+  setReportBranches(event: Event): void {
+    const values = Array.from((event.target as HTMLSelectElement).selectedOptions).map(
+      (o) => o.value,
+    );
+    this.reportAnalysisOptions.update((o) => ({ ...o, branch_ids: values }));
+    this.generateReportPreview();
+  }
+  reportBarWidth(value: number): number {
+    const values = (this.reportPreviewData()?.rows || []).map((r) => Number(r['value']) || 0);
+    return Math.max(0, Math.min(100, (100 * value) / Math.max(1, ...values)));
+  }
+  reportRowLabel(row: Record<string, any>): string {
+    return (
+      [
+        row['company_name'],
+        row['branch_name'],
+        row['month'],
+        row['nutritionist_name'],
+        row['status'],
+        row['payment_method'],
+        row['currency'],
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Total'
+    );
+  }
+  openSavedReport(id: string): void {
+    this.reportService.getSavedReport(id).subscribe({
+      next: (r) => this.reportPreviewData.set(r),
+      error: (e) => this.reportError.set(e?.error?.detail || 'No se pudo abrir el reporte.'),
+    });
+  }
+  deleteSavedReport(id: string): void {
+    if (!window.confirm('¿Eliminar este reporte guardado?')) return;
+    this.reportService.deleteSavedReport(id).subscribe({
+      next: () => this.loadSavedReports(),
+      error: (e) => this.reportError.set(e?.error?.detail || 'No se pudo eliminar el reporte.'),
+    });
+  }
+  generateReportPreview(): void {
+    const version = ++this.reportRequestVersion;
+    const req = this.currentReportRequest();
     this.isLoadingReport.set(true);
     this.reportError.set(null);
     this.reportService.queryReport(req).subscribe({
       next: (res) => {
+        if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
         this.reportPreviewData.set(res);
         this.isLoadingReport.set(false);
       },
       error: (err: any) => {
+        if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
         this.reportError.set(err?.error?.detail || 'Error al generar vista previa');
         this.isLoadingReport.set(false);
       },
@@ -2832,16 +3218,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   exportReportExcel(): void {
-    const req = {
-      entity: this.selectedReportEntity(),
-      columns: this.selectedReportColumns(),
-      start_date: this.reportStartDate() || undefined,
-      end_date: this.reportEndDate() || undefined,
-      status: this.reportStatusFilter() || undefined,
-      search: this.reportSearch() || undefined,
-      limit: 500,
-      tenant_id: this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined,
-    };
+    const req = this.currentReportRequest();
     this.isExportingReport.set(true);
     this.reportService.exportExcel(req).subscribe({
       next: (blob) => {
@@ -2860,16 +3237,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   exportReportPdf(): void {
-    const req = {
-      entity: this.selectedReportEntity(),
-      columns: this.selectedReportColumns(),
-      start_date: this.reportStartDate() || undefined,
-      end_date: this.reportEndDate() || undefined,
-      status: this.reportStatusFilter() || undefined,
-      search: this.reportSearch() || undefined,
-      limit: 500,
-      tenant_id: this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined,
-    };
+    const req = this.currentReportRequest();
     this.isExportingReport.set(true);
     this.reportService.exportPdf(req).subscribe({
       next: (blob) => {
@@ -2897,9 +3265,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   startVoiceRecording(): void {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      this.reportError.set('Tu navegador no cuenta con soporte directo de SpeechRecognition. Puedes escribir la instrucción en el campo de texto.');
+      this.reportError.set(
+        'Tu navegador no cuenta con soporte directo de SpeechRecognition. Puedes escribir la instrucción en el campo de texto.',
+      );
       return;
     }
 
@@ -2944,6 +3315,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  private cancelVoiceActivity(): void {
+    if (this.speechRecognition) {
+      this.speechRecognition.onend = null;
+      this.speechRecognition.onresult = null;
+      try {
+        this.speechRecognition.abort();
+      } catch (_) {}
+      this.speechRecognition = null;
+    }
+    this.isRecordingVoice.set(false);
+    this.stopVoiceSummary();
+  }
+
   stopVoiceRecording(): void {
     if (this.speechRecognition) {
       try {
@@ -2956,10 +3340,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   onReportTenantChange(event: Event): void {
     const val = (event.target as HTMLSelectElement).value;
     this.reportFilterTenant.set(val);
+    this.reportAnalysisOptions.update((o) => ({ ...o, tenant_ids: [], branch_ids: [] }));
+    this.loadReportBranches();
     this.generateReportPreview();
   }
 
   processVoiceReportCommand(text?: string): void {
+    const version = ++this.reportRequestVersion;
     const transcript = (text || this.voiceTranscript()).trim();
     if (!transcript) {
       this.reportError.set('Por favor di o escribe una instrucción para el reporte.');
@@ -2970,41 +3357,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.reportError.set(null);
     this.geminiVoiceExplanation.set(null);
 
-    const tenantId = this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined;
-    this.reportService.sendVoiceCommand(transcript, tenantId).subscribe({
-      next: (res) => {
-        this.isProcessingVoice.set(false);
-        this.geminiVoiceExplanation.set(res.explanation);
+    const tenantId =
+      this.isSaasAdmin() && this.reportFilterTenant() ? this.reportFilterTenant() : undefined;
+    this.reportService
+      .sendVoiceCommand(
+        transcript,
+        tenantId,
+        this.reportAnalysisOptions().tenant_ids || [],
+        this.reportAnalysisOptions().branch_ids || [],
+      )
+      .subscribe({
+        next: (res) => {
+          if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
+          this.isProcessingVoice.set(false);
+          this.geminiVoiceExplanation.set(res.explanation);
 
-        // Actualizar parámetros en la interfaz de forma sincronizada
-        if (res.parsed_request) {
-          this.selectedReportEntity.set(res.parsed_request.entity);
-          if (res.parsed_request.columns && res.parsed_request.columns.length > 0) {
-            this.selectedReportColumns.set(res.parsed_request.columns);
+          // Actualizar parámetros en la interfaz de forma sincronizada
+          if (res.parsed_request) {
+            const p = res.parsed_request;
+            this.reportAnalysisOptions.set({
+              filters: p.filters,
+              aggregate: p.aggregate,
+              group_by: p.group_by,
+              metric: p.metric,
+              value_field: p.value_field,
+              tenant_ids: p.tenant_ids || [],
+              branch_ids: p.branch_ids || [],
+              sort_by: p.sort_by,
+              sort_order: p.sort_order,
+              limit: p.limit,
+              currency: p.currency,
+            });
+            if (this.isSaasAdmin()) this.reportFilterTenant.set(p.tenant_id || '');
+            this.loadReportBranches();
+            this.selectedReportColumns.set([]);
+            this.selectedReportEntity.set(res.parsed_request.entity);
+            if (res.parsed_request.columns && res.parsed_request.columns.length > 0) {
+              this.selectedReportColumns.set(res.parsed_request.columns);
+            }
+            this.reportStartDate.set(res.parsed_request.start_date || '');
+            this.reportEndDate.set(res.parsed_request.end_date || '');
+            this.reportSearch.set(res.parsed_request.search || '');
+            this.reportStatusFilter.set(res.parsed_request.status || '');
           }
-          this.reportStartDate.set(res.parsed_request.start_date || '');
-          this.reportEndDate.set(res.parsed_request.end_date || '');
-          this.reportSearch.set(res.parsed_request.search || '');
-          this.reportStatusFilter.set(res.parsed_request.status || '');
-        }
 
-        // Si vino la vista previa de datos generada directamente, asignarla
-        if (res.report_data) {
-          this.reportPreviewData.set(res.report_data);
-          this.voiceSummaryData.set(null);
-          this.stopVoiceSummary();
-        } else {
-          this.generateReportPreview();
-        }
+          // Si vino la vista previa de datos generada directamente, asignarla
+          if (res.report_data) {
+            this.reportPreviewData.set(res.report_data);
+            this.voiceSummaryData.set(null);
+            this.stopVoiceSummary();
+          } else {
+            this.generateReportPreview();
+          }
 
-        this.reportMessage.set(`Gemini IA: ${res.explanation}`);
-        setTimeout(() => this.reportMessage.set(null), 6000);
-      },
-      error: (err: any) => {
-        this.isProcessingVoice.set(false);
-        this.reportError.set(err?.error?.detail || 'Error al procesar el comando por voz con Gemini.');
-      },
-    });
+          this.reportMessage.set(`Gemini IA: ${res.explanation}`);
+          setTimeout(() => this.reportMessage.set(null), 6000);
+        },
+        error: (err: any) => {
+          this.isProcessingVoice.set(false);
+          if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
+          this.reportError.set(
+            err?.error?.detail || 'Error al procesar el comando por voz con Gemini.',
+          );
+        },
+      });
   }
 
   selectVoiceSuggestion(prompt: string): void {
@@ -3063,7 +3479,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '👥',
       title: 'Pacientes Activos y Contacto',
       command: 'Reporte de pacientes activos con fecha de registro y contacto',
-      description: 'Obtiene el listado de clientes activos vinculados a tu clínica con nombre, teléfono y correo para seguimiento directo.',
+      description:
+        'Obtiene el listado de clientes activos vinculados a tu clínica con nombre, teléfono y correo para seguimiento directo.',
       entity: 'patients',
       suggestedColumns: ['full_name', 'email', 'phone', 'is_active', 'created_at'],
       filterBadge: 'Activos',
@@ -3075,7 +3492,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '👥',
       title: 'Pacientes Sin Nutricionista Asignado',
       command: 'Listar pacientes sin especialista asignado',
-      description: 'Identifica pacientes de tu clínica que aún no cuentan con profesional asignado para distribuirlos en consulta.',
+      description:
+        'Identifica pacientes de tu clínica que aún no cuentan con profesional asignado para distribuirlos en consulta.',
       entity: 'patients',
       suggestedColumns: ['full_name', 'email', 'phone', 'is_active', 'created_at'],
       filterBadge: 'Sin Asignar',
@@ -3087,7 +3505,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '👥',
       title: 'Pacientes Registrados Recientes',
       command: 'Pacientes registrados este mes con correo y teléfono',
-      description: 'Auditoría cronológica de nuevos registros para llamadas de inducción o bienvenida en el centro médico.',
+      description:
+        'Auditoría cronológica de nuevos registros para llamadas de inducción o bienvenida en el centro médico.',
       entity: 'patients',
       suggestedColumns: ['full_name', 'email', 'phone', 'created_at'],
       filterBadge: 'Nuevos',
@@ -3099,7 +3518,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '👥',
       title: 'Padrón General de Clientes',
       command: 'Reporte completo de clientes con estado y fecha de registro',
-      description: 'Visión integral del padrón de usuarios registrados en el tenant con estado activo o inactivo.',
+      description:
+        'Visión integral del padrón de usuarios registrados en el tenant con estado activo o inactivo.',
       entity: 'patients',
       suggestedColumns: ['full_name', 'email', 'phone', 'is_active', 'created_at'],
       filterBadge: 'Padrón Completo',
@@ -3113,7 +3533,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '🥗',
       title: 'Catálogo de Recetas y Macronutrientes',
       command: 'Catálogo de recetas con calorías, proteínas y carbohidratos',
-      description: 'Listado completo de recetas exclusivas de la clínica con balance de macronutrientes para armado de planes.',
+      description:
+        'Listado completo de recetas exclusivas de la clínica con balance de macronutrientes para armado de planes.',
       entity: 'recipes',
       suggestedColumns: ['title', 'category', 'calories', 'protein', 'carbohydrates', 'fats'],
       filterBadge: 'Macronutrientes',
@@ -3125,7 +3546,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '🥗',
       title: 'Almuerzos Altos en Proteína',
       command: 'Recetas de almuerzo con calorías y proteínas',
-      description: 'Filtra opciones de almuerzo ricas en proteína para planes deportivos o de recomposición corporal.',
+      description:
+        'Filtra opciones de almuerzo ricas en proteína para planes deportivos o de recomposición corporal.',
       entity: 'recipes',
       suggestedColumns: ['title', 'calories', 'protein', 'servings', 'difficulty'],
       filterBadge: 'Almuerzo / Proteína',
@@ -3149,7 +3571,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '🥗',
       title: 'Cenas Ligeras de Fácil Preparación',
       command: 'Listar recetas de cena con dificultad fácil y detalle de grasas',
-      description: 'Cenas digestivas y bajas en lípidos con instrucciones sencillas para pacientes ambulatorios.',
+      description:
+        'Cenas digestivas y bajas en lípidos con instrucciones sencillas para pacientes ambulatorios.',
       entity: 'recipes',
       suggestedColumns: ['title', 'difficulty', 'calories', 'fats', 'fiber'],
       filterBadge: 'Cenas Fáciles',
@@ -3161,7 +3584,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '🥗',
       title: 'Snacks y Colaciones Saludables',
       command: 'Recetas de snacks y meriendas con calorías y porciones',
-      description: 'Colaciones intermedias controladas en calorías para regular la saciedad y niveles glucémicos.',
+      description:
+        'Colaciones intermedias controladas en calorías para regular la saciedad y niveles glucémicos.',
       entity: 'recipes',
       suggestedColumns: ['title', 'servings', 'calories', 'protein'],
       filterBadge: 'Snacks',
@@ -3175,9 +3599,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '📅',
       title: 'Citas Confirmadas de la Semana',
       command: 'Reporte de citas confirmadas de esta semana',
-      description: 'Agenda confirmada de atenciones para coordinar boxes y especialistas de la clínica.',
+      description:
+        'Agenda confirmada de atenciones para coordinar boxes y especialistas de la clínica.',
       entity: 'appointments',
-      suggestedColumns: ['appointment_date', 'status', 'patient_name', 'nutritionist_name', 'reason'],
+      suggestedColumns: [
+        'appointment_date',
+        'status',
+        'patient_name',
+        'nutritionist_name',
+        'reason',
+      ],
       filterBadge: 'Confirmadas',
     },
     {
@@ -3187,7 +3618,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '📅',
       title: 'Citas Pendientes de Confirmación',
       command: 'Citas pendientes de confirmación con fecha y paciente',
-      description: 'Citas solicitadas desde la app móvil por clientes que esperan aprobación de la clínica.',
+      description:
+        'Citas solicitadas desde la app móvil por clientes que esperan aprobación de la clínica.',
       entity: 'appointments',
       suggestedColumns: ['appointment_date', 'status', 'patient_name', 'reason'],
       filterBadge: 'Pendientes',
@@ -3199,7 +3631,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '📅',
       title: 'Citas Canceladas y Motivos',
       command: 'Historial de citas canceladas con motivo y fecha',
-      description: 'Monitoreo de cancelaciones con motivo para optimizar asistencia y reprogramaciones.',
+      description:
+        'Monitoreo de cancelaciones con motivo para optimizar asistencia y reprogramaciones.',
       entity: 'appointments',
       suggestedColumns: ['appointment_date', 'patient_name', 'status', 'cancellation_reason'],
       filterBadge: 'Canceladas',
@@ -3211,7 +3644,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '📅',
       title: 'Agenda Mensual por Especialista',
       command: 'Agenda de citas del mes con estado y especialista',
-      description: 'Resumen consolidado del flujo de atenciones y carga horaria del equipo nutricional.',
+      description:
+        'Resumen consolidado del flujo de atenciones y carga horaria del equipo nutricional.',
       entity: 'appointments',
       suggestedColumns: ['appointment_date', 'status', 'patient_name', 'nutritionist_name'],
       filterBadge: 'Mensual',
@@ -3227,7 +3661,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       command: 'Reporte de pagos y cobros de suscripciones',
       description: 'Relación de ingresos por mensualidades y planes de suscripción de la clínica.',
       entity: 'payments',
-      suggestedColumns: ['customer_name', 'concept', 'amount', 'currency', 'status', 'payment_date'],
+      suggestedColumns: [
+        'customer_name',
+        'concept',
+        'amount',
+        'currency',
+        'status',
+        'payment_date',
+      ],
       filterBadge: 'Suscripciones',
     },
     {
@@ -3275,7 +3716,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '📋',
       title: 'Fichas Clínicas y Metas Terapéuticas',
       command: 'Reporte de fichas clínicas con diagnósticos y objetivos nutricionales',
-      description: 'Historial patológico, diagnósticos de ingreso y objetivos terapéuticos trazados.',
+      description:
+        'Historial patológico, diagnósticos de ingreso y objetivos terapéuticos trazados.',
       entity: 'clinical_records',
       suggestedColumns: ['patient_name', 'diagnosis', 'clinical_goals', 'created_at'],
       filterBadge: 'Diagnósticos',
@@ -3313,7 +3755,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '🔒',
       title: 'Bitácora de Auditoría Reciente',
       command: 'Bitácora de auditoría y movimientos recientes',
-      description: 'Trazabilidad de acciones registradas por los usuarios autorizados de tu clínica.',
+      description:
+        'Trazabilidad de acciones registradas por los usuarios autorizados de tu clínica.',
       entity: 'activity_logs',
       suggestedColumns: ['user_name', 'action', 'details', 'module', 'created_at'],
       filterBadge: 'Auditoría',
@@ -3325,7 +3768,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       categoryIcon: '🔒',
       title: 'Accesos e Inicios de Sesión',
       command: 'Registro de accesos e inicios de sesión del sistema',
-      description: 'Control de seguridad sobre inicios de sesión y accesos al entorno de la organización.',
+      description:
+        'Control de seguridad sobre inicios de sesión y accesos al entorno de la organización.',
       entity: 'activity_logs',
       suggestedColumns: ['user_name', 'action', 'details', 'created_at'],
       filterBadge: 'Seguridad',
@@ -3360,7 +3804,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   requestVoiceSummary(): void {
     const preview = this.reportPreviewData();
     if (!preview) {
-      this.reportError.set('Primero genera una vista previa del reporte para poder narrarlo por voz.');
+      this.reportError.set(
+        'Primero genera una vista previa del reporte para poder narrarlo por voz.',
+      );
       return;
     }
 
@@ -3368,6 +3814,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.reportError.set(null);
 
     const req: VoiceReportSummaryRequest = {
+      summary: preview.summary,
+      notes: preview.notes,
       entity: preview.entity,
       title: preview.title,
       total_rows: preview.total_rows,
@@ -3379,7 +3827,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (res) => {
         this.isLoadingVoiceSummary.set(false);
         this.voiceSummaryData.set(res);
-        this.speakText(res.summary_text);
+        if (this.activeTab() === 'reportes') this.speakText(res.summary_text);
       },
       error: (err) => {
         this.isLoadingVoiceSummary.set(false);
@@ -3455,7 +3903,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadBackupData(): void {
-    const tenantId = this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
+    if (this.isSaasAdmin() && !this.backupFilterTenant()) {
+      this.backupService.history.set([]);
+      this.backupService.settings.set(null);
+      return;
+    }
+    const tenantId =
+      this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
     this.backupService.getSettings(tenantId).subscribe({
       next: (s) => {
         this.backupForm.patchValue({
@@ -3469,7 +3923,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   saveBackupSettings(): void {
-    const tenantId = this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
+    if (this.isSaasAdmin() && !this.backupFilterTenant()) {
+      this.backupError.set('Selecciona una empresa.');
+      return;
+    }
+    const tenantId =
+      this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
     this.backupService.updateSettings(this.backupForm.value, tenantId).subscribe({
       next: () => {
         this.backupSuccess.set('Configuración de copias de seguridad actualizada.');
@@ -3483,10 +3942,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   createManualBackup(): void {
-    const tenantId = this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
+    if (this.isSaasAdmin() && !this.backupFilterTenant()) {
+      this.backupError.set('Selecciona una empresa.');
+      return;
+    }
+    const tenantId =
+      this.isSaasAdmin() && this.backupFilterTenant() ? this.backupFilterTenant() : undefined;
     this.backupService.exportManual(tenantId).subscribe({
       next: (log) => {
-        this.backupSuccess.set(`Copia de seguridad manual generada: ${log.filename} (${log.file_size_bytes} bytes).`);
+        this.backupSuccess.set(
+          `Copia de seguridad manual generada: ${log.filename} (${log.file_size_bytes} bytes).`,
+        );
         setTimeout(() => this.backupSuccess.set(null), 4000);
       },
       error: (err: any) => {
@@ -3502,6 +3968,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onBackupFileSelected(event: any): void {
     const file: File = event.target.files[0];
+    event.target.value = '';
+    if (this.isSaasAdmin() && !this.backupFilterTenant()) {
+      this.backupError.set('Selecciona una empresa antes de cargar el respaldo.');
+      return;
+    }
     if (file) {
       this.selectedRestoreFile = file;
       this.restoreModalOpen.set(true);
@@ -3513,24 +3984,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedRestoreFile = null;
   }
 
-  executeRestore(): void {
-    if (!this.selectedRestoreFile) return;
-    this.isRestoringBackup.set(true);
-    this.backupService.restoreBackup(this.selectedRestoreFile).subscribe({
-      next: (res) => {
-        this.isRestoringBackup.set(false);
-        this.backupSuccess.set(res.message);
-        this.closeRestoreModal();
-        setTimeout(() => this.backupSuccess.set(null), 5000);
-      },
-      error: (err: any) => {
-        this.isRestoringBackup.set(false);
-        this.backupError.set(err?.error?.detail || 'Error durante la restauración del sistema');
-        setTimeout(() => this.backupError.set(null), 4000);
-      },
-    });
-  }
-
   onBackupRestored(msg: string): void {
     this.backupSuccess.set(msg);
     this.closeRestoreModal();
@@ -3539,9 +3992,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   onRecipeSaved(event: { isEdit: boolean; title: string }): void {
     const action = event.isEdit ? 'RECETA_MODIFICADA' : 'RECETA_CREADA';
-    const detail = event.isEdit ? `Se editó la receta ${event.title}` : `Se creó la receta ${event.title}`;
+    const detail = event.isEdit
+      ? `Se editó la receta ${event.title}`
+      : `Se creó la receta ${event.title}`;
     this.activityLogService.recordActivity(action, detail, 'CLINICAL');
-    this.recipeSuccess.set(event.isEdit ? `Receta '${event.title}' actualizada con éxito.` : `Receta '${event.title}' creada con éxito.`);
+    this.recipeSuccess.set(
+      event.isEdit
+        ? `Receta '${event.title}' actualizada con éxito.`
+        : `Receta '${event.title}' creada con éxito.`,
+    );
     this.loadRecipes();
     setTimeout(() => this.recipeSuccess.set(null), 4000);
   }
@@ -3560,12 +4019,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onAppointmentCancelled(appt?: Appointment): void {
-    const patientName = appt?.patient_name || this.appointmentToCancel()?.patient_name || 'el paciente';
-    this.appointmentSuccess.set(`La cita ha sido cancelada. Se ha enviado notificación a ${patientName} con el motivo especificado.`);
+    const patientName =
+      appt?.patient_name || this.appointmentToCancel()?.patient_name || 'el paciente';
+    this.appointmentSuccess.set(
+      `La cita ha sido cancelada. Se ha enviado notificación a ${patientName} con el motivo especificado.`,
+    );
     this.loadAppointments();
     this.loadNotificationCount();
     setTimeout(() => this.appointmentSuccess.set(null), 5000);
   }
 }
-
-

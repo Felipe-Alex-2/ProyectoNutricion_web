@@ -1,3 +1,5 @@
+import { AuthShellComponent } from '../auth-shell.component';
+import { IconComponent } from '../../../shared/ui/icon.component';
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -33,9 +35,9 @@ export function passwordComplexityValidator(control: AbstractControl): Validatio
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthShellComponent, IconComponent],
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
+  styleUrls: ['../auth-form.css'],
 })
 export class LoginComponent {
   loginForm: FormGroup;

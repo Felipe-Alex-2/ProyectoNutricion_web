@@ -1,0 +1,82 @@
+<section
+  class="showcase"
+  aria-roledescription="carrusel"
+  aria-label="Descubre NutriSalud"
+  (mouseenter)="hovered.set(true)"
+  (mouseleave)="hovered.set(false)"
+  (focusin)="focused.set(true)"
+  (focusout)="onFocusOut($event)"
+>
+  @for (slide of slides; track slide.crop; let i = $index) {
+    <article
+      class="showcase-slide"
+      [class.active]="activeSlide() === i"
+      [attr.aria-hidden]="activeSlide() !== i"
+      role="group"
+      aria-roledescription="diapositiva"
+      [attr.aria-label]="i + 1 + ' de 3'"
+    >
+      <svg
+        class="showcase-photo"
+        [attr.viewBox]="slide.crop"
+        preserveAspectRatio="xMidYMid slice"
+        role="img"
+        [attr.aria-label]="slide.alt"
+      >
+        <image href="/images/nutrisalud-auth-scenes.webp" x="0" y="0" width="1672" height="941" />
+      </svg>
+      <div class="photo-shade"></div>
+      <span class="showcase-badge"><ns-icon name="leaf" />{{ slide.badge }}</span>
+      <div class="showcase-caption">
+        <span class="showcase-eyebrow">{{ slide.eyebrow }}</span>
+        <h2>{{ slide.title }}</h2>
+        <p>{{ slide.text }}</p>
+        <span class="caption-line"></span
+        ><span class="showcase-signature">NutriSalud · Nutrición & bienestar</span>
+      </div>
+    </article>
+  }
+  <div class="carousel-top-controls">
+    <span class="slide-position">0{{ activeSlide() + 1 }} / 03</span
+    ><button
+      class="carousel-button"
+      type="button"
+      [attr.aria-label]="paused() ? 'Reproducir carrusel' : 'Pausar carrusel'"
+      [attr.aria-pressed]="paused()"
+      (click)="toggle()"
+    >
+      <ns-icon [name]="paused() ? 'play' : 'pause'" />
+    </button>
+  </div>
+  <div class="carousel-bottom-controls">
+    <button
+      type="button"
+      class="carousel-button"
+      aria-label="Imagen anterior"
+      (click)="select(activeSlide() - 1)"
+    >
+      <ns-icon name="back" />
+    </button>
+    <div class="carousel-dots" aria-label="Elegir imagen">
+      @for (slide of slides; track slide.crop; let i = $index) {
+        <button
+          type="button"
+          [class.active]="activeSlide() === i"
+          [attr.aria-label]="'Ver imagen ' + (i + 1) + ': ' + slide.badge"
+          [attr.aria-pressed]="activeSlide() === i"
+          (click)="select(i)"
+        >
+          <span></span>
+        </button>
+      }
+    </div>
+    <button
+      type="button"
+      class="carousel-button"
+      aria-label="Imagen siguiente"
+      (click)="select(activeSlide() + 1)"
+    >
+      <ns-icon name="arrow" />
+    </button>
+  </div>
+</section>

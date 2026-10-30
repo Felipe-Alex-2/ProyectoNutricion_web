@@ -146,7 +146,7 @@ export class PaypalReturnComponent implements OnInit {
             this.success.set(true);
             this.successDetail.set('Suscripción activada exitosamente.');
             setTimeout(() => {
-              this.router.navigate(['/dashboard'], { queryParams: { tab: 'suscripciones', sub_success: 'true' } });
+              this.router.navigate(['/dashboard'], { queryParams: { tab: 'suscripcion', sub_success: 'true' } });
             }, 1200);
           },
           error: (subErr) => {

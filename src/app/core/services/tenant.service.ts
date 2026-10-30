@@ -22,6 +22,14 @@ export class TenantService {
     return this.http.get<Tenant[]>(`${this.apiUrl}/public`);
   }
 
+  getBranches(
+    tenantId?: string,
+  ): Observable<{ id: string; name: string; tenant_id: string; code: string }[]> {
+    return this.http.get<{ id: string; name: string; tenant_id: string; code: string }[]>(
+      `${environment.apiUrl}/branches`,
+      { params: tenantId ? { tenant_id: tenantId } : {} },
+    );
+  }
   getTenant(id: string): Observable<Tenant> {
     return this.http.get<Tenant>(`${this.apiUrl}/${id}`);
   }

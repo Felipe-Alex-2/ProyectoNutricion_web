@@ -1,6 +1,7 @@
 export interface Payment {
   id: string;
   tenant_id: string;
+  branch_id?: string;
   tenant_name?: string | null;
   cashier_id?: string | null;
   cashier_name?: string | null;
@@ -20,6 +21,7 @@ export interface Payment {
 
 export interface PaymentCreate {
   tenant_id: string;
+  branch_id?: string;
   customer_name: string;
   customer_email?: string | null;
   concept: string;

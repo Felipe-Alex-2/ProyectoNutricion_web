@@ -1,3 +1,7 @@
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { AuthShellComponent } from '../auth-shell.component';
+import { IconComponent } from '../../../shared/ui/icon.component';
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -33,11 +37,13 @@ export function passwordComplexityValidator(control: AbstractControl): Validatio
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AuthShellComponent, IconComponent],
   templateUrl: './register.component.html',
-  styleUrls: ['./register.component.css'],
+  styleUrls: ['../auth-form.css'],
 })
 export class RegisterComponent {
+  companies = signal<{id:string;name:string}[]>([]);
+  branches = signal<{id:string;name:string}[]>([]);
   registerForm: FormGroup;
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
@@ -47,20 +53,39 @@ export class RegisterComponent {
     private fb: FormBuilder,
     public authService: AuthService,
     public themeService: ThemeService,
+    private http: HttpClient,
     private router: Router
   ) {
     this.registerForm = this.fb.group({
+      tenant_id: ['', Validators.required],
+      branch_id: ['', Validators.required],
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, passwordComplexityValidator]],
       confirmPassword: ['', [Validators.required]],
     }, { validators: this.passwordMatchValidator });
+    this.http.get<{id:string;name:string}[]>(`${environment.apiUrl}/tenants/public`).subscribe({next: rows=>this.companies.set(rows),error:()=>this.errorMessage.set('No se pudieron cargar las empresas. Intenta nuevamente.')});
+    this.registerForm.get('tenant_id')!.valueChanges.subscribe(id=>{
+      this.branches.set([]); this.registerForm.patchValue({branch_id:''});
+      if(id) this.http.get<{id:string;name:string}[]>(`${environment.apiUrl}/branches/public`,{params:{tenant_id:id}}).subscribe({next: rows=>{ if(this.registerForm.value.tenant_id !== id)return; this.branches.set(rows); if(rows.length===1)this.registerForm.patchValue({branch_id:rows[0].id}); },error:()=>this.errorMessage.set('No se pudieron cargar las sucursales.')});
+    });
   }
 
   passwordMatchValidator(g: FormGroup) {
     return g.get('password')?.value === g.get('confirmPassword')?.value
       ? null
       : { mismatch: true };
+  }
+
+  get passwordRequirements() {
+    const value = String(this.registerForm.get('password')?.value || '');
+    return [
+      {label:'8 caracteres como mínimo',met:value.length >= 8},
+      {label:'Una letra mayúscula',met:/[A-Z]/.test(value)},
+      {label:'Una letra minúscula',met:/[a-z]/.test(value)},
+      {label:'Un número',met:/[0-9]/.test(value)},
+      {label:'Un símbolo',met:/[^A-Za-z0-9]/.test(value)},
+    ];
   }
 
   togglePassword(): void {
@@ -75,9 +100,9 @@ export class RegisterComponent {
 
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    const { email, password, full_name } = this.registerForm.value;
+    const { email, password, full_name, tenant_id, branch_id } = this.registerForm.value;
 
-    this.authService.register({ email, password, full_name }).subscribe({
+    this.authService.register({ email, password, full_name, tenant_id, branch_id }).subscribe({
       next: () => {
         this.successMessage.set('¡Cuenta creada exitosamente! Iniciando sesión...');
         // Auto login

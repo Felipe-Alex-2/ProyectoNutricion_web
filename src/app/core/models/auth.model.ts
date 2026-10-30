@@ -5,6 +5,8 @@ export interface RegisterRequest {
   password: string;
   full_name: string;
   client_platform?: string;
+  tenant_id?: string;
+  branch_id?: string;
 }
 
 export interface LoginRequest {

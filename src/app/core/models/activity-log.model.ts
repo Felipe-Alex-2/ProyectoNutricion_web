@@ -6,7 +6,6 @@ export interface ActivityLog {
   action: string;
   description: string;
   category: string;
-  ip_address?: string;
   created_at: string;
 }
 

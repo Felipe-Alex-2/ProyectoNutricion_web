@@ -37,7 +37,7 @@ export class ReportService {
           this.errorMessage.set(err?.error?.detail || 'Error al obtener entidades reportables');
           this.isLoading.set(false);
         },
-      })
+      }),
     );
   }
 
@@ -54,10 +54,24 @@ export class ReportService {
           this.errorMessage.set(err?.error?.detail || 'Error al generar vista previa del reporte');
           this.isLoading.set(false);
         },
-      })
+      }),
     );
   }
 
+  savedReports(tenantId?: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/saved`, {
+      params: tenantId ? { tenant_id: tenantId } : {},
+    });
+  }
+  saveReport(req: ReportQueryRequest): Observable<any> {
+    return this.http.post(`${this.apiUrl}/saved`, req);
+  }
+  getSavedReport(id: string): Observable<ReportQueryResponse> {
+    return this.http.get<ReportQueryResponse>(`${this.apiUrl}/saved/${id}`);
+  }
+  deleteSavedReport(id: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/saved/${id}`);
+  }
   exportExcel(req: ReportQueryRequest): Observable<Blob> {
     return this.http.post(`${this.apiUrl}/export/excel`, req, {
       responseType: 'blob',
@@ -70,8 +84,17 @@ export class ReportService {
     });
   }
 
-  sendVoiceCommand(transcript: string, tenantId?: string): Observable<VoiceReportCommandResponse> {
-    const body: VoiceReportCommandRequest = { transcript };
+  sendVoiceCommand(
+    transcript: string,
+    tenantId?: string,
+    tenantIds: string[] = [],
+    branchIds: string[] = [],
+  ): Observable<VoiceReportCommandResponse> {
+    const body: VoiceReportCommandRequest = {
+      transcript,
+      tenant_ids: tenantIds,
+      branch_ids: branchIds,
+    };
     if (tenantId) body.tenant_id = tenantId;
     return this.http.post<VoiceReportCommandResponse>(`${this.apiUrl}/voice-command`, body);
   }

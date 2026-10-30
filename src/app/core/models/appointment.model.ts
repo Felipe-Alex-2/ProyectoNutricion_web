@@ -9,7 +9,7 @@ export interface Appointment {
   nutritionist_name?: string | null;
   scheduled_at: string;
   reason?: string | null;
-  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   cancellation_reason?: string | null;
   created_at: string;
   updated_at: string;

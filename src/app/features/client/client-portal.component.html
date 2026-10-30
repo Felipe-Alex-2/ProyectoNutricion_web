@@ -1,0 +1,1061 @@
+<a class="ns-skip" [routerLink]="[]" fragment="mi-contenido" queryParamsHandling="preserve"
+  >Saltar al contenido</a
+>
+<div class="ns-container portal-shell">
+  <header class="ns-topbar">
+    <a class="ns-brand" routerLink="/"
+      ><span class="ns-brand-mark"><ns-icon name="leaf" /></span
+      ><span>NutriSalud<small>MI ESPACIO DE BIENESTAR</small></span></a
+    >
+    <nav class="ns-topnav" aria-label="Mi espacio">
+      @for (item of navItems; track item.id) {
+        <button
+          [class.active]="tab() === item.id"
+          [attr.aria-current]="tab() === item.id ? 'page' : null"
+          (click)="go(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </nav>
+    <div class="ns-actions account-actions">
+      <button
+        class="ns-icon-btn"
+        (click)="go('notificaciones')"
+        [attr.aria-label]="'Notificaciones: ' + unread() + ' sin leer'"
+      >
+        <ns-icon name="bell" />
+        @if (unread() > 0) {
+          <span class="ns-count">{{ unread() }}</span>
+        }
+      </button>
+      <div class="account-wrapper">
+        <button
+          class="account-trigger"
+          aria-label="Abrir menú de mi cuenta"
+          [attr.aria-expanded]="accountOpen()"
+          aria-controls="mi-cuenta-menu"
+          (click)="accountOpen.set(!accountOpen())"
+          (keydown.escape)="accountOpen.set(false)"
+        >
+          <span class="account-avatar">{{ firstName().charAt(0) }}</span
+          ><span class="account-name">{{ firstName() }}</span
+          ><span aria-hidden="true">⌄</span>
+        </button>
+        @if (accountOpen()) {
+          <div
+            id="mi-cuenta-menu"
+            class="account-dropdown"
+            (keydown.escape)="accountOpen.set(false)"
+          >
+            <button (click)="go('perfil')"><ns-icon name="users" />Mi perfil</button
+            ><button (click)="go('suscripcion')">
+              <ns-icon name="wallet" />Suscripción y pagos</button
+            ><button (click)="theme.toggleTheme()">
+              <ns-icon name="sun" />{{ theme.isDarkMode() ? 'Modo claro' : 'Modo oscuro' }}</button
+            ><button (click)="auth.logout()"><ns-icon name="logout" />Cerrar sesión</button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+  <main id="mi-contenido">
+    @if (error()) {
+      <div class="ns-feedback error" role="alert">{{ error() }}</div>
+    }
+    @if (success()) {
+      <div class="ns-feedback" role="status">{{ success() }}</div>
+    }
+    @if (tab() === 'inicio') {
+      <section class="ns-hero patient-hero">
+        <div>
+          <span class="ns-eyebrow"><span class="ns-dot"></span>ESTE ESPACIO ES PARA TI</span>
+          <h1>Hola, {{ firstName() }}.<br />Hoy también puedes<br /><em>cuidar de ti.</em></h1>
+          <p>
+            Tu bienestar se construye un día a la vez. Aquí tienes tu plan, tus citas y el
+            acompañamiento de tu nutricionista.
+          </p>
+          <div class="ns-actions">
+            <button class="ns-btn ns-btn-primary" (click)="go('plan')">
+              Ver mi plan<ns-icon name="arrow" /></button
+            ><button class="ns-btn" (click)="go('citas')">
+              <ns-icon name="calendar" />Mis consultas
+            </button>
+          </div>
+          <div class="ns-hero-foot">
+            <span><ns-icon name="shield" />Tu información, en tu cuenta</span
+            ><span><ns-icon name="check" />Web y móvil conectados</span>
+          </div>
+        </div>
+        <div class="ns-card today-card">
+          <div class="ns-section-heading">
+            <h2>Tu bienestar, a la vista</h2>
+            <ns-icon name="leaf" />
+          </div>
+          <div class="ns-inset goal-card">
+            <span class="ns-stat-label">Mi objetivo</span>
+            <h3>{{ anamnesis()?.goal || 'Cada camino empieza con un objetivo' }}</h3>
+            <p>
+              {{
+                anamnesis()
+                  ? 'Lo registraste en tu ficha de salud.'
+                  : 'Completa tu ficha para que tu especialista te conozca.'
+              }}
+            </p>
+            <button class="text-link" (click)="go('salud')">
+              {{ anamnesis() ? 'Revisar mi ficha' : 'Completar mi ficha' }}<ns-icon name="arrow" />
+            </button>
+          </div>
+          <div class="today-grid">
+            <div class="ns-inset">
+              <span class="ns-stat-label">Plan nutricional</span
+              ><strong>{{
+                loading()['plan']
+                  ? 'Cargando…'
+                  : loadErrors()['plan']
+                    ? 'No disponible'
+                    : plan()
+                      ? 'Aprobado'
+                      : 'Por preparar'
+              }}</strong
+              ><small>{{
+                plan() ? plan()!.daily_calories + ' kcal al día' : 'Con tu nutricionista'
+              }}</small>
+            </div>
+            <div class="ns-inset">
+              <span class="ns-stat-label">Próxima consulta</span
+              ><strong>{{
+                loading()['citas']
+                  ? 'Cargando…'
+                  : loadErrors()['citas']
+                    ? 'No disponible'
+                    : nextAppointment()
+                      ? (nextAppointment()!.scheduled_at | date: 'dd MMM')
+                      : 'Sin agendar'
+              }}</strong
+              ><small>{{
+                nextAppointment()
+                  ? (nextAppointment()!.scheduled_at | date: 'HH:mm')
+                  : 'Encuentra un horario'
+              }}</small>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section>
+        <div class="ns-section-heading">
+          <div>
+            <h2>Un poco más cerca de tus metas.</h2>
+            <p>Tus herramientas para hacer más sencillo el día a día.</p>
+          </div>
+          <span class="ns-tag">A tu ritmo</span>
+        </div>
+        <div class="ns-grid-3">
+          @for (
+            item of [
+              {
+                icon: 'file',
+                title: 'Mi ficha de salud',
+                text: 'Tus antecedentes y hábitos ayudan a personalizar tu atención.',
+                tab: 'salud',
+                action: 'Actualizar mi ficha',
+              },
+              {
+                icon: 'camera',
+                title: 'Conoce tu plato',
+                text: 'Obtén una estimación nutricional de tu comida con una fotografía.',
+                tab: 'foto',
+                action: 'Analizar mi comida',
+              },
+              {
+                icon: 'chat',
+                title: 'Conversa con Carlitos',
+                text: 'Orientación nutricional con el asistente IA. Requiere Premium.',
+                tab: 'asistente',
+                action: 'Abrir asistente',
+              },
+            ];
+            track item.tab
+          ) {
+            <article class="ns-card patient-feature">
+              <span class="ns-feature-icon"><ns-icon [name]="item.icon" /></span>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.text }}</p>
+              <button class="text-link" (click)="go(item.tab)">
+                {{ item.action }}<ns-icon name="arrow" />
+              </button>
+            </article>
+          }
+        </div>
+      </section>
+      <section class="ns-card connection-card">
+        <span class="ns-feature-icon"><ns-icon name="link" /></span>
+        <div>
+          <h2>{{ link() ? 'Tu nutricionista te acompaña' : 'Conecta con tu nutricionista' }}</h2>
+          <p>
+            {{
+              link()?.nutritionist_name ||
+                'Ingresa el código que te compartió tu especialista para vincular tu cuenta.'
+            }}
+          </p>
+          @if (loadErrors()['vinculo']) {
+            <p class="ns-feedback error">{{ loadErrors()['vinculo'] }}</p>
+          }
+        </div>
+        @if (!link()) {
+          <form [formGroup]="claimForm" (ngSubmit)="claim()" class="pairing-form">
+            <label class="ns-field" for="pairing-code"
+              >Código de vinculación<input
+                id="pairing-code"
+                formControlName="pairing_code"
+                placeholder="Ej. AB123"
+                maxlength="20"
+              />
+              @if (
+                claimForm.controls.pairing_code.touched && claimForm.controls.pairing_code.invalid
+              ) {
+                <small>Ingresa el código de tu especialista.</small>
+              }</label
+            ><button class="ns-btn ns-btn-primary" [disabled]="!!busy() || loading()['vinculo']">
+              {{ busy() === 'vinculo' ? 'Vinculando…' : 'Vincularme' }}
+            </button>
+          </form>
+        } @else {
+          <span class="ns-tag"><ns-icon name="check" />Cuenta vinculada</span>
+        }
+      </section>
+    }
+    @if (tab() === 'plan') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">HECHO PARA TI</span>
+        <h1>Mi plan nutricional</h1>
+        <p>Las indicaciones de tu especialista, siempre a mano.</p>
+      </div>
+      @if (loading()['plan']) {
+        <div class="ns-empty" role="status">Cargando tu plan…</div>
+      } @else if (loadErrors()['plan']) {
+        <div class="ns-feedback error" role="alert">{{ loadErrors()['plan'] }}</div>
+      } @else if (plan(); as p) {
+        <section class="ns-card">
+          <div class="ns-section-heading">
+            <div>
+              <h2>{{ p.title }}</h2>
+              <p>{{ p.goal }}</p>
+            </div>
+            <span class="ns-tag"><ns-icon name="check" />Aprobado por tu especialista</span>
+          </div>
+          <div class="macro-grid">
+            <div class="ns-inset">
+              <span>Calorías diarias</span
+              ><strong>{{ p.daily_calories | number: '1.0-0' }} <small>kcal</small></strong>
+            </div>
+            <div class="ns-inset">
+              <span>Proteínas</span
+              ><strong>{{ p.protein_g | number: '1.0-0' }} <small>g</small></strong>
+            </div>
+            <div class="ns-inset">
+              <span>Carbohidratos</span
+              ><strong>{{ p.carbs_g | number: '1.0-0' }} <small>g</small></strong>
+            </div>
+            <div class="ns-inset">
+              <span>Grasas</span><strong>{{ p.fats_g | number: '1.0-0' }} <small>g</small></strong>
+            </div>
+          </div>
+          @if (p.clinical_notes) {
+            <p class="plan-notes">{{ p.clinical_notes }}</p>
+          }
+          <div class="ns-grid-2 meals">
+            @for (meal of p.meals; track $index) {
+              <article class="ns-inset">
+                <div class="ns-section-heading">
+                  <h3>{{ meal.meal_name }}</h3>
+                  <span class="ns-tag">{{ meal.time_suggestion }}</span>
+                </div>
+                @for (food of meal.foods; track $index) {
+                  <div class="food-line">
+                    <span
+                      >{{ food.name }}<small>{{ food.portion }}</small></span
+                    ><strong>{{ food.calories | number: '1.0-0' }} kcal</strong>
+                  </div>
+                }
+              </article>
+            }
+          </div>
+        </section>
+      } @else {
+        <div class="ns-card ns-empty">
+          <ns-icon name="leaf" />
+          <h3>Tu plan está por comenzar</h3>
+          <p>
+            Vincúlate con un nutricionista y completa tu ficha. Tu plan aparecerá cuando lo apruebe
+            tu especialista.
+          </p>
+          <button class="ns-btn" (click)="go('inicio')">Ir a mi bienestar</button>
+        </div>
+      }
+      <section class="ns-card spaced">
+        <div class="ns-section-heading">
+          <div>
+            <h2>Mi menú semanal</h2>
+            <p>Organiza tus comidas a partir de tu plan aprobado.</p>
+          </div>
+          <button
+            class="ns-btn ns-btn-primary"
+            [disabled]="!!busy() || !plan() || !link()"
+            (click)="generateMenu()"
+          >
+            {{
+              busy() === 'menu' ? 'Preparando menú…' : weekly() ? 'Renovar menú' : 'Generar menú'
+            }}
+          </button>
+        </div>
+        @if (loadErrors()['menu']) {
+          <p class="ns-feedback error">{{ loadErrors()['menu'] }}</p>
+        }
+        @if (weekly(); as menu) {
+          <div class="day-switch" aria-label="Días del menú">
+            @for (day of menu.days; track $index) {
+              <button
+                [class.active]="dayIndex() === $index"
+                [attr.aria-pressed]="dayIndex() === $index"
+                (click)="dayIndex.set($index)"
+              >
+                {{ day.day }}
+              </button>
+            }
+          </div>
+          @if (menu.days[dayIndex()]; as day) {
+            <div class="ns-grid-2 meals">
+              @for (meal of day.meals; track $index) {
+                <article class="ns-inset">
+                  <h3>{{ meal.meal_name }}</h3>
+                  @for (food of meal.foods; track $index) {
+                    <div class="food-line">
+                      <span
+                        >{{ food.name }}<small>{{ food.portion }}</small></span
+                      ><strong>{{ food.calories | number: '1.0-0' }} kcal</strong>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          }
+        } @else {
+          <p class="ns-muted">
+            Necesitas estar vinculado a un nutricionista y tener un plan aprobado para generar tu
+            menú.
+          </p>
+        }
+      </section>
+      <section class="spaced">
+        <div class="ns-section-heading">
+          <div>
+            <h2>Mis recetas asignadas</h2>
+            <p>Ideas y preparación indicadas para ti.</p>
+          </div>
+        </div>
+        @if (loadErrors()['recetas']) {
+          <p class="ns-feedback error">{{ loadErrors()['recetas'] }}</p>
+        }
+        <div class="ns-grid-3">
+          @for (recipe of recipes(); track recipe.id) {
+            <article class="ns-card recipe-card">
+              @if (recipe.image_url) {
+                <img
+                  [src]="recipe.image_url"
+                  [alt]="recipe.title"
+                  loading="lazy"
+                  width="320"
+                  height="170"
+                />
+              }
+              <span class="ns-tag">{{ recipe.category }}</span>
+              <h3>{{ recipe.title }}</h3>
+              <p>
+                {{ recipe.calories }} kcal ·
+                {{ recipe.prep_time_minutes + recipe.cook_time_minutes }} min
+              </p>
+              <button
+                class="text-link"
+                (click)="selectedRecipe.set(selectedRecipe()?.id === recipe.id ? null : recipe)"
+              >
+                {{ selectedRecipe()?.id === recipe.id ? 'Cerrar receta' : 'Ver preparación'
+                }}<ns-icon name="arrow" />
+              </button>
+            </article>
+          } @empty {
+            <p class="ns-muted">
+              {{
+                loading()['recetas']
+                  ? 'Cargando recetas…'
+                  : 'Tus recetas aparecerán cuando te las asigne tu nutricionista.'
+              }}
+            </p>
+          }
+        </div>
+        @if (selectedRecipe(); as recipe) {
+          <article class="ns-card spaced recipe-detail">
+            <div class="ns-section-heading">
+              <h2>{{ recipe.title }}</h2>
+              <button
+                class="ns-icon-btn"
+                aria-label="Cerrar receta"
+                (click)="selectedRecipe.set(null)"
+              >
+                <ns-icon name="close" />
+              </button>
+            </div>
+            <h3>Ingredientes</h3>
+            <p>{{ recipe.ingredients }}</p>
+            <h3>Preparación</h3>
+            <p>{{ recipe.instructions }}</p>
+          </article>
+        }
+      </section>
+    }
+    @if (tab() === 'citas') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">UN ESPACIO PARA TU SALUD</span>
+        <h1>Mis citas</h1>
+        <p>Encuentra un momento para conversar con tu especialista.</p>
+      </div>
+      <div class="ns-grid-2">
+        <section class="ns-card">
+          <div class="ns-section-heading">
+            <h2>Solicitar una consulta</h2>
+            <ns-icon name="calendar" />
+          </div>
+          @if (loadErrors()['especialistas']) {
+            <p class="ns-feedback error">{{ loadErrors()['especialistas'] }}</p>
+          }
+          <form [formGroup]="appointmentForm" (ngSubmit)="schedule()" class="stack-form">
+            <label class="ns-field" for="specialist"
+              >Nutricionista<select id="specialist" formControlName="nutritionist_id">
+                <option value="">Selecciona un especialista</option>
+                @for (n of nutritionists(); track n.id) {
+                  <option [value]="n.id">{{ n.full_name }}</option>
+                }
+              </select>
+              @if (
+                appointmentForm.controls.nutritionist_id.touched &&
+                appointmentForm.controls.nutritionist_id.invalid
+              ) {
+                <small>Selecciona un especialista.</small>
+              }</label
+            ><label class="ns-field" for="appointment-date"
+              >Fecha y hora<input
+                id="appointment-date"
+                type="datetime-local"
+                formControlName="scheduled_at"
+              />
+              @if (
+                appointmentForm.controls.scheduled_at.touched &&
+                appointmentForm.controls.scheduled_at.invalid
+              ) {
+                <small>Indica la fecha y hora.</small>
+              }</label
+            ><label class="ns-field" for="appointment-reason"
+              >¿Qué te gustaría consultar? (opcional)<textarea
+                id="appointment-reason"
+                formControlName="reason"
+                maxlength="500"
+              ></textarea></label
+            ><button
+              class="ns-btn ns-btn-primary"
+              [disabled]="!!busy() || loading()['especialistas']"
+            >
+              {{ busy() === 'cita' ? 'Enviando solicitud…' : 'Solicitar cita' }}
+            </button>
+            <p class="ns-muted">Tu cita quedará pendiente de confirmación del especialista.</p>
+          </form>
+        </section>
+        <section class="ns-card">
+          <div class="ns-section-heading">
+            <h2>Mi agenda</h2>
+            <span class="ns-tag">{{ appointments().length }} citas</span>
+          </div>
+          @if (loadErrors()['citas']) {
+            <p class="ns-feedback error">{{ loadErrors()['citas'] }}</p>
+          }
+          @for (a of appointments(); track a.id) {
+            <article class="appointment-item ns-inset">
+              <div>
+                <span class="ns-tag">{{ status(a.status) }}</span>
+                <h3>{{ a.nutritionist_name || 'Consulta nutricional' }}</h3>
+                <p>{{ a.scheduled_at | date: 'dd/MM/yyyy · HH:mm' }}</p>
+                @if (a.reason) {
+                  <p>{{ a.reason }}</p>
+                }
+              </div>
+              @if (a.status !== 'CANCELLED') {
+                <button class="text-link" [disabled]="!!busy()" (click)="cancelAppointment(a)">
+                  Cancelar
+                </button>
+              }
+            </article>
+          } @empty {
+            <div class="ns-empty">
+              <ns-icon name="calendar" />
+              <h3>{{ loading()['citas'] ? 'Cargando citas…' : 'Aún no tienes citas' }}</h3>
+              <p>Tu próxima consulta puede ser el inicio de un nuevo hábito.</p>
+            </div>
+          }
+        </section>
+      </div>
+    }
+    @if (tab() === 'salud') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">CONOCERTE PARA ACOMPAÑARTE</span>
+        <h1>Mi ficha de salud</h1>
+        <p>Mantén tus datos al día para una atención más personalizada.</p>
+      </div>
+      @if (loadErrors()['salud']) {
+        <div class="ns-feedback error" role="alert">
+          {{ loadErrors()['salud'] }} Recarga la página antes de editar tu ficha.
+        </div>
+      }
+      <form [formGroup]="healthForm" (ngSubmit)="saveHealth()" class="ns-card health-form">
+        <fieldset [disabled]="loading()['salud'] || !!loadErrors()['salud'] || !!busy()">
+          <legend>Sobre ti</legend>
+          <div class="ns-form-grid">
+            <label class="ns-field" for="birth-date"
+              >Fecha de nacimiento<input
+                id="birth-date"
+                type="date"
+                formControlName="birth_date" /></label
+            ><label class="ns-field" for="gender"
+              >Sexo biológico<select id="gender" formControlName="gender">
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select></label
+            >
+            @for (
+              field of [
+                { key: 'weight_kg', label: 'Peso actual (kg)', min: 20, max: 400 },
+                { key: 'height_cm', label: 'Estatura (cm)', min: 50, max: 260 },
+                {
+                  key: 'target_weight_kg',
+                  label: 'Peso objetivo (kg, opcional)',
+                  min: 20,
+                  max: 400,
+                },
+                {
+                  key: 'target_weeks',
+                  label: 'Plazo objetivo (semanas, opcional)',
+                  min: 1,
+                  max: 104,
+                },
+              ];
+              track field.key
+            ) {
+              <label class="ns-field" [for]="field.key"
+                >{{ field.label
+                }}<input
+                  [id]="field.key"
+                  type="number"
+                  [formControlName]="field.key"
+                  [min]="field.min"
+                  [max]="field.max"
+                  step="any"
+                />
+                @if (healthForm.get(field.key)?.touched && healthForm.get(field.key)?.invalid) {
+                  <small>Ingresa un valor entre {{ field.min }} y {{ field.max }}.</small>
+                }
+              </label>
+            }
+            <label class="ns-field ns-full" for="health-goal"
+              >Mi objetivo principal<input
+                id="health-goal"
+                formControlName="goal"
+                placeholder="Ej. Mejorar mis hábitos alimentarios"
+                maxlength="200"
+              />
+              @if (healthForm.controls.goal.touched && healthForm.controls.goal.invalid) {
+                <small>Describe tu objetivo (entre 2 y 200 caracteres).</small>
+              }
+            </label>
+          </div>
+          <h2>Antecedentes y preferencias</h2>
+          <div class="ns-form-grid">
+            @for (
+              field of [
+                { key: 'pathologies', label: 'Condiciones o enfermedades' },
+                { key: 'allergies', label: 'Alergias e intolerancias' },
+                { key: 'medications', label: 'Medicamentos y suplementos' },
+                { key: 'food_preferences', label: 'Preferencias alimentarias' },
+                { key: 'digestive_symptoms', label: 'Síntomas digestivos' },
+                { key: 'other_pathologies', label: 'Otras condiciones' },
+                { key: 'other_allergies', label: 'Otras alergias' },
+              ];
+              track field.key
+            ) {
+              <label class="ns-field" [for]="field.key"
+                >{{ field.label
+                }}<textarea [id]="field.key" [formControlName]="field.key"></textarea>
+              </label>
+            }
+          </div>
+          <h2>Mis hábitos</h2>
+          <div class="ns-form-grid">
+            @for (
+              field of [
+                { key: 'water_intake_liters', label: 'Agua al día (litros)', min: 0, max: 10 },
+                { key: 'sleep_hours', label: 'Horas de sueño', min: 1, max: 24 },
+                { key: 'coffee_cups', label: 'Tazas de café al día', min: 0, max: 20 },
+                {
+                  key: 'fruits_vegetables_daily',
+                  label: 'Porciones de frutas y verduras al día',
+                  min: 0,
+                  max: 20,
+                },
+                {
+                  key: 'sugary_drinks_weekly',
+                  label: 'Bebidas azucaradas por semana',
+                  min: 0,
+                  max: 100,
+                },
+                { key: 'meals_per_day', label: 'Comidas al día', min: 1, max: 10 },
+              ];
+              track field.key
+            ) {
+              <label class="ns-field" [for]="field.key"
+                >{{ field.label
+                }}<input
+                  [id]="field.key"
+                  type="number"
+                  [formControlName]="field.key"
+                  [min]="field.min"
+                  [max]="field.max"
+                  step="any"
+                />
+                @if (healthForm.get(field.key)?.touched && healthForm.get(field.key)?.invalid) {
+                  <small>Ingresa un valor entre {{ field.min }} y {{ field.max }}.</small>
+                }
+              </label>
+            }
+            <label class="ns-field" for="activity"
+              >Actividad física<select id="activity" formControlName="physical_activity">
+                @for (option of ['Sedentario', 'Ligero', 'Moderado', 'Intenso']; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select></label
+            ><label class="ns-field" for="alcohol"
+              >Consumo de alcohol<select id="alcohol" formControlName="alcohol_frequency">
+                @for (option of ['Nunca', 'Ocasional', 'Frecuente']; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select></label
+            ><label class="ns-field" for="smoke"
+              >Consumo de tabaco<select id="smoke" formControlName="smoke_habit">
+                @for (option of ['No fuma', 'Ocasional', 'Habitual']; track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select></label
+            >
+          </div>
+          <label class="checkbox-field"
+            ><input type="checkbox" formControlName="is_pregnant_or_lactating" />Estoy en embarazo o
+            lactancia.</label
+          ><label class="checkbox-field"
+            ><input type="checkbox" formControlName="consent_data_processing" />Autorizo el
+            tratamiento de mis datos de salud para mi atención nutricional.</label
+          >
+          @if (
+            healthForm.controls.consent_data_processing.touched &&
+            healthForm.controls.consent_data_processing.invalid
+          ) {
+            <p class="ns-feedback error">Necesitamos tu consentimiento para guardar la ficha.</p>
+          }
+          <button class="ns-btn ns-btn-primary" [disabled]="!!busy()">
+            {{ busy() === 'salud' ? 'Guardando ficha…' : 'Guardar mi ficha' }}
+          </button>
+        </fieldset>
+      </form>
+    }
+    @if (tab() === 'asistente') {
+      <div class="page-heading">
+        <span class="ns-eyebrow"><ns-icon name="sparkles" />APOYO PARA TUS HÁBITOS</span>
+        <h1>Conversa con Carlitos</h1>
+        <p>Tu asistente de orientación nutricional. No sustituye a tu especialista.</p>
+      </div>
+      <div class="ns-grid-2 assistant-layout">
+        <section class="ns-card chat-card">
+          <div class="ns-section-heading">
+            <div class="chat-heading">
+              <span class="ns-brand-mark"><ns-icon name="chat" /></span>
+              <div>
+                <h2>Carlitos</h2>
+                <p>Asistente nutricional · Premium</p>
+              </div>
+            </div>
+            <button
+              class="ns-icon-btn"
+              aria-label="Borrar historial de conversación"
+              [disabled]="!!busy()"
+              (click)="clearChat()"
+            >
+              <ns-icon name="close" />
+            </button>
+          </div>
+          @if (loadErrors()['chat']) {
+            <div class="ns-feedback error">{{ loadErrors()['chat'] }}</div>
+            <button class="ns-btn" (click)="go('suscripcion')">Ver mi suscripción</button>
+          }
+          <div
+            class="chat-messages"
+            role="log"
+            aria-label="Conversación con Carlitos"
+            aria-live="polite"
+          >
+            @for (m of messages(); track m.id) {
+              <article class="chat-message" [class.mine]="m.role === 'user'">
+                <span>{{ m.role === 'user' ? 'Tú' : 'Carlitos' }}</span>
+                <p>{{ m.content }}</p>
+              </article>
+            } @empty {
+              <div class="ns-empty">
+                <ns-icon name="sparkles" />
+                <h3>¿Por dónde empezamos?</h3>
+                <p>Pregunta sobre hábitos, alimentos o cómo organizar mejor tus comidas.</p>
+              </div>
+            }
+            @if (busy() === 'chat') {
+              <p class="ns-muted" role="status">Carlitos está preparando tu respuesta…</p>
+            }
+          </div>
+          <form [formGroup]="chatForm" (ngSubmit)="sendMessage()" class="chat-input">
+            <label class="ns-field" for="chat-message"
+              >Tu mensaje<textarea
+                id="chat-message"
+                formControlName="message"
+                maxlength="1000"
+                placeholder="¿Cómo puedo organizar mejor mis comidas?"
+              ></textarea></label
+            ><button class="ns-btn ns-btn-primary" [disabled]="!!busy() || chatForm.invalid">
+              Enviar<ns-icon name="arrow" />
+            </button>
+          </form>
+        </section>
+        <aside class="ns-card assistant-side">
+          <span class="ns-feature-icon"><ns-icon name="camera" /></span>
+          <h2>Una foto, más información.</h2>
+          <p>
+            También puedes analizar tu plato para conocer una estimación de sus calorías y
+            macronutrientes.
+          </p>
+          <button class="ns-btn" (click)="go('foto')">
+            Analizar una comida<ns-icon name="arrow" />
+          </button>
+          <div class="ns-inset">
+            <ns-icon name="shield" />
+            <p>
+              Tu nutricionista es quien define y aprueba tu plan. Usa el asistente como apoyo a su
+              acompañamiento.
+            </p>
+          </div>
+        </aside>
+      </div>
+    }
+    @if (tab() === 'foto') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">CONOCE LO QUE COMES</span>
+        <h1>Una mirada a tu plato</h1>
+        <p>Obtén una estimación nutricional a partir de una fotografía.</p>
+      </div>
+      <div class="ns-grid-2">
+        <section class="ns-card">
+          <span class="ns-feature-icon"><ns-icon name="camera" /></span>
+          <h2>Sube una foto de tu comida</h2>
+          <p class="ns-muted">Procura que se vea el plato completo y tenga buena iluminación.</p>
+          <label class="photo-upload ns-field" for="food-photo"
+            >Seleccionar fotografía<input
+              id="food-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="choosePhoto($event)"
+            /><span>JPG, PNG o WebP · Máximo 10 MB</span></label
+          >
+          @if (photo()) {
+            <p class="ns-muted">Seleccionada: {{ photo()!.name }}</p>
+          }
+          <button
+            class="ns-btn ns-btn-primary"
+            [disabled]="!photo() || !!busy()"
+            (click)="analyzePhoto()"
+          >
+            {{ busy() === 'foto' ? 'Analizando tu plato…' : 'Analizar fotografía'
+            }}<ns-icon name="sparkles" />
+          </button>
+        </section>
+        <section class="ns-card">
+          @if (analysis(); as a) {
+            <div class="ns-section-heading">
+              <h2>Estimación de tu plato</h2>
+              <span class="ns-tag">Aproximada</span>
+            </div>
+            <strong class="ns-stat-value">{{ a.total.calorias | number: '1.0-0' }} kcal</strong>
+            <p class="plan-notes">
+              Proteínas: {{ a.total.proteinas_g | number: '1.0-1' }} g · Carbohidratos:
+              {{ a.total.carbohidratos_g | number: '1.0-1' }} g · Grasas:
+              {{ a.total.grasas_g | number: '1.0-1' }} g
+            </p>
+            @for (food of a.alimentos; track $index) {
+              <div class="food-line">
+                <span
+                  >{{ food.nombre }}<small>{{ food.porcion_aprox_g }} g aprox.</small></span
+                ><strong>{{ food.calorias | number: '1.0-0' }} kcal</strong>
+              </div>
+            }
+            <p class="plan-notes">{{ a.observaciones }}</p>
+            @if (a.evaluacion) {
+              <p class="ns-feedback">{{ a.evaluacion.comparison_message }}</p>
+              <p class="ns-muted">{{ a.evaluacion.disclaimer }}</p>
+            }
+          } @else {
+            <div class="ns-empty">
+              <ns-icon name="leaf" />
+              <h3>Tu análisis aparecerá aquí</h3>
+              <p>
+                Las cantidades son estimaciones y pueden variar según las porciones e ingredientes.
+              </p>
+            </div>
+          }
+        </section>
+      </div>
+      <section class="ns-card spaced">
+        <div class="ns-section-heading"><h2>Mis análisis anteriores</h2></div>
+        @if (loadErrors()['fotos']) {
+          <p class="ns-feedback error">{{ loadErrors()['fotos'] }}</p>
+        }
+        @for (record of foodHistory(); track record.id) {
+          <div class="food-line">
+            <span
+              >{{ record.created_at | date: 'dd/MM/yyyy · HH:mm'
+              }}<small>{{ record.notes }}</small></span
+            ><strong>{{ record.estimated_calories | number: '1.0-0' }} kcal</strong>
+          </div>
+        } @empty {
+          <p class="ns-muted">
+            {{
+              loading()['fotos']
+                ? 'Cargando historial…'
+                : 'Todavía no has analizado ninguna comida.'
+            }}
+          </p>
+        }
+      </section>
+    }
+    @if (tab() === 'notificaciones') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">MANTENTE AL DÍA</span>
+        <h1>Mis notificaciones</h1>
+        <p>Los avisos de tu clínica y tu especialista.</p>
+      </div>
+      <section class="ns-card">
+        <div class="ns-section-heading">
+          <h2>{{ unread() }} sin leer</h2>
+          <div class="ns-actions">
+            <button
+              class="ns-btn"
+              (click)="refreshNotifications()"
+              [disabled]="loading()['avisos']"
+            >
+              Actualizar</button
+            ><button
+              class="ns-btn ns-btn-primary"
+              (click)="markAllRead()"
+              [disabled]="!!busy() || !unread()"
+            >
+              Marcar todas como leídas
+            </button>
+          </div>
+        </div>
+        @if (loadErrors()['avisos']) {
+          <p class="ns-feedback error">{{ loadErrors()['avisos'] }}</p>
+        }
+        @for (n of notifications(); track n.id) {
+          <article class="notification-item" [class.unread]="!n.is_read">
+            <span class="ns-feature-icon"><ns-icon name="bell" /></span>
+            <div>
+              <h3>{{ n.title }}</h3>
+              <p>{{ n.message }}</p>
+              <small>{{ n.created_at | date: 'dd/MM/yyyy · HH:mm' }}</small>
+            </div>
+            @if (!n.is_read) {
+              <button class="ns-btn" [disabled]="!!busy()" (click)="markRead(n)">
+                Marcar leída
+              </button>
+            } @else {
+              <span class="ns-tag">Leída</span>
+            }
+          </article>
+        } @empty {
+          <div class="ns-empty">
+            <ns-icon name="bell" />
+            <h3>{{ loading()['avisos'] ? 'Cargando avisos…' : 'Todo al día' }}</h3>
+            <p>Las nuevas notificaciones aparecerán aquí.</p>
+          </div>
+        }
+      </section>
+    }
+    @if (tab() === 'suscripcion') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">TU CUENTA, EN ORDEN</span>
+        <h1>Suscripción y pagos</h1>
+        <p>Consulta tu acceso y descarga tus comprobantes.</p>
+      </div>
+      @if (loadErrors()['suscripcion']) {
+        <p class="ns-feedback error">{{ loadErrors()['suscripcion'] }}</p>
+      }
+      <section class="ns-card">
+        <div class="ns-section-heading">
+          <div>
+            <h2>
+              {{
+                subscription()?.plan_name === 'CLIENTE_PREMIUM'
+                  ? 'NutriSalud Premium'
+                  : 'Mi acceso actual'
+              }}
+            </h2>
+            <p>
+              {{
+                subscription()
+                  ? status(subscription()!.status)
+                  : loading()['suscripcion']
+                    ? 'Cargando suscripción…'
+                    : 'Sin suscripción Premium activa'
+              }}
+            </p>
+          </div>
+          @if (subscription()?.status === 'ACTIVE') {
+            <button class="ns-btn" [disabled]="!!busy()" (click)="cancelSubscription()">
+              Cancelar suscripción
+            </button>
+          }
+        </div>
+        @if (subscription()?.expires_at) {
+          <p class="ns-muted">Vigencia: {{ subscription()!.expires_at | date: 'dd/MM/yyyy' }}</p>
+        }
+      </section>
+      <div class="ns-grid-3 spaced">
+        @for (p of plans(); track p.name) {
+          <article class="ns-card subscription-card">
+            <span class="ns-feature-icon"><ns-icon name="sparkles" /></span>
+            <h2>{{ p.display_name }}</h2>
+            <strong class="ns-stat-value"
+              >{{ p.price }} <small>{{ p.currency }}</small></strong
+            >
+            <p class="ns-muted">{{ p.period }}</p>
+            <ul>
+              @for (f of p.features; track f.text) {
+                @if (f.included) {
+                  <li><ns-icon name="check" />{{ f.text }}</li>
+                }
+              }
+            </ul>
+            <button
+              class="ns-btn ns-btn-primary"
+              [disabled]="
+                !!busy() ||
+                subscription()?.status === 'ACTIVE' ||
+                !!loadErrors()['suscripcion'] ||
+                loading()['suscripcion']
+              "
+              (click)="subscribe(p)"
+            >
+              {{
+                busy() === 'pago'
+                  ? 'Abriendo pago…'
+                  : subscription()?.status === 'ACTIVE'
+                    ? 'Ya tienes acceso'
+                    : 'Continuar con PayPal'
+              }}
+            </button>
+          </article>
+        }
+      </div>
+      @if (loadErrors()['planes']) {
+        <p class="ns-feedback error">{{ loadErrors()['planes'] }}</p>
+      }
+      <section class="ns-card spaced">
+        <div class="ns-section-heading">
+          <h2>Mis comprobantes</h2>
+          <ns-icon name="file" />
+        </div>
+        @if (loadErrors()['recibos']) {
+          <p class="ns-feedback error">{{ loadErrors()['recibos'] }}</p>
+        }
+        @for (r of receipts(); track r.id) {
+          <div class="receipt-item">
+            <div>
+              <strong>{{ r.plan_name }}</strong>
+              <p>
+                {{ r.paid_at | date: 'dd/MM/yyyy' }} · {{ r.currency }}
+                {{ r.amount | number: '1.2-2' }}
+              </p>
+              @if (r.is_sandbox) {
+                <span class="ns-tag">Pago de prueba</span>
+              }
+            </div>
+            <button class="ns-btn" (click)="downloadReceipt(r)" [disabled]="!!busy()">
+              <ns-icon name="download" />Descargar PDF
+            </button>
+          </div>
+        } @empty {
+          <p class="ns-empty">
+            {{
+              loading()['recibos']
+                ? 'Cargando comprobantes…'
+                : 'Tus comprobantes aparecerán después de un pago confirmado.'
+            }}
+          </p>
+        }
+      </section>
+    }
+    @if (tab() === 'perfil') {
+      <div class="page-heading">
+        <span class="ns-eyebrow">UN ESPACIO PERSONAL</span>
+        <h1>Mi perfil</h1>
+        <p>Mantén tu información de contacto actualizada.</p>
+      </div>
+      <form class="ns-card profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <div class="stack-form">
+          <label class="ns-field" for="profile-name"
+            >Nombre completo<input
+              id="profile-name"
+              formControlName="full_name"
+              autocomplete="name"
+              maxlength="250"
+            />
+            @if (profileForm.controls.full_name.touched && profileForm.controls.full_name.invalid) {
+              <small>Ingresa tu nombre completo (mínimo 2 caracteres).</small>
+            }</label
+          ><label class="ns-field" for="profile-email"
+            >Correo electrónico<input
+              id="profile-email"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+            />
+            @if (profileForm.controls.email.touched && profileForm.controls.email.invalid) {
+              <small>Ingresa un correo válido.</small>
+            }</label
+          ><label class="ns-field" for="profile-phone"
+            >Teléfono<input
+              id="profile-phone"
+              type="tel"
+              formControlName="phone"
+              autocomplete="tel" /></label
+          ><button class="ns-btn ns-btn-primary" [disabled]="!!busy()">
+            {{ busy() === 'perfil' ? 'Guardando…' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </form>
+    }
+  </main>
+  <footer class="ns-footer">
+    <a class="ns-brand" routerLink="/"><ns-icon name="leaf" />NutriSalud</a
+    ><span>Un día a la vez. Un hábito a la vez.</span
+    ><button class="text-link" (click)="go('perfil')">Mi cuenta<ns-icon name="arrow" /></button>
+  </footer>
+</div>

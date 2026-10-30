@@ -1,0 +1,142 @@
+<a class="ns-skip" href="#contenido">Saltar al contenido</a>
+<div class="ns-container">
+  <header class="ns-topbar">
+    <a class="ns-brand" routerLink="/" aria-label="NutriSalud, inicio"
+      ><span class="ns-brand-mark"><ns-icon name="leaf" /></span
+      ><span>NutriSalud<small>NUTRICIÓN & BIENESTAR</small></span></a
+    >
+    <nav class="ns-topnav" aria-label="Navegación principal">
+      <a href="#beneficios">Tu bienestar</a><a href="#como-funciona">Cómo funciona</a
+      ><a href="#para-clinicas">Para clínicas</a>
+    </nav>
+    <a class="ns-btn" [routerLink]="tokens.hasToken() ? '/dashboard' : '/login'"
+      >{{ tokens.hasToken() ? 'Mi espacio' : 'Iniciar sesión' }}<ns-icon name="arrow"
+    /></a>
+  </header>
+  <main id="contenido">
+    <section class="ns-hero">
+      <div>
+        <span class="ns-eyebrow"><span class="ns-dot"></span>Pequeños cambios. Más bienestar.</span>
+        <h1>Tu nutrición,<br />más simple.<br /><em>Tu bienestar, más cerca.</em></h1>
+        <p>
+          Conecta con tu nutricionista y lleva tu plan a tu ritmo. Tus recetas, citas y orientación
+          nutricional, desde el celular o desde aquí.
+        </p>
+        <div class="ns-actions">
+          <a
+            class="ns-btn ns-btn-primary"
+            [routerLink]="tokens.hasToken() ? '/dashboard' : '/register'"
+            >{{ tokens.hasToken() ? 'Ir a mi espacio' : 'Comenzar mi camino'
+            }}<ns-icon name="arrow" /></a
+          ><a class="ns-btn" href="#como-funciona"><ns-icon name="grid" />Conocer NutriSalud</a>
+        </div>
+        <div class="ns-hero-foot">
+          <span><ns-icon name="shield" />Acceso personal</span
+          ><span><ns-icon name="check" />Acompañamiento profesional</span>
+        </div>
+      </div>
+      <div class="preview-wrap">
+        <div class="ns-card plan-preview">
+          <div class="preview-heading">
+            <span>Un vistazo a tu espacio</span><span class="ns-tag">EJEMPLO</span>
+          </div>
+          <div class="preview-title">
+            <span class="ns-feature-icon"><ns-icon name="leaf" /></span>
+            <div>
+              <h2>Comer bien, sentirte mejor</h2>
+              <p>Tu plan, a un paso de ti.</p>
+            </div>
+          </div>
+          <div class="plate-scene" aria-hidden="true">
+            <div class="plate">
+              <div class="greens"><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="tomato one"></div>
+              <div class="tomato two"></div>
+              <div class="grain"></div>
+              <div class="avocado"></div>
+            </div>
+            <span class="plate-label"><span class="ns-dot"></span>Equilibrio en cada comida</span>
+          </div>
+          <div class="preview-bottom">
+            <div class="ns-inset">
+              <ns-icon name="calendar" /><span
+                >Tus próximas citas<strong>Siempre a la vista</strong></span
+              >
+            </div>
+            <div class="ns-inset">
+              <ns-icon name="file" /><span>Tu plan nutricional<strong>Hecho para ti</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="preview-note">
+          <span class="ns-brand-mark"><ns-icon name="check" /></span>
+          <div>
+            <strong>Con acompañamiento real</strong><span>Tu nutricionista guía el proceso.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="beneficios" class="benefits">
+      <div class="ns-section-heading">
+        <div>
+          <span class="section-kicker">PENSADO PARA TU DÍA A DÍA</span>
+          <h2>Todo lo que necesitas para cuidarte.</h2>
+          <p>Menos complicaciones. Más espacio para tus hábitos.</p>
+        </div>
+        <span class="ns-tag"><ns-icon name="leaf" />A tu ritmo</span>
+      </div>
+      <div class="ns-grid-3">
+        @for (feature of features; track feature.title) {
+          <article class="ns-card feature">
+            <span class="ns-feature-icon"><ns-icon [name]="feature.icon" /></span>
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.text }}</p>
+          </article>
+        }
+      </div>
+    </section>
+    <section id="como-funciona" class="how-section">
+      <div class="ns-section-heading">
+        <div>
+          <span class="section-kicker">ASÍ DE SENCILLO</span>
+          <h2>Tu próximo paso empieza aquí.</h2>
+        </div>
+      </div>
+      <div class="ns-grid-3">
+        <article>
+          <span class="step-number">01</span>
+          <h3>Crea tu cuenta</h3>
+          <p>Completa tu perfil y tu ficha de salud para que tu especialista te conozca.</p>
+        </article>
+        <article>
+          <span class="step-number">02</span>
+          <h3>Conecta con tu nutricionista</h3>
+          <p>Usa el código que te comparte tu especialista para vincular tu cuenta.</p>
+        </article>
+        <article>
+          <span class="step-number">03</span>
+          <h3>Hazlo parte de tu día</h3>
+          <p>Consulta tu plan, organiza tus citas y recibe avisos desde web o móvil.</p>
+        </article>
+      </div>
+    </section>
+    <section id="para-clinicas" class="ns-card clinic-banner">
+      <div>
+        <span class="section-kicker">PARA QUIENES CUIDAN DE OTROS</span>
+        <h2>Tu clínica, conectada.</h2>
+        <p>
+          Pacientes, agenda, planes nutricionales, cobros y reportes en un mismo espacio de trabajo.
+        </p>
+      </div>
+      <a class="ns-btn ns-btn-primary" routerLink="/login"
+        >Acceso del equipo<ns-icon name="arrow"
+      /></a>
+    </section>
+  </main>
+  <footer class="ns-footer">
+    <a class="ns-brand" routerLink="/"
+      ><span class="ns-brand-mark"><ns-icon name="leaf" /></span>NutriSalud</a
+    ><span>Nutrición con propósito. Tecnología que te acompaña.</span
+    ><a routerLink="/login">Acceder a mi cuenta</a>
+  </footer>
+</div>

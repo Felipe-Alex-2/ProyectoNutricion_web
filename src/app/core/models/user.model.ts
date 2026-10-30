@@ -5,6 +5,7 @@ export interface User {
   phone?: string;
   role_id: string;
   tenant_id?: string;
+  branch_id?: string;
   is_active: boolean;
   is_verified: boolean;
   has_custom_developer_key?: boolean;
@@ -19,6 +20,7 @@ export interface UserUpdate {
   password?: string;
   role_id?: string;
   tenant_id?: string;
+  branch_id?: string;
   is_active?: boolean;
   developer_key?: string;
 }
@@ -39,6 +41,7 @@ export interface PatientListItem {
   phone?: string;
   is_active: boolean;
   tenant_id?: string;
+  branch_id?: string;
   created_at: string;
   updated_at: string;
   linked_status: string;

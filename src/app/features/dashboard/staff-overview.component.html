@@ -1,0 +1,244 @@
+<div class="overview-toolbar">
+  <div>
+    <h2>Tu operación, de un vistazo.</h2>
+    <p>Agenda, pacientes y actividad de tu espacio de trabajo.</p>
+  </div>
+  <div class="ns-actions">
+    @if (isSaas()) {
+      <label class="tenant-label"
+        >Organización<select
+          class="ns-input"
+          [value]="selectedTenant()"
+          (change)="changeTenant($event)"
+        >
+          <option value="">Todas las organizaciones</option>
+          @for (t of tenants(); track t.id) {
+            <option [value]="t.id">{{ t.name }}</option>
+          }
+        </select></label
+      >
+    }
+    <button class="ns-btn" (click)="refresh()" [disabled]="loading()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </div>
+</div>
+@if (error()) {
+  <div class="ns-feedback error" role="alert">{{ error() }}</div>
+}
+<div class="ns-grid-3 metrics" [attr.aria-busy]="loading()">
+  <article class="ns-card metric">
+    <div class="metric-top">
+      <span class="ns-stat-label">Pacientes activos</span><ns-icon name="users" />
+    </div>
+    <strong class="ns-stat-value"
+      >{{ patients() === null ? '—' : (patients() | number)
+      }}{{ patients() === 5000 ? '+' : '' }}</strong
+    ><span class="ns-tag">{{
+      patients() === null ? 'Información no disponible' : 'En tu directorio de pacientes'
+    }}</span>
+  </article>
+  <article class="ns-card metric">
+    <div class="metric-top">
+      <span class="ns-stat-label">Citas confirmadas</span><ns-icon name="calendar" />
+    </div>
+    <strong class="ns-stat-value">{{ loading() || error() ? '—' : confirmed() }}</strong
+    ><span class="ns-tag">En la agenda registrada</span>
+  </article>
+  <article class="ns-card metric">
+    <div class="metric-top">
+      <span class="ns-stat-label">Por confirmar</span><ns-icon name="clock" />
+    </div>
+    <strong class="ns-stat-value">{{ loading() || error() ? '—' : pending() }}</strong
+    ><button class="ns-tag metric-link" (click)="open('citas')">
+      Revisar solicitudes <ns-icon name="arrow" />
+    </button>
+  </article>
+</div>
+<div class="overview-columns">
+  <section class="ns-card chart-card">
+    <div class="ns-section-heading">
+      <div>
+        <h2>Actividad de la agenda</h2>
+        <p>Citas programadas por mes, sin cancelaciones.</p>
+      </div>
+      <ns-icon name="chart" />
+    </div>
+    <div class="period-switch" aria-label="Periodo de la gráfica">
+      @for (p of [3, 6, 12]; track p) {
+        <button
+          [class.active]="period() === p"
+          [attr.aria-pressed]="period() === p"
+          (click)="period.set(p)"
+        >
+          {{ p }} meses
+        </button>
+      }
+    </div>
+    @if (loading()) {
+      <div class="ns-empty" role="status">Cargando la actividad de tu agenda…</div>
+    } @else if (error()) {
+      <div class="ns-empty">La gráfica estará disponible al cargar la agenda.</div>
+    } @else {
+      <div
+        class="bar-chart"
+        role="img"
+        aria-label="Citas programadas por mes. Los valores se muestran debajo de cada barra."
+      >
+        @for (month of chart(); track month.full) {
+          <div class="bar-column" [title]="month.full + ': ' + month.count + ' citas'">
+            <span class="bar-value">{{ month.count }}</span>
+            <div class="bar-track">
+              <div class="bar-fill" [style.height.%]="month.height"></div>
+            </div>
+            <span class="bar-label">{{ month.label }}</span>
+          </div>
+        }
+      </div>
+      <p class="chart-note">
+        <span class="ns-dot"></span>Citas pendientes y confirmadas, según su fecha programada.
+      </p>
+    }
+  </section>
+  <section class="ns-card shortcuts">
+    <div class="ns-section-heading">
+      <div>
+        <h2>Tu espacio de trabajo</h2>
+        <p>Lo que necesitas, a un clic.</p>
+      </div>
+    </div>
+    @for (
+      item of [
+        {
+          icon: 'users',
+          title: 'Pacientes',
+          text: 'Consulta y administra tu directorio.',
+          tab: 'clientes',
+        },
+        {
+          icon: 'wallet',
+          title: 'Caja y cobros',
+          text: 'Registra pagos y consulta comprobantes.',
+          tab: 'suscripcion',
+        },
+        {
+          icon: 'file',
+          title: 'Reportes',
+          text: 'Explora datos y exporta tus resultados.',
+          tab: 'reportes',
+        },
+      ];
+      track item.tab
+    ) {
+      <button class="shortcut ns-inset" (click)="open(item.tab)">
+        <span class="ns-brand-mark"><ns-icon [name]="item.icon" /></span
+        ><span
+          ><strong>{{ item.title }}</strong
+          ><small>{{ item.text }}</small></span
+        ><ns-icon name="arrow" />
+      </button>
+    }
+  </section>
+</div>
+<section class="ns-card upcoming">
+  <div class="ns-section-heading">
+    <div>
+      <h2>Próximas consultas</h2>
+      <p>Una agenda clara para acompañar mejor.</p>
+    </div>
+    <button class="ns-btn" (click)="open('citas')">Ver agenda<ns-icon name="arrow" /></button>
+  </div>
+  @if (!upcoming().length) {
+    <div class="ns-empty">
+      <ns-icon name="calendar" />
+      <h3>
+        {{
+          loading()
+            ? 'Cargando consultas…'
+            : error()
+              ? 'Agenda no disponible'
+              : 'Tu agenda tiene espacio'
+        }}
+      </h3>
+      <p>
+        {{
+          error()
+            ? 'Actualiza el resumen para volver a intentar.'
+            : 'Las próximas citas aparecerán aquí cuando se registren.'
+        }}
+      </p>
+    </div>
+  } @else {
+    <div class="ns-wide-scroll">
+      <table class="ns-table">
+        <thead>
+          <tr>
+            <th>Paciente</th>
+            <th>Especialista</th>
+            <th>Fecha y hora</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of upcoming(); track a.id) {
+            <tr>
+              <td>
+                <strong>{{ a.patient_name || 'Paciente' }}</strong>
+              </td>
+              <td>{{ a.nutritionist_name || 'Sin especificar' }}</td>
+              <td>{{ a.scheduled_at | date: 'dd/MM/yyyy · HH:mm' }}</td>
+              <td>
+                <span class="ns-tag">{{
+                  a.status === 'CONFIRMED' ? 'Confirmada' : 'Pendiente'
+                }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+<section class="ns-card recent">
+  <div class="ns-section-heading">
+    <div>
+      <h2>Últimos movimientos de caja</h2>
+      <p>Transacciones de la organización seleccionada.</p>
+    </div>
+    <button class="ns-btn" (click)="open('suscripcion')">Abrir caja<ns-icon name="arrow" /></button>
+  </div>
+  @if (recentPayments().length) {
+    <div class="ns-wide-scroll">
+      <table class="ns-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Concepto</th>
+            <th>Estado</th>
+            <th>Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of recentPayments(); track $index) {
+            <tr>
+              <td>{{ p['customer_name'] }}</td>
+              <td>{{ p['concept'] }}</td>
+              <td>
+                <span class="ns-tag">{{ statusLabel(p['status']) }}</span>
+              </td>
+              <td>{{ p['currency'] }} {{ p['amount'] }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="ns-empty">
+      {{
+        paymentsLoaded()
+          ? 'Aún no hay movimientos de caja para mostrar.'
+          : 'No hay información de caja disponible.'
+      }}
+    </p>
+  }
+</section>

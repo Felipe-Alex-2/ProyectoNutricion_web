@@ -15,7 +15,7 @@ export class ActivityLogService {
   isLoading = signal<boolean>(false);
 
   constructor(private http: HttpClient) {
-    this.loadLocalLogs();
+    this.clearLocalLogs();
   }
 
   private loadLocalLogs(): void {
@@ -53,31 +53,8 @@ export class ActivityLogService {
   }
 
   recordActivity(action: string, description: string, category: string = 'SISTEMA'): void {
-    const localEntry: ActivityLog = {
-      id: `local_${Date.now()}`,
-      action,
-      description,
-      category,
-      created_at: new Date().toISOString(),
-    };
-
-    // Update local state immediately
-    const updated = [localEntry, ...this.logs()];
-    this.logs.set(updated);
-    this.saveLocalLogs(updated);
-
-    // Send to backend in background
-    const payload: ActivityLogCreate = { action, description, category };
-    this.http.post<ActivityLog>(this.apiUrl, payload).subscribe({
-      next: (saved) => {
-        const synched = this.logs().map((l) => (l.id === localEntry.id ? saved : l));
-        this.logs.set(synched);
-        this.saveLocalLogs(synched);
-      },
-      error: () => {
-        // Kept in local state safely
-      },
-    });
+    // Business mutations are recorded by the authenticated server transaction.
+    // Navigation and browser-local events never become audit records.
   }
 
   clearLocalLogs(): void {
