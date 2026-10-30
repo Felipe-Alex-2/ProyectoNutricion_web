@@ -1,13 +1,24 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { IconComponent } from '../../shared/ui/icon.component';
-import { staffPackagesForRole } from './staff-navigation.model';
+import { canOpenStaffTab, STAFF_DASHBOARD, staffPackagesForRole } from './staff-navigation.model';
 
 @Component({
   selector: 'app-staff-navigation',
   standalone: true,
   imports: [IconComponent],
   template: `
-    <nav aria-label="Paquetes del espacio de trabajo">
+    <nav aria-label="Navegación del espacio de trabajo">
+      @if (showDashboard()) {
+        <button
+          type="button"
+          class="package-item dashboard-link"
+          [class.active]="activeTab() === dashboard.tab"
+          [attr.aria-current]="activeTab() === dashboard.tab ? 'page' : null"
+          (click)="navigate.emit(dashboard.tab)"
+        >
+          <ns-icon [name]="dashboard.icon" /><span>{{ dashboard.label }}</span>
+        </button>
+      }
       @for (group of packages(); track group.id) {
         <section class="nav-package" [class.current]="isCurrent(group.id)">
           <button
@@ -55,7 +66,9 @@ export class StaffNavigationComponent {
   readonly activeTab = input.required<string>();
   readonly pending = input(0);
   readonly navigate = output<string>();
-  readonly expanded = signal<ReadonlySet<string>>(new Set(['inicio']));
+  readonly dashboard = STAFF_DASHBOARD;
+  readonly showDashboard = computed(() => canOpenStaffTab(this.role(), this.dashboard.tab));
+  readonly expanded = signal<ReadonlySet<string>>(new Set());
   readonly packages = computed(() => staffPackagesForRole(this.role()));
   constructor() {
     effect(() => {

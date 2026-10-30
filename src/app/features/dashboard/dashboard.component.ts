@@ -743,7 +743,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'perfil':
         return 'Mi perfil';
       case 'principal':
-        return 'Panel central';
+        return 'Dashboard';
       case 'clientes':
         return 'Pacientes';
       case 'reportes':

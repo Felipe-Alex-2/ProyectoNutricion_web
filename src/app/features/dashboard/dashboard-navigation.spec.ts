@@ -76,19 +76,27 @@ describe('Exclusive staff navigation', () => {
     fixture.destroy();
     http.verify();
   });
-  it('renders exactly the seven authorized packages without repeating notifications', () => {
+  it('renders Dashboard directly and the four authorized packages without repeating notifications', () => {
     const labels = Array.from(fixture.nativeElement.querySelectorAll('.package-trigger')).map(
       (e: any) => e.textContent.trim(),
     );
     expect(labels).toEqual([
-      'Inicio',
       'Pacientes',
       'Atención nutricional',
-      'Caja y pagos',
-      'Reportes y analítica',
       'Administración',
       'Seguridad y auditoría',
     ]);
+    const dashboard = fixture.nativeElement.querySelector('.dashboard-link');
+    expect(dashboard.textContent.trim()).toBe('Dashboard');
+    expect(dashboard.hasAttribute('aria-expanded')).toBe(false);
+    expect(dashboard.getAttribute('aria-current')).toBe('page');
+    const packages = staffPackagesForRole('SUPERADMIN');
+    expect(
+      packages.find((p) => p.id === 'administracion')?.items.some((i) => i.tab === 'suscripcion'),
+    ).toBe(true);
+    expect(
+      packages.find((p) => p.id === 'seguridad')?.items.some((i) => i.tab === 'reportes'),
+    ).toBe(true);
     expect(fixture.nativeElement.querySelector('app-staff-navigation').textContent).not.toContain(
       'Notificaciones',
     );
@@ -96,7 +104,7 @@ describe('Exclusive staff navigation', () => {
   it('shows profile as a single page and removes it on every other module', () => {
     const component = fixture.componentInstance;
     const tabs = staffPackagesForRole('SUPERADMIN').flatMap((p) => p.items.map((i) => i.tab));
-    for (const tab of [...tabs, 'notificaciones']) {
+    for (const tab of ['principal', ...tabs, 'notificaciones']) {
       component.setActiveTab('perfil', false);
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('.edit-profile-card')).toBeTruthy();

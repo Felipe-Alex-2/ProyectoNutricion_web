@@ -13,13 +13,13 @@ export interface StaffNavigationPackage {
 const admins = ['SUPERADMIN', 'ADMIN_ORGANIZATION'];
 const staffRoles = [...admins, 'NUTRICIONISTA'];
 
+export const STAFF_DASHBOARD: StaffNavigationItem = {
+  tab: 'principal',
+  label: 'Dashboard',
+  icon: 'grid',
+};
+
 export const STAFF_PACKAGES: readonly StaffNavigationPackage[] = [
-  {
-    id: 'inicio',
-    label: 'Inicio',
-    icon: 'grid',
-    items: [{ tab: 'principal', label: 'Resumen', icon: 'grid' }],
-  },
   {
     id: 'pacientes',
     label: 'Pacientes',
@@ -40,18 +40,6 @@ export const STAFF_PACKAGES: readonly StaffNavigationPackage[] = [
     ],
   },
   {
-    id: 'finanzas',
-    label: 'Caja y pagos',
-    icon: 'wallet',
-    items: [{ tab: 'suscripcion', label: 'Caja y cobros', icon: 'wallet' }],
-  },
-  {
-    id: 'reportes',
-    label: 'Reportes y analítica',
-    icon: 'chart',
-    items: [{ tab: 'reportes', label: 'Consultar reportes', icon: 'chart' }],
-  },
-  {
     id: 'administracion',
     label: 'Administración',
     icon: 'building',
@@ -60,6 +48,7 @@ export const STAFF_PACKAGES: readonly StaffNavigationPackage[] = [
       { tab: 'sucursales', label: 'Sucursales', icon: 'building', roles: admins },
       { tab: 'sprint1-usuarios', label: 'Equipo de la organización', icon: 'users', roles: admins },
       { tab: 'sprint1-roles', label: 'Roles y permisos', icon: 'shield', roles: ['SUPERADMIN'] },
+      { tab: 'suscripcion', label: 'Caja y cobros', icon: 'wallet' },
     ],
   },
   {
@@ -69,6 +58,7 @@ export const STAFF_PACKAGES: readonly StaffNavigationPackage[] = [
     items: [
       { tab: 'bitacora', label: 'Bitácora', icon: 'file' },
       { tab: 'backup', label: 'Copias de seguridad', icon: 'download', roles: admins },
+      { tab: 'reportes', label: 'Consultar reportes', icon: 'chart' },
     ],
   },
 ];
@@ -83,7 +73,8 @@ export function staffPackagesForRole(role: string): StaffNavigationPackage[] {
 export function canOpenStaffTab(role: string, tab: string): boolean {
   return (
     staffRoles.includes(role) &&
-    (['perfil', 'notificaciones'].includes(tab) ||
+    (tab === STAFF_DASHBOARD.tab ||
+      ['perfil', 'notificaciones'].includes(tab) ||
       staffPackagesForRole(role).some((group) => group.items.some((item) => item.tab === tab)))
   );
 }

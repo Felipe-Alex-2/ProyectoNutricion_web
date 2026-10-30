@@ -88,6 +88,11 @@ nav {
   color: #fff;
   box-shadow: 0 4px 9px #087f751b;
 }
+.dashboard-link {
+  min-height: 46px;
+  padding: 12px 13px;
+  font-weight: 700;
+}
 .pending-count {
   background: var(--color-primary-light);
   color: var(--color-primary);
