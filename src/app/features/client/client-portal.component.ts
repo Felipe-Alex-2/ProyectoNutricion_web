@@ -23,6 +23,7 @@ import {
 } from '../../core/models/clinical.model';
 import { Subscription, SubscriptionPlan } from '../../core/models/subscription.model';
 import { environment } from '../../../environments/environment';
+import { NutritionDiaryComponent } from '../nutrition/nutrition-diary.component';
 
 interface DayMenu {
   day: string;
@@ -62,7 +63,7 @@ interface FoodRecord {
 @Component({
   selector: 'app-client-portal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, IconComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, IconComponent, NutritionDiaryComponent],
   templateUrl: './client-portal.component.html',
   styleUrl: './client-portal.component.css',
 })
@@ -114,6 +115,7 @@ export class ClientPortalComponent implements OnInit {
   readonly navItems = [
     { id: 'inicio', label: 'Mi bienestar', icon: 'grid' },
     { id: 'plan', label: 'Mi plan', icon: 'leaf' },
+    { id: 'foto', label: 'Mi alimentación', icon: 'camera' },
     { id: 'citas', label: 'Mis citas', icon: 'calendar' },
     { id: 'salud', label: 'Mi ficha', icon: 'file' },
     { id: 'asistente', label: 'Asistente IA', icon: 'sparkles' },
@@ -301,10 +303,6 @@ export class ClientPortalComponent implements OnInit {
         'chat',
         this.http.get<{ messages: ChatMessage[] }>(`${this.api}/chat/history`),
         (h) => this.messages.set(h.messages),
-      );
-    if (tab === 'foto')
-      this.fetch('fotos', this.http.get<FoodRecord[]>(`${this.api}/food/history`), (h) =>
-        this.foodHistory.set(h),
       );
     if (tab === 'suscripcion') {
       this.fetch('suscripcion', this.subscriptionsApi.getCurrentSubscription(), (s) =>

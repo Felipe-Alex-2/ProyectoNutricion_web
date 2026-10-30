@@ -1,0 +1,200 @@
+<section class="nutrition-page">
+  <header>
+    <span class="eyebrow">DIARIO NUTRICIONAL</span>
+    <h1>Conoce y registra tu alimentación</h1>
+    <p>Un espacio para tus comidas, sus nutrientes y el seguimiento de tu profesional.</p>
+  </header>
+  @if (error()) {
+    <div class="feedback error" role="alert">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="feedback" role="status">{{ success() }}</div>
+  }
+  @if (staff()) {
+    <section class="panel">
+      <h2>¿Para quién es el registro?</h2>
+      <p>
+        Analiza tus propias comidas o consulta y registra fotografías para un paciente autorizado.
+      </p>
+      <div class="fields">
+        <label
+          >Buscar paciente<input
+            #search
+            type="search"
+            placeholder="Nombre o correo"
+            (input)="searchPatients(search.value)"
+            [disabled]="busy()"
+        /></label>
+        <label
+          >Cuenta<select
+            #patient
+            [value]="patientId()"
+            (change)="selectPatient(patient.value)"
+            [disabled]="busy()"
+          >
+            <option value="">Mi alimentación</option>
+            @for (p of patients(); track p.id) {
+              <option [value]="p.id">{{ p.full_name }} · {{ p.email }}</option>
+            }
+          </select></label
+        >
+      </div>
+    </section>
+  }
+  <div class="columns">
+    <section class="panel">
+      <span class="eyebrow">FOTO + IA</span>
+      <h2>Una mirada a tu plato</h2>
+      <p>
+        Selecciona una foto clara. El análisis se guardará en el historial de la cuenta
+        seleccionada.
+      </p>
+      <label class="upload"
+        >Seleccionar fotografía<input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="choosePhoto($event)"
+          [disabled]="busy()"
+        /><small>JPG, PNG o WebP · Máximo 10 MB</small></label
+      >
+      @if (preview()) {
+        <img
+          class="preview"
+          [src]="preview()"
+          alt="Fotografía seleccionada para el análisis nutricional"
+        />
+      }
+      <button class="primary" (click)="analyzePhoto()" [disabled]="!preview() || busy()">
+        {{ busy() ? 'Procesando…' : 'Analizar y registrar foto' }}
+      </button>
+      @if (analysis(); as a) {
+        <div class="analysis">
+          <h3>Estimación nutricional</h3>
+          <strong class="calories">{{ a.total.calorias | number: '1.0-0' }} kcal</strong>
+          <p>
+            Proteínas {{ a.total.proteinas_g | number: '1.0-1' }} g · Carbohidratos
+            {{ a.total.carbohidratos_g | number: '1.0-1' }} g · Grasas
+            {{ a.total.grasas_g | number: '1.0-1' }} g
+          </p>
+          @for (food of a.alimentos; track $index) {
+            <p>
+              {{ food.nombre }} · {{ food.porcion_aprox_g }} g aprox. · {{ food.calorias }} kcal
+            </p>
+          }
+          <p>{{ a.observaciones }}</p>
+          <small>Estimación aproximada. Revisa las porciones con tu nutricionista.</small>
+        </div>
+      }
+    </section>
+    <section class="panel">
+      <span class="eyebrow">REGISTRO MANUAL</span>
+      <h2>¿Qué comiste hoy?</h2>
+      @if (patientId()) {
+        <p>
+          El registro manual corresponde al paciente desde su propia cuenta. Puedes utilizar el
+          análisis de fotos para el paciente seleccionado.
+        </p>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="save()">
+          <label
+            >Tipo de comida<select formControlName="meal_type">
+              @for (meal of ['Desayuno', 'Almuerzo', 'Merienda', 'Cena', 'Snack']; track meal) {
+                <option [value]="meal">{{ meal }}</option>
+              }
+            </select></label
+          >
+          <label
+            >Tu comida<textarea
+              formControlName="description"
+              maxlength="500"
+              rows="3"
+              placeholder="Ej.: pollo con arroz y ensalada"
+            ></textarea>
+          </label>
+          @if (form.controls.description.touched && form.controls.description.invalid) {
+            <small class="invalid">Describe tu comida (máximo 500 caracteres).</small>
+          }
+          <label>Fecha y hora<input type="datetime-local" formControlName="consumed_at" /></label>
+          <p>Si conoces los nutrientes, puedes indicarlos. Estos valores son declarados por ti.</p>
+          <div class="fields">
+            <label
+              >Calorías (kcal)<input
+                type="number"
+                formControlName="calories"
+                min="0"
+                max="10000"
+                step="any"
+            /></label>
+            <label
+              >Proteínas (g)<input
+                type="number"
+                formControlName="protein_g"
+                min="0"
+                max="1000"
+                step="any"
+            /></label>
+            <label
+              >Carbohidratos (g)<input
+                type="number"
+                formControlName="carbs_g"
+                min="0"
+                max="1000"
+                step="any"
+            /></label>
+            <label
+              >Grasas (g)<input
+                type="number"
+                formControlName="fats_g"
+                min="0"
+                max="1000"
+                step="any"
+            /></label>
+          </div>
+          @if (form.touched && form.invalid) {
+            <small class="invalid"
+              >Revisa los campos. Calorías: 0–10000; macronutrientes: 0–1000 g.</small
+            >
+          }
+          <button class="primary" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Procesando…' : 'Guardar comida' }}
+          </button>
+        </form>
+        <aside>
+          <strong>Tu alimentación también sin conexión</strong>
+          <p>
+            En la app móvil puedes consultar tu plan descargado, registrar comidas sin internet y
+            sincronizarlas cuando vuelva la conexión.
+          </p>
+        </aside>
+      }
+    </section>
+  </div>
+  <section class="panel">
+    <div class="history-heading">
+      <h2>Historial de alimentación</h2>
+      <button (click)="loadHistory()" [disabled]="loading()">Actualizar</button>
+    </div>
+    @if (loading()) {
+      <p role="status">Cargando comidas…</p>
+    }
+    @for (record of records(); track record.id) {
+      <article class="record">
+        <div>
+          <strong>{{ record.notes || 'Comida analizada' }}</strong
+          ><small>{{
+            record.details?.consumed_at || record.created_at | date: 'dd/MM/yyyy · HH:mm'
+          }}</small>
+          <small
+            >Proteínas {{ record.estimated_protein }} g · Carbohidratos
+            {{ record.estimated_carbs }} g · Grasas {{ record.estimated_fats }} g</small
+          >
+        </div>
+        <strong>{{ record.estimated_calories | number: '1.0-0' }} kcal</strong>
+      </article>
+    } @empty {
+      @if (!loading()) {
+        <p>Todavía no hay comidas registradas para esta cuenta.</p>
+      }
+    }
+  </section>
+</section>
