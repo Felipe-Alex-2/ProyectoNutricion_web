@@ -36,6 +36,7 @@ export const STAFF_PACKAGES: readonly StaffNavigationPackage[] = [
     items: [
       { tab: 'historial-clinico', label: 'Evaluación nutricional', icon: 'file' },
       { tab: 'recetas', label: 'Planes y recetas', icon: 'leaf' },
+      { tab: 'alimentacion', label: 'Alimentación y fotos IA', icon: 'camera' },
       { tab: 'citas', label: 'Gestión de citas', icon: 'calendar' },
     ],
   },
