@@ -1,9 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="64" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <title>NutriSalud</title>
   <defs>
     <clipPath id="c"><circle cx="512" cy="512" r="512"/></clipPath>
   </defs>
   <circle cx="512" cy="512" r="512" fill="#2b2e34"/>
-  <path clip-path="url(#c)" fill="#ffffff" d="M756 193C700 270 600 290 480 320C330 360 240 440 235 590C233 640 240 680 249 710C310 580 430 490 585 444C400 550 270 740 231 940L296 975C285 900 305 830 343 770C480 782 620 750 710 640C790 540 800 380 756 193Z"/>
+  <circle cx="512" cy="512" r="496" fill="none" stroke="#ffffff" stroke-width="32" opacity="0.9"/>
+  <g clip-path="url(#c)">
+    <path transform="translate(512 512) scale(1.2) translate(-510 -584)" fill="#ffffff" d="M756 193C700 270 600 290 480 320C330 360 240 440 235 590C233 640 240 680 249 710C310 580 430 490 585 444C400 550 270 740 231 940L296 975C285 900 305 830 343 770C480 782 620 750 710 640C790 540 800 380 756 193Z"/>
+  </g>
 </svg>
-
