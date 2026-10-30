@@ -325,6 +325,9 @@
       @if (activeTab() === 'principal') {
         <app-staff-overview (navigate)="navigateFromOverview($event)" />
       }
+      @if (activeTab() === 'alimentacion') {
+        <app-nutrition-diary />
+      }
 
       <!-- ============================================================= -->
       <!-- TAB 2: BITÁCORA DEL SISTEMA (Auditoría con Llave Confidencial) -->

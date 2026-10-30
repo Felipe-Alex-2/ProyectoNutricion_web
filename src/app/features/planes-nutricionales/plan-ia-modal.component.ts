@@ -60,6 +60,10 @@ export class PlanIaModalComponent implements OnChanges {
 
   generarBorrador(): void {
     if (!this.patient) return;
+    if (!Number.isFinite(this.planCalorieAdjustmentPct()) || this.planCalorieAdjustmentPct() < -30 || this.planCalorieAdjustmentPct() > 30) {
+      this.aiPlanError.set('El ajuste calórico debe estar entre -30% y 30%.');
+      return;
+    }
     this.isGeneratingAiPlan.set(true);
     this.aiPlanError.set(null);
     this.aiPlanSuccess.set(null);
@@ -68,7 +72,7 @@ export class PlanIaModalComponent implements OnChanges {
       .generateDraft(
         this.patient.id,
         this.planCustomGoal() || undefined,
-        this.planCalorieAdjustmentPct() || undefined,
+        this.planCalorieAdjustmentPct(),
         this.planMealsPerDay() || 4
       )
       .subscribe({
@@ -97,13 +101,8 @@ export class PlanIaModalComponent implements OnChanges {
       next: (approvedPlan) => {
         this.selectedPlanDraft.set(approvedPlan);
         this.isApprovingAiPlan.set(false);
-        this.aiPlanSuccess.set('¡Plan aprobado y publicado! Abriendo creación de receta para el paciente...');
+        this.aiPlanSuccess.set('Plan aprobado y asignado. El paciente ya puede consultarlo en web y móvil.');
         this.planApproved.emit(approvedPlan);
-        if (this.patient) {
-          setTimeout(() => {
-            this.createRecipeFromPlan.emit({ plan: approvedPlan, patient: this.patient! });
-          }, 600);
-        }
       },
       error: (err: any) => {
         this.isApprovingAiPlan.set(false);

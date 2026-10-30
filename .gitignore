@@ -34,6 +34,8 @@ yarn-error.log
 .sass-cache/
 .env
 .env.local
+.env.*
+!.env.example
 *.env
 /connect.lock
 /coverage

@@ -70,6 +70,7 @@ import {
 } from '../../core/models/report.model';
 import { AIRecommendationResponse } from '../../core/models/ai-recommendation.model';
 import { PlanIaModalComponent } from '../planes-nutricionales/plan-ia-modal.component';
+import { NutritionDiaryComponent } from '../nutrition/nutrition-diary.component';
 import { PanelAutomatizacionesComponent } from '../automatizaciones/panel-automatizaciones.component';
 import { ModalEditarPacienteComponent } from '../pacientes/modal-editar-paciente.component';
 import { ModalDesactivarPacienteComponent } from '../pacientes/modal-desactivar-paciente.component';
@@ -92,6 +93,7 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
     ClientPortalComponent,
     ReactiveFormsModule,
     PlanIaModalComponent,
+    NutritionDiaryComponent,
     PanelAutomatizacionesComponent,
     ModalEditarPacienteComponent,
     ModalDesactivarPacienteComponent,
@@ -740,6 +742,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getTabLabel(tab: string): string {
     switch (tab) {
+      case 'alimentacion':
+        return 'Alimentación y fotos IA';
       case 'perfil':
         return 'Mi perfil';
       case 'principal':
