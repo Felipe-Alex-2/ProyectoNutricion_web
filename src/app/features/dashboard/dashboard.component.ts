@@ -1,6 +1,8 @@
 import { StaffNavigationComponent } from './staff-navigation.component';
 import { canOpenStaffTab } from './staff-navigation.model';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { UserAvatarComponent } from '../../shared/ui/user-avatar.component';
+import { AvatarPickerComponent } from '../../shared/ui/avatar-picker.component';
 import { StaffOverviewComponent } from './staff-overview.component';
 import { ClientPortalComponent } from '../client/client-portal.component';
 import {
@@ -89,6 +91,8 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    UserAvatarComponent,
+    AvatarPickerComponent,
     CompanyManagerComponent,
     WorkspaceSelectorComponent,
     LocationPickerComponent,
@@ -403,6 +407,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
       email: ['', [Validators.required, Validators.email]],
       phone: [''],
+      avatar: [''],
       developer_key: [''],
     });
 
@@ -570,6 +575,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       full_name: user.full_name,
       email: user.email,
       phone: user.phone || '',
+      avatar: user.avatar || '',
       developer_key: '',
     });
   }
@@ -602,6 +608,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       full_name: formVal.full_name,
       email: formVal.email,
       phone: formVal.phone,
+      avatar: formVal.avatar ?? '',
     };
     if (formVal.developer_key && formVal.developer_key.trim()) {
       payload.developer_key = formVal.developer_key.trim();

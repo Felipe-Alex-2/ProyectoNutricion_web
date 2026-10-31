@@ -183,7 +183,7 @@
           >
             <ns-icon name="plus" /><span>Abrir caja</span></button
           ><button class="staff-avatar" (click)="toggleEdit()" aria-label="Editar mi perfil">
-            {{ authService.currentUser()?.full_name?.charAt(0) }}
+            <ns-user-avatar [avatar]="authService.currentUser()?.avatar" [name]="authService.currentUser()?.full_name" />
           </button>
         </div>
       </header>
@@ -228,6 +228,10 @@
           <h2 class="card-title">Editar Información Personal</h2>
           <app-workspace-selector (saved)="workspaceChanged()" />
           <form [formGroup]="editForm" (ngSubmit)="onSaveProfile()" class="edit-form">
+            <div class="form-group mb-3">
+              <label class="form-label">Avatar</label>
+              <ns-avatar-picker [value]="editForm.value.avatar || ''" [name]="editForm.value.full_name || ''" (valueChange)="editForm.patchValue({ avatar: $event }); editForm.markAsDirty()" />
+            </div>
             <div class="form-group mb-3">
               <label class="form-label">Nombre Completo *</label>
               <input

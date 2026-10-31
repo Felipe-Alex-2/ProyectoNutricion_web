@@ -6,6 +6,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, timer, switchMap, catchError, of } from 'rxjs';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { UserAvatarComponent } from '../../shared/ui/user-avatar.component';
+import { AvatarPickerComponent } from '../../shared/ui/avatar-picker.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -63,7 +65,15 @@ interface FoodRecord {
 @Component({
   selector: 'app-client-portal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, IconComponent, NutritionDiaryComponent],
+  imports: [
+    UserAvatarComponent,
+    AvatarPickerComponent,
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    IconComponent,
+    NutritionDiaryComponent,
+  ],
   templateUrl: './client-portal.component.html',
   styleUrl: './client-portal.component.css',
 })
@@ -135,6 +145,7 @@ export class ClientPortalComponent implements OnInit {
     full_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(250)]],
     email: ['', [Validators.required, Validators.email]],
     phone: [''],
+    avatar: [''],
   });
   readonly healthForm = this.fb.group({
     birth_date: [''],
@@ -176,6 +187,7 @@ export class ClientPortalComponent implements OnInit {
         full_name: user.full_name,
         email: user.email,
         phone: user.phone || '',
+        avatar: user.avatar || '',
       });
     this.loadPersonalData();
     this.route.queryParams.pipe(takeUntilDestroyed(this.destroy)).subscribe((p) => {

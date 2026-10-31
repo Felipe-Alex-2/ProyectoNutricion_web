@@ -7,6 +7,7 @@ export interface User {
   email: string;
   full_name: string;
   phone?: string;
+  avatar?: string | null;
   role_id: string;
   tenant_id?: string;
   branch_id?: string;
@@ -21,6 +22,7 @@ export interface UserUpdate {
   full_name?: string;
   email?: string;
   phone?: string;
+  avatar?: string;
   password?: string;
   role_id?: string;
   tenant_id?: string;

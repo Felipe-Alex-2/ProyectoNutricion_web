@@ -38,7 +38,7 @@
           (click)="accountOpen.set(!accountOpen())"
           (keydown.escape)="accountOpen.set(false)"
         >
-          <span class="account-avatar">{{ firstName().charAt(0) }}</span
+          <span class="account-avatar"><ns-user-avatar [avatar]="auth.currentUser()?.avatar" [name]="firstName()" /></span
           ><span class="account-name">{{ firstName() }}</span
           ><span aria-hidden="true">⌄</span>
         </button>
@@ -933,6 +933,12 @@
         <p>Mantén tu información de contacto actualizada.</p>
       </div>
       <form class="ns-card profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <div class="stack-form">
+          <div class="ns-field">
+            <span>Avatar</span>
+            <ns-avatar-picker [value]="profileForm.controls.avatar.value" [name]="profileForm.controls.full_name.value" (valueChange)="profileForm.controls.avatar.setValue($event)" />
+          </div>
+        </div>
         <div class="stack-form">
           <label class="ns-field" for="profile-name"
             >Nombre completo<input

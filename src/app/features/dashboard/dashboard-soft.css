@@ -166,6 +166,9 @@
   color: var(--text-primary);
 }
 .staff-avatar {
+  --avatar-size: 38px;
+  padding: 0;
+  overflow: hidden;
   display: grid;
   place-items: center;
   border: 0;

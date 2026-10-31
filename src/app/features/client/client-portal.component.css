@@ -30,6 +30,7 @@
   padding: 0 5px;
 }
 .account-avatar {
+  --avatar-size: 35px;
   width: 35px;
   height: 35px;
   display: grid;
