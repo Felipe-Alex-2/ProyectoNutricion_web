@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "appData": {
+    "name": "NutriSalud",
+    "id": "nutrisalud-app"
+  },
+  "assetGroups": [
+    {
+      "name": "nutrisalud-shell",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/index.html",
+          "/*.css",
+          "/*.js",
+          "/favicon.svg",
+          "/favicon.ico",
+          "/manifest.webmanifest",
+          "/icons/**"
+        ]
+      }
+    },
+    {
+      "name": "nutrisalud-images",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/images/**"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [],
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/api/**",
+    "!/paypal-return",
+    "!/ngsw/**"
+  ]
+}

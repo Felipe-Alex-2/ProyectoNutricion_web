@@ -253,4 +253,96 @@ describe('Exclusive staff navigation', () => {
     expect(component.reportPreviewData()).toBe(before);
     flushRequests();
   });
+  it('validates manual columns and dates, hides the notes banner, and blocks stale exports', () => {
+    const component = fixture.componentInstance;
+    const service = TestBed.inject(ReportService);
+    component.setActiveTab('reportes', false);
+    flushRequests();
+    const columns = [
+      { key: 'patient_name', label: 'Paciente', type: 'string' },
+      { key: 'diagnosis', label: 'Diagnóstico', type: 'string' },
+    ];
+    service.entities.set([
+      {
+        entity: 'clinical_records',
+        label: 'Fichas clínicas',
+        description: 'Evaluaciones',
+        available_columns: columns,
+      },
+    ]);
+    component.reportStatusFilter.set('CONFIRMED');
+    component.reportStartDate.set('2026-10-31');
+    component.reportEndDate.set('2026-10-31');
+    component.onReportEntityChange('clinical_records');
+    const request = http.expectOne((r) => r.url.endsWith('/reports/query'));
+    expect(request.request.body.columns).toEqual(['patient_name', 'diagnosis']);
+    expect(request.request.body.status).toBeUndefined();
+    request.flush({
+      entity: 'clinical_records',
+      title: 'Fichas',
+      columns,
+      rows: [{ patient_name: 'Ana', diagnosis: 'Control' }],
+      total_rows: 1,
+      notes: [
+        'Datos limitados a las empresas, sucursales y pacientes autorizados.',
+        'Periodo en Bolivia (UTC−4): 2026-10-31 a 2026-10-31.',
+      ],
+    });
+    fixture.detectChanges();
+    flushRequests();
+    expect(fixture.nativeElement.querySelector('#report-status')).toBeNull();
+    expect(fixture.nativeElement.querySelector('select[multiple]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Datos limitados a las empresas');
+    expect(component.reportPreviewIsCurrent()).toBe(true);
+    component.reportSearch.set('Ana');
+    component.exportReportExcel();
+    http.expectNone((r) => r.url.endsWith('/reports/export/excel'));
+    expect(component.reportError()).toContain('Genera la vista previa');
+    component.deselectAllReportColumns();
+    http.expectNone((r) => r.url.endsWith('/reports/query'));
+    expect(component.reportError()).toContain('al menos una columna');
+    expect(component.reportPreviewData()).toBeNull();
+    component.reportStartDate.set('2026-11-01');
+    component.selectAllReportColumns();
+    http.expectNone((r) => r.url.endsWith('/reports/query'));
+    expect(component.reportError()).toContain('fecha inicial');
+  });
+  it('keeps detailed rows separate from summary calculations and lets the user choose the numeric field', () => {
+    const component = fixture.componentInstance;
+    const service = TestBed.inject(ReportService);
+    component.setActiveTab('reportes', false);
+    flushRequests();
+    service.entities.set([
+      {
+        entity: 'recipes',
+        label: 'Recetas',
+        description: 'Recetas',
+        available_columns: [
+          { key: 'title', label: 'Receta', type: 'string' },
+          { key: 'calories', label: 'Calorías', type: 'number' },
+          { key: 'protein', label: 'Proteína', type: 'number' },
+        ],
+      },
+    ]);
+    component.onReportEntityChange('recipes');
+    flushRequests();
+    component.setReportMode('summary');
+    flushRequests();
+    component.setReportMetric('average');
+    const average = http.expectOne((r) => r.url.endsWith('/reports/query'));
+    expect(average.request.body.aggregate).toBe(true);
+    expect(average.request.body.value_field).toBe('calories');
+    average.flush({ rows: [], columns: [], total_rows: 0 });
+    component.setReportValueField('protein');
+    const protein = http.expectOne((r) => r.url.endsWith('/reports/query'));
+    expect(protein.request.body.value_field).toBe('protein');
+    protein.flush({ rows: [], columns: [], total_rows: 0 });
+    component.setReportMode('list');
+    const list = http.expectOne((r) => r.url.endsWith('/reports/query'));
+    expect(list.request.body.aggregate).toBe(false);
+    expect(list.request.body.metric).toBe('count');
+    expect(list.request.body.group_by).toBeNull();
+    list.flush({ rows: [], columns: [], total_rows: 0 });
+    expect(component.isReportSummary()).toBe(false);
+  });
 });

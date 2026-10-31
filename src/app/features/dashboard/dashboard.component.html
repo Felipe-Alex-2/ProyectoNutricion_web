@@ -4004,7 +4004,13 @@
             guardan.
           </p>
 
-          <button class="btn-primary" (click)="saveCurrentReport()">Guardar reporte actual</button>
+          <button
+            class="btn-primary"
+            [disabled]="isLoadingReport() || !reportPreviewIsCurrent()"
+            (click)="saveCurrentReport()"
+          >
+            Guardar reporte actual
+          </button>
           <button class="btn-outline" (click)="loadSavedReports()">Actualizar historial</button>
           @for (report of savedReports(); track report.id) {
             <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px">
@@ -4028,7 +4034,7 @@
             <button
               (click)="exportReportExcel()"
               class="btn-primary"
-              [disabled]="isExportingReport()"
+              [disabled]="isExportingReport() || isLoadingReport() || !reportPreviewIsCurrent()"
               style="background: #1d6f42; display: inline-flex; align-items: center; gap: 6px"
             >
               <svg
@@ -4054,7 +4060,7 @@
             <button
               (click)="exportReportPdf()"
               class="btn-primary"
-              [disabled]="isExportingReport()"
+              [disabled]="isExportingReport() || isLoadingReport() || !reportPreviewIsCurrent()"
               style="background: #d9534f; display: inline-flex; align-items: center; gap: 6px"
             >
               <svg
@@ -4086,116 +4092,6 @@
         }
 
         <app-workspace-selector [compact]="true" (saved)="workspaceChanged()" />
-
-        <section class="card" style="padding: 20px; margin-bottom: 20px">
-          <h2>Alcance y tipo de análisis</h2>
-          <div class="filters-bar">
-            @if (isSaasAdmin() && !authService.currentUser()?.active_tenant_id) {
-              <label
-                >Comparar empresas
-                <select
-                  class="select-input"
-                  multiple
-                  size="3"
-                  aria-label="Empresas del reporte, selección múltiple"
-                  (change)="setReportCompanies($event)"
-                >
-                  @for (company of tenants(); track company.id) {
-                    <option
-                      [value]="company.id"
-                      [selected]="reportAnalysisOptions().tenant_ids?.includes(company.id)"
-                    >
-                      {{ company.name }}
-                    </option>
-                  }
-                </select></label
-              >
-            }
-            @if (isSaasAdmin() && !authService.currentUser()?.active_branch_id) {
-              <label
-                >Sucursales
-                <select
-                  class="select-input"
-                  multiple
-                  size="3"
-                  aria-label="Sucursales del reporte, selección múltiple"
-                  (change)="setReportBranches($event)"
-                >
-                  @for (branch of reportBranches(); track branch.id) {
-                    <option
-                      [value]="branch.id"
-                      [selected]="reportAnalysisOptions().branch_ids?.includes(branch.id)"
-                    >
-                      {{ getTenantName(branch.tenant_id) }} · {{ branch.name }}
-                    </option>
-                  }
-                </select></label
-              >
-            }
-            <label
-              >Agrupar<select
-                class="select-input"
-                [value]="
-                  reportAnalysisOptions().group_by ||
-                  (reportAnalysisOptions().aggregate ? 'total' : '')
-                "
-                (change)="setReportGrouping($any($event.target).value)"
-              >
-                <option value="">Lista de registros</option>
-                <option value="total">Total general</option>
-                @if (isSaasAdmin()) {
-                  <option value="company">Por empresa</option>
-                }
-                <option value="branch">Por sucursal</option>
-                <option value="month">Por mes</option>
-                @if (
-                  ['appointments', 'payments', 'nutritional_plans'].includes(selectedReportEntity())
-                ) {
-                  <option value="status">Por estado</option>
-                }
-                @if (
-                  ['appointments', 'clinical_records', 'nutritional_plans'].includes(
-                    selectedReportEntity()
-                  )
-                ) {
-                  <option value="nutritionist">Por especialista</option>
-                }
-                @if (selectedReportEntity() === 'payments') {
-                  <option value="payment_method">Por método de pago</option>
-                }
-              </select></label
-            >
-            <label
-              >Métrica<select
-                class="select-input"
-                [value]="reportAnalysisOptions().metric || 'count'"
-                (change)="setReportMetric($any($event.target).value)"
-              >
-                <option value="count">Cantidad de registros</option>
-                @if (
-                  ['patients', 'appointments', 'clinical_records', 'nutritional_plans'].includes(
-                    selectedReportEntity()
-                  )
-                ) {
-                  <option value="unique_patients">Pacientes únicos</option>
-                }
-                @if (
-                  ['payments', 'recipes', 'nutritional_plans'].includes(selectedReportEntity())
-                ) {
-                  <option value="sum">Suma</option>
-                  <option value="average">Promedio</option>
-                }
-                @if (selectedReportEntity() === 'appointments') {
-                  <option value="cancellation_rate">Cancelaciones (%)</option>
-                }
-              </select></label
-            >
-          </div>
-          <p>
-            Sin selección se incluyen todas las empresas y sucursales autorizadas. Puedes
-            seleccionar varias opciones con Ctrl o Cmd.
-          </p>
-        </section>
 
         <!-- Card: Asistente de Voz para Reportes Dinámicos con Gemini IA -->
 
@@ -4525,75 +4421,234 @@
             </div>
           </div>
 
-          <!-- Selector de Columnas Dinámicas -->
-          <div style="margin-bottom: 20px">
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-              "
-            >
-              <label style="font-weight: 600; font-size: 0.88rem; color: var(--color-text-muted)">
-                Columnas a Incluir en la Exportación
+          <section class="card report-options" aria-labelledby="report-options-heading">
+            <h2 id="report-options-heading">Presentación del reporte</h2>
+            <div class="report-controls-grid">
+              <label for="report-mode"
+                >Tipo de resultado
+                <select
+                  id="report-mode"
+                  class="select-input"
+                  [value]="isReportSummary() ? 'summary' : 'list'"
+                  (change)="setReportMode($any($event.target).value)"
+                >
+                  <option value="list">Listado detallado</option>
+                  <option value="summary">Resumen numérico</option>
+                </select>
               </label>
-              <div style="display: flex; gap: 8px">
-                <button
-                  (click)="selectAllReportColumns()"
-                  class="btn-outline btn-sm"
-                  style="font-size: 0.75rem; padding: 3px 8px"
-                >
-                  Todas
-                </button>
-                <button
-                  (click)="deselectAllReportColumns()"
-                  class="btn-outline btn-sm"
-                  style="font-size: 0.75rem; padding: 3px 8px"
-                >
-                  Ninguna
-                </button>
-              </div>
-            </div>
-
-            @for (ent of reportService.entities(); track ent.entity) {
-              @if (selectedReportEntity() === ent.entity) {
-                <div
-                  style="
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 12px;
-                    background: rgba(0, 0, 0, 0.02);
-                    padding: 14px;
-                    border-radius: 8px;
-                    border: 1px solid var(--color-border);
-                  "
-                >
-                  @for (col of ent.available_columns; track col.key) {
-                    <label
-                      style="
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                        font-size: 0.85rem;
-                        user-select: none;
-                      "
+              @if (isReportSummary()) {
+                <label for="report-group"
+                  >Agrupar por
+                  <select
+                    id="report-group"
+                    class="select-input"
+                    [value]="reportAnalysisOptions().group_by || 'total'"
+                    (change)="setReportGrouping($any($event.target).value)"
+                  >
+                    <option value="total">Total general</option>
+                    @if (isSaasAdmin()) {
+                      <option value="company">Empresa</option>
+                    }
+                    <option value="branch">Sucursal</option>
+                    <option value="month">Mes</option>
+                    @if (
+                      ['appointments', 'payments', 'nutritional_plans'].includes(
+                        selectedReportEntity()
+                      )
+                    ) {
+                      <option value="status">Estado</option>
+                    }
+                    @if (
+                      ['appointments', 'clinical_records', 'nutritional_plans'].includes(
+                        selectedReportEntity()
+                      )
+                    ) {
+                      <option value="nutritionist">Especialista</option>
+                    }
+                    @if (selectedReportEntity() === 'payments') {
+                      <option value="payment_method">Método de pago</option>
+                    }
+                  </select>
+                </label>
+                <label for="report-metric"
+                  >Calcular
+                  <select
+                    id="report-metric"
+                    class="select-input"
+                    [value]="reportAnalysisOptions().metric || 'count'"
+                    (change)="setReportMetric($any($event.target).value)"
+                  >
+                    <option value="count">Cantidad de registros</option>
+                    @if (
+                      [
+                        'patients',
+                        'appointments',
+                        'clinical_records',
+                        'nutritional_plans',
+                      ].includes(selectedReportEntity())
+                    ) {
+                      <option value="unique_patients">Pacientes únicos</option>
+                    }
+                    @if (reportNumericFields().length) {
+                      <option value="sum">Suma</option>
+                      <option value="average">Promedio</option>
+                    }
+                    @if (selectedReportEntity() === 'appointments') {
+                      <option value="cancellation_rate">Tasa de cancelación (%)</option>
+                    }
+                  </select>
+                </label>
+                @if (['sum', 'average'].includes(reportAnalysisOptions().metric || '')) {
+                  <label for="report-value-field"
+                    >Campo numérico
+                    <select
+                      id="report-value-field"
+                      class="select-input"
+                      [value]="reportAnalysisOptions().value_field || ''"
+                      (change)="setReportValueField($any($event.target).value)"
                     >
-                      <input
-                        type="checkbox"
-                        [checked]="selectedReportColumns().includes(col.key)"
-                        (change)="toggleReportColumn(col.key)"
-                        style="accent-color: var(--color-primary); width: 16px; height: 16px"
-                      />
-                      <span>{{ col.label }}</span>
-                    </label>
-                  }
-                </div>
+                      @for (column of reportNumericFields(); track column.key) {
+                        <option [value]="column.key">{{ column.label }}</option>
+                      }
+                    </select>
+                  </label>
+                }
               }
-            }
-          </div>
+            </div>
+            <p class="report-options-help">
+              {{
+                isReportSummary()
+                  ? 'Resume los registros con un cálculo: por ejemplo, cantidad de citas por mes o ingresos por sucursal.'
+                  : 'Muestra cada registro con las columnas y filtros que selecciones abajo.'
+              }}
+            </p>
+            <div class="report-controls-grid">
+              @if (isSaasAdmin() && !authService.currentUser()?.active_tenant_id) {
+                <details class="report-scope-filter">
+                  <summary>
+                    Empresas:
+                    {{ reportAnalysisOptions().tenant_ids?.length || 'todas las disponibles' }}
+                  </summary>
+                  <fieldset>
+                    <legend>Selecciona las empresas del reporte</legend>
+                    @for (company of tenants(); track company.id) {
+                      <label class="report-scope-option"
+                        ><input
+                          type="checkbox"
+                          [checked]="
+                            reportAnalysisOptions().tenant_ids?.includes(company.id) || false
+                          "
+                          (change)="toggleReportCompany(company.id)"
+                        /><span>{{ company.name }}</span></label
+                      >
+                    } @empty {
+                      <p>No hay empresas disponibles.</p>
+                    }
+                  </fieldset>
+                </details>
+              }
+              @if (isSaasAdmin() && !authService.currentUser()?.active_branch_id) {
+                <details class="report-scope-filter">
+                  <summary>
+                    Sucursales:
+                    {{ reportAnalysisOptions().branch_ids?.length || 'todas las disponibles' }}
+                  </summary>
+                  <fieldset>
+                    <legend>Selecciona las sucursales del reporte</legend>
+                    @for (branch of reportBranches(); track branch.id) {
+                      <label class="report-scope-option"
+                        ><input
+                          type="checkbox"
+                          [checked]="
+                            reportAnalysisOptions().branch_ids?.includes(branch.id) || false
+                          "
+                          (change)="toggleReportBranch(branch.id)"
+                        /><span
+                          >{{ getTenantName(branch.tenant_id) }} · {{ branch.name }}</span
+                        ></label
+                      >
+                    } @empty {
+                      <p>No hay sucursales disponibles para este espacio.</p>
+                    }
+                  </fieldset>
+                </details>
+              }
+            </div>
+          </section>
+          @if (!isReportSummary()) {
+            <!-- Selector de Columnas Dinámicas -->
+            <div style="margin-bottom: 20px">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 8px;
+                "
+              >
+                <label style="font-weight: 600; font-size: 0.88rem; color: var(--color-text-muted)">
+                  Columnas del listado y la exportación
+                </label>
+                <div style="display: flex; gap: 8px">
+                  <button
+                    (click)="selectAllReportColumns()"
+                    class="btn-outline btn-sm"
+                    style="font-size: 0.75rem; padding: 3px 8px"
+                  >
+                    Todas
+                  </button>
+                  <button
+                    (click)="deselectAllReportColumns()"
+                    class="btn-outline btn-sm"
+                    style="font-size: 0.75rem; padding: 3px 8px"
+                  >
+                    Ninguna
+                  </button>
+                </div>
+              </div>
 
+              @for (ent of reportService.entities(); track ent.entity) {
+                @if (selectedReportEntity() === ent.entity) {
+                  <div
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 12px;
+                      background: rgba(0, 0, 0, 0.02);
+                      padding: 14px;
+                      border-radius: 8px;
+                      border: 1px solid var(--color-border);
+                    "
+                  >
+                    @for (col of ent.available_columns; track col.key) {
+                      <label
+                        style="
+                          display: inline-flex;
+                          align-items: center;
+                          gap: 6px;
+                          cursor: pointer;
+                          font-size: 0.85rem;
+                          user-select: none;
+                        "
+                      >
+                        <input
+                          type="checkbox"
+                          [checked]="selectedReportColumns().includes(col.key)"
+                          (change)="toggleReportColumn(col.key)"
+                          style="accent-color: var(--color-primary); width: 16px; height: 16px"
+                        />
+                        <span>{{ col.label }}</span>
+                      </label>
+                    }
+                  </div>
+                }
+              }
+            </div>
+          } @else {
+            <p class="report-options-help">
+              Las columnas del resumen se definen con la agrupación y el cálculo seleccionados.
+            </p>
+          }
           <!-- Filtros secundarios -->
           <div
             style="
@@ -4605,6 +4660,7 @@
           >
             <div>
               <label
+                for="report-start-date"
                 style="
                   display: block;
                   font-size: 0.82rem;
@@ -4616,6 +4672,7 @@
               >
               <input
                 type="date"
+                id="report-start-date"
                 [value]="reportStartDate()"
                 (input)="reportStartDate.set($any($event.target).value)"
                 (change)="generateReportPreview()"
@@ -4624,6 +4681,7 @@
             </div>
             <div>
               <label
+                for="report-end-date"
                 style="
                   display: block;
                   font-size: 0.82rem;
@@ -4635,34 +4693,50 @@
               >
               <input
                 type="date"
+                id="report-end-date"
                 [value]="reportEndDate()"
                 (input)="reportEndDate.set($any($event.target).value)"
                 (change)="generateReportPreview()"
                 class="input-field form-control"
               />
             </div>
+            @if (selectedReportEntity() !== 'clinical_records') {
+              <div>
+                <label class="report-filter-label" for="report-status">{{
+                  selectedReportEntity() === 'activity_logs' ? 'Categoría de operación' : 'Estado'
+                }}</label>
+                @if (selectedReportEntity() === 'activity_logs') {
+                  <input
+                    id="report-status"
+                    class="input-field form-control"
+                    [value]="reportStatusFilter()"
+                    (input)="reportStatusFilter.set($any($event.target).value)"
+                    (keyup.enter)="generateReportPreview()"
+                    placeholder="Ej.: OPERACIONES"
+                  />
+                } @else {
+                  <select
+                    id="report-status"
+                    class="input-field select-input"
+                    [value]="reportStatusFilter()"
+                    [disabled]="reportAnalysisOptions().metric === 'cancellation_rate'"
+                    (change)="reportStatusFilter.set($any($event.target).value)"
+                  >
+                    <option value="">Todos los estados</option>
+                    @for (status of reportStatusOptions(); track status.value) {
+                      <option [value]="status.value">{{ status.label }}</option>
+                    }
+                  </select>
+                  @if (reportAnalysisOptions().metric === 'cancellation_rate') {
+                    <small>La tasa utiliza citas de todos los estados.</small>
+                  }
+                }
+              </div>
+            }
+
             <div>
               <label
-                style="
-                  display: block;
-                  font-size: 0.82rem;
-                  font-weight: 600;
-                  color: var(--color-text-muted);
-                  margin-bottom: 4px;
-                "
-                >Estado / Condición</label
-              >
-              <input
-                type="text"
-                [value]="reportStatusFilter()"
-                (input)="reportStatusFilter.set($any($event.target).value)"
-                (keyup.enter)="generateReportPreview()"
-                placeholder="Ej: CONFIRMED, Activo, Desayuno..."
-                class="input-field form-control"
-              />
-            </div>
-            <div>
-              <label
+                for="report-search"
                 style="
                   display: block;
                   font-size: 0.82rem;
@@ -4674,10 +4748,11 @@
               >
               <input
                 type="text"
+                id="report-search"
                 [value]="reportSearch()"
                 (input)="reportSearch.set($any($event.target).value)"
                 (keyup.enter)="generateReportPreview()"
-                placeholder="Buscar en el reporte..."
+                placeholder="Nombre, correo o contenido del reporte..."
                 class="input-field form-control"
               />
             </div>
@@ -4756,14 +4831,17 @@
           </button>
         </div>
 
+        @if (reportPreviewData() && !isLoadingReport() && !reportPreviewIsCurrent()) {
+          <p role="status" class="report-options-help">
+            Los parámetros cambiaron o abriste un reporte guardado. Genera una nueva vista previa
+            antes de exportar o guardar.
+          </p>
+        }
         <!-- Vista previa del Reporte -->
         @if (reportPreviewData(); as report) {
-          @if (report.summary || report.notes?.length) {
-            <div class="card" style="padding: 20px; margin-bottom: 16px">
+          @if (report.summary) {
+            <div class="card report-summary">
               <h3>{{ report.summary }}</h3>
-              @for (note of report.notes || []; track $index) {
-                <p>{{ note }}</p>
-              }
             </div>
           }
           @if (report.chart && report.rows.length) {
@@ -4811,7 +4889,8 @@
                   Vista Previa: {{ report.title }}
                 </h3>
                 <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 0">
-                  {{ report.total_rows }} registros encontrados.
+                  Mostrando {{ report.rows.length }} de {{ report.total_rows }}
+                  {{ report.chart ? 'grupos' : 'registros' }}.
                 </p>
               </div>
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">

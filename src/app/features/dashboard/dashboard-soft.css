@@ -406,3 +406,77 @@ table td {
     height: 38px;
   }
 }
+.report-options,
+.report-summary {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.report-options h2 {
+  margin: 0 0 18px;
+}
+.report-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.report-controls-grid > label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.report-controls-grid select {
+  width: 100%;
+  min-height: 44px;
+}
+.report-options-help {
+  margin: 14px 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.report-scope-filter {
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+}
+.report-scope-filter summary {
+  cursor: pointer;
+  min-height: 24px;
+  overflow-wrap: anywhere;
+}
+.report-scope-filter fieldset {
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+}
+.report-scope-filter legend {
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+.report-scope-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px;
+  cursor: pointer;
+}
+.report-scope-option input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--color-primary);
+}
+.report-scope-option span {
+  overflow-wrap: anywhere;
+}
+.report-filter-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}

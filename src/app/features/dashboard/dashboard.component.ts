@@ -3075,6 +3075,131 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ==========================================
   // MÓDULO DE REPORTES DINÁMICOS
   // ==========================================
+  private reportPreviewRequestKey = '';
+  private reportBranchesVersion = 0;
+  isReportSummary(): boolean {
+    const options = this.reportAnalysisOptions();
+    return !!(
+      options.aggregate ||
+      options.group_by ||
+      (options.metric && options.metric !== 'count')
+    );
+  }
+  reportStatusOptions(): { value: string; label: string }[] {
+    const options: Record<string, [string, string][]> = {
+      patients: [
+        ['ACTIVE', 'Activos'],
+        ['INACTIVE', 'Inactivos'],
+      ],
+      recipes: [
+        ['ACTIVE', 'Activas'],
+        ['INACTIVE', 'Inactivas'],
+      ],
+      appointments: [
+        ['PENDING', 'Pendientes'],
+        ['CONFIRMED', 'Confirmadas'],
+        ['COMPLETED', 'Atendidas'],
+        ['CANCELLED', 'Canceladas'],
+      ],
+      payments: [
+        ['PENDING', 'Pendientes'],
+        ['COMPLETED', 'Cobrados'],
+        ['CANCELLED', 'Cancelados'],
+        ['FAILED', 'Fallidos'],
+      ],
+      nutritional_plans: [
+        ['DRAFT', 'Borradores'],
+        ['APPROVED', 'Aprobados'],
+        ['REJECTED', 'Rechazados'],
+        ['ARCHIVED', 'Archivados'],
+      ],
+    };
+    const result = (options[this.selectedReportEntity()] || []).map(([value, label]) => ({
+      value,
+      label,
+    }));
+    const interpreted = this.reportStatusFilter();
+    if (interpreted && !result.some((option) => option.value === interpreted))
+      result.push({ value: interpreted, label: `Filtro interpretado: ${interpreted}` });
+    return result;
+  }
+  reportNumericFields() {
+    return (
+      this.reportService
+        .entities()
+        .find((e) => e.entity === this.selectedReportEntity())
+        ?.available_columns.filter((c) => c.type === 'number') || []
+    );
+  }
+  setReportMode(mode: string): void {
+    this.reportAnalysisOptions.update((o) => ({
+      ...o,
+      aggregate: mode === 'summary',
+      group_by: null,
+      metric: 'count',
+      value_field: null,
+      sort_by: undefined,
+      sort_order: 'desc',
+    }));
+    if (mode === 'list' && !this.selectedReportColumns().length) {
+      const entity = this.reportService
+        .entities()
+        .find((e) => e.entity === this.selectedReportEntity());
+      if (entity) this.selectedReportColumns.set(entity.available_columns.map((c) => c.key));
+    }
+    this.generateReportPreview();
+  }
+  setReportValueField(field: string): void {
+    this.reportAnalysisOptions.update((o) => ({ ...o, value_field: field }));
+    this.generateReportPreview();
+  }
+  toggleReportCompany(id: string): void {
+    const selected = this.reportAnalysisOptions().tenant_ids || [];
+    this.reportFilterTenant.set('');
+    this.reportAnalysisOptions.update((o) => ({
+      ...o,
+      tenant_ids: selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id],
+      branch_ids: [],
+    }));
+    this.loadReportBranches();
+    this.generateReportPreview();
+  }
+  toggleReportBranch(id: string): void {
+    const selected = this.reportAnalysisOptions().branch_ids || [];
+    this.reportAnalysisOptions.update((o) => ({
+      ...o,
+      branch_ids: selected.includes(id) ? selected.filter((v) => v !== id) : [...selected, id],
+    }));
+    this.generateReportPreview();
+  }
+  reportPreviewIsCurrent(): boolean {
+    return (
+      !!this.reportPreviewData() &&
+      this.reportPreviewRequestKey === JSON.stringify(this.currentReportRequest())
+    );
+  }
+  private validReportParameters(requirePreview = false): boolean {
+    let error = '';
+    if (
+      this.reportStartDate() &&
+      this.reportEndDate() &&
+      this.reportStartDate() > this.reportEndDate()
+    )
+      error = 'La fecha inicial no puede ser posterior a la fecha final.';
+    else if (
+      !this.isReportSummary() &&
+      !this.selectedReportColumns().length &&
+      this.reportService.entities().some((e) => e.entity === this.selectedReportEntity())
+    )
+      error = 'Selecciona al menos una columna para el listado.';
+    else if (requirePreview && !this.reportPreviewIsCurrent())
+      error = 'Genera la vista previa con estos parámetros antes de exportar o guardar.';
+    if (error) {
+      this.reportError.set(error);
+      return false;
+    }
+    return true;
+  }
   loadReportConfig(): void {
     this.loadReportBranches();
     this.reportService.getEntities().subscribe({
@@ -3098,6 +3223,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       branch_ids: o.branch_ids,
     }));
     this.selectedReportEntity.set(entityKey);
+    this.reportStatusFilter.set('');
     const ent = this.reportService.entities().find((e) => e.entity === entityKey);
     if (ent) this.selectedReportColumns.set(ent.available_columns.map((c) => c.key));
     else this.selectedReportColumns.set([]);
@@ -3164,6 +3290,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     };
   }
   saveCurrentReport(): void {
+    if (!this.validReportParameters(true)) return;
     this.reportService.saveReport(this.currentReportRequest()).subscribe({
       next: () => {
         this.reportMessage.set(
@@ -3175,6 +3302,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
   loadReportBranches(): void {
+    const version = ++this.reportBranchesVersion;
     this.tenantService
       .getBranches(
         this.isSaasAdmin()
@@ -3182,13 +3310,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
           : this.authService.currentUser()?.tenant_id,
       )
       .subscribe({
-        next: (rows) =>
+        next: (rows) => {
+          if (version !== this.reportBranchesVersion) return;
           this.reportBranches.set(
             this.reportAnalysisOptions().tenant_ids?.length
               ? rows.filter((b) => this.reportAnalysisOptions().tenant_ids!.includes(b.tenant_id))
               : rows,
-          ),
-        error: () => this.reportBranches.set([]),
+          );
+        },
+        error: () => {
+          if (version === this.reportBranchesVersion) this.reportBranches.set([]);
+        },
       });
   }
   setReportGrouping(value: string): void {
@@ -3196,6 +3328,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...o,
       group_by: value === 'total' || !value ? null : (value as ReportQueryRequest['group_by']),
       aggregate: !!value,
+      ...(!value ? { metric: 'count' as const, value_field: null } : {}),
       sort_by: value === 'month' ? 'month' : value ? 'value' : undefined,
       sort_order: value === 'month' ? 'asc' : 'desc',
     }));
@@ -3255,7 +3388,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   openSavedReport(id: string): void {
     this.reportService.getSavedReport(id).subscribe({
-      next: (r) => this.reportPreviewData.set(r),
+      next: (r) => {
+        this.reportPreviewRequestKey = '';
+        this.reportPreviewData.set(r);
+      },
       error: (e) => this.reportError.set(e?.error?.detail || 'No se pudo abrir el reporte.'),
     });
   }
@@ -3268,6 +3404,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   generateReportPreview(): void {
     const version = ++this.reportRequestVersion;
+    if (!this.validReportParameters()) {
+      this.reportPreviewData.set(null);
+      this.reportPreviewRequestKey = '';
+      this.isLoadingReport.set(false);
+      return;
+    }
     const req = this.currentReportRequest();
     this.isLoadingReport.set(true);
     this.reportError.set(null);
@@ -3275,17 +3417,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: (res) => {
         if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
         this.reportPreviewData.set(res);
+        this.reportPreviewRequestKey = JSON.stringify(req);
         this.isLoadingReport.set(false);
       },
       error: (err: any) => {
         if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
         this.reportError.set(err?.error?.detail || 'Error al generar vista previa');
+        this.reportPreviewData.set(null);
+        this.reportPreviewRequestKey = '';
         this.isLoadingReport.set(false);
       },
     });
   }
 
   exportReportExcel(): void {
+    if (!this.validReportParameters(true)) return;
     const req = this.currentReportRequest();
     this.isExportingReport.set(true);
     this.reportService.exportExcel(req).subscribe({
@@ -3305,6 +3451,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   exportReportPdf(): void {
+    if (!this.validReportParameters(true)) return;
     const req = this.currentReportRequest();
     this.isExportingReport.set(true);
     this.reportService.exportPdf(req).subscribe({
@@ -3471,7 +3618,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
           // Si vino la vista previa de datos generada directamente, asignarla
           if (res.report_data) {
+            if (!this.isReportSummary() && !this.selectedReportColumns().length) {
+              this.selectedReportColumns.set(res.report_data.columns.map((column) => column.key));
+            }
             this.reportPreviewData.set(res.report_data);
+            this.reportPreviewRequestKey = JSON.stringify(this.currentReportRequest());
             this.voiceSummaryData.set(null);
             this.stopVoiceSummary();
           } else {
@@ -3482,8 +3633,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           setTimeout(() => this.reportMessage.set(null), 6000);
         },
         error: (err: any) => {
-          this.isProcessingVoice.set(false);
           if (version !== this.reportRequestVersion || this.activeTab() !== 'reportes') return;
+          this.isProcessingVoice.set(false);
           this.reportError.set(
             err?.error?.detail || 'Error al procesar el comando por voz con Gemini.',
           );
