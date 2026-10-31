@@ -819,12 +819,16 @@ export class CompanyManagerComponent implements OnInit {
     this.companyError.set('');
     this.message.set('');
     const normalize = (value: string) => value.trim().replace(/\s+/g, ' ');
+    const code = this.company.code.trim().toUpperCase();
+    const rawBranchCode = (this.company.initial_branch_code || '').trim().toUpperCase();
+    const branchCode =
+      !rawBranchCode || rawBranchCode === 'PRINCIPAL' ? `${code}-PRINCIPAL`.slice(0, 50) : rawBranchCode;
     const payload = {
       ...this.company,
       name: normalize(this.company.name),
-      code: this.company.code.trim().toUpperCase(),
+      code,
       initial_branch_name: normalize(this.company.initial_branch_name),
-      initial_branch_code: this.company.initial_branch_code.trim().toUpperCase(),
+      initial_branch_code: branchCode,
     };
     if (
       payload.name.length < 2 ||
