@@ -1652,7 +1652,7 @@
         <app-company-manager />
       }
       @if (activeTab() === 'sprint1-tenants') {
-        <app-company-manager [superadmin]="true" (changed)="loadTenants()" />
+        <app-company-manager [superadmin]="true" (changed)="companyCreated($event)" />
         <header class="workspace-header">
           <div>
             <div class="header-tag">Módulo 1 • Multi-Tenancy</div>

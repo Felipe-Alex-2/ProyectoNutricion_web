@@ -860,10 +860,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // --- Sprint 1: Tenants CRUD Methods ---
+  private tenantListVersion = 0;
+  companyCreated(company: Tenant): void {
+    ++this.tenantListVersion;
+    this.tenants.update((rows) => [company, ...rows.filter((row) => row.id !== company.id)]);
+    this.isLoadingTenants.set(false);
+  }
+
   loadTenants(): void {
+    const version = ++this.tenantListVersion;
     this.isLoadingTenants.set(true);
     this.tenantService.getTenants().subscribe({
       next: (res) => {
+        if (version !== this.tenantListVersion) return;
         this.tenants.set(res);
         this.isLoadingTenants.set(false);
         if (res.length > 0 && !this.orgUserForm.get('tenant_id')?.value) {
@@ -871,7 +880,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.orgUserForm.patchValue({ tenant_id: userTenant || res[0].id });
         }
       },
-      error: () => this.isLoadingTenants.set(false),
+      error: () => {
+        if (version === this.tenantListVersion) this.isLoadingTenants.set(false);
+      },
     });
   }
 

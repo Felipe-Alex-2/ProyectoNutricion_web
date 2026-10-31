@@ -65,4 +65,44 @@ describe('Bolivia company and branch locations', () => {
     fixture.destroy();
     http.verify();
   });
+  it('shows a created company immediately and discards an older company list response', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CompanyManagerComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CompanyManagerComponent);
+    const c = fixture.componentInstance;
+    c.superadmin = true;
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const old = http.expectOne((r) => r.url.endsWith('/tenants'));
+    http
+      .expectOne((r) => r.url.endsWith('/administrator-candidates'))
+      .flush([{ id: 'admin', full_name: 'Admin', email: 'admin@example.com' }]);
+    c.companies.set([{ id: 'old', name: 'Empresa existente' }]);
+    Object.assign(c.company, {
+      name: 'Empresa nueva',
+      code: 'NEW',
+      administrator_id: 'admin',
+      department_code: '01',
+      initial_province_code: '0101',
+      initial_municipality_code: '010101',
+    });
+    const changed = vi.fn();
+    c.changed.subscribe(changed);
+    c.createCompany();
+    http
+      .expectOne((r) => r.method === 'POST' && r.url.endsWith('/tenants'))
+      .flush({ id: 'new', name: 'Empresa nueva', department_code: '01' });
+    old.flush([{ id: 'old', name: 'Empresa existente' }]);
+    http.expectOne((r) => r.url.endsWith('/branches')).flush([{ id: 'branch', name: 'Principal' }]);
+    fixture.detectChanges();
+    expect(c.companies().map((row) => row.id)).toEqual(['new', 'old']);
+    expect(c.selected).toBe('new');
+    expect(changed).toHaveBeenCalledWith(expect.objectContaining({ id: 'new' }));
+    expect(c.candidates()).toEqual([]);
+    expect(fixture.nativeElement.textContent).toContain('Empresa nueva');
+    fixture.destroy();
+    http.verify();
+  });
 });

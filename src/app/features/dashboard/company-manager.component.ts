@@ -50,6 +50,9 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
       <details>
         <summary>Crear empresa</summary>
         <form (ngSubmit)="createCompany()">
+          @if (companyError()) {
+            <p role="alert" class="company-feedback">{{ companyError() }}</p>
+          }
           <label
             >Nombre de la empresa<input
               name="name"
@@ -253,7 +256,9 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
 })
 export class CompanyManagerComponent implements OnInit {
   @Input() superadmin = false;
-  @Output() changed = new EventEmitter<void>();
+  @Output() changed = new EventEmitter<any>();
+  companyError = signal('');
+  private listVersion = 0;
   companies = signal<any[]>([]);
   branches = signal<any[]>([]);
   candidates = signal<any[]>([]);
@@ -324,8 +329,10 @@ export class CompanyManagerComponent implements OnInit {
     this.load();
   }
   load() {
+    const version = ++this.listVersion;
     this.http.get<any[]>(`${this.api}/tenants`).subscribe({
       next: (rows) => {
+        if (version !== this.listVersion) return;
         this.companies.set(rows);
         if (rows.length === 1) {
           this.selected = rows[0].id;
@@ -364,12 +371,19 @@ export class CompanyManagerComponent implements OnInit {
   }
   createCompany() {
     if (this.busy()) return;
+    this.companyError.set('');
+    if (!this.company.name.trim() || !this.company.code.trim() || !this.company.administrator_id) {
+      this.companyError.set(
+        'Completa nombre, código y administrador responsable. Si no hay cuentas disponibles, prepara una cuenta de administrador primero.',
+      );
+      return;
+    }
     if (
       !this.company.department_code ||
       !this.company.initial_province_code ||
       !this.company.initial_municipality_code
     ) {
-      this.error.set('Selecciona departamento, provincia y municipio.');
+      this.companyError.set('Selecciona departamento, provincia y municipio de la lista.');
       return;
     }
     this.busy.set(true);
@@ -377,6 +391,11 @@ export class CompanyManagerComponent implements OnInit {
     this.http.post<any>(`${this.api}/tenants`, this.company).subscribe({
       next: (c) => {
         this.busy.set(false);
+        ++this.listVersion;
+        this.companies.update((rows) => [c, ...rows.filter((row) => row.id !== c.id)]);
+        this.candidates.update((rows) =>
+          rows.filter((row) => row.id !== this.company.administrator_id),
+        );
         this.selected = c.id;
         this.company = {
           name: '',
@@ -389,11 +408,13 @@ export class CompanyManagerComponent implements OnInit {
           initial_municipality_code: '',
         };
         this.message.set('Empresa creada con su administrador y primera sucursal.');
-        this.load();
         this.loadBranches();
-        this.changed.emit();
+        this.changed.emit(c);
       },
-      error: (e) => this.fail(e),
+      error: (e) => {
+        this.fail(e);
+        this.companyError.set(this.error());
+      },
     });
   }
   loadBranches() {
