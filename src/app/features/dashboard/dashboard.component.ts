@@ -606,10 +606,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const formVal = this.editForm.value;
     const payload: UserUpdate = {
       full_name: formVal.full_name,
-      email: formVal.email,
       phone: formVal.phone,
       avatar: formVal.avatar ?? '',
     };
+    const currentEmail = this.authService.currentUser()?.email?.toLowerCase().trim();
+    if (formVal.email && formVal.email.toLowerCase().trim() !== currentEmail) {
+      payload.email = formVal.email;
+    }
     if (formVal.developer_key && formVal.developer_key.trim()) {
       payload.developer_key = formVal.developer_key.trim();
     }
@@ -628,9 +631,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         const detail = err?.error?.detail;
+        const fields = Array.isArray(err?.error?.errors)
+          ? err.error.errors
+              .map((e: { field?: string; message?: string }) => `${e.field}: ${e.message}`)
+              .join(' · ')
+          : '';
         if (this.activeTab() === 'perfil')
           this.updateError.set(
-            typeof detail === 'string' ? detail : 'Error al actualizar el perfil',
+            fields || (typeof detail === 'string' ? detail : 'Error al actualizar el perfil'),
           );
       },
     });

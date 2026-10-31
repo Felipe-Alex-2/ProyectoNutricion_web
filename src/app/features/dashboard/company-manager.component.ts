@@ -2,6 +2,7 @@ import { Component, Input, OnInit, signal, Output, EventEmitter } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { finalize, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BOLIVIA_LOCATIONS } from '../../core/data/bolivia-locations';
 import { LocationPickerComponent } from '../../shared/ui/location-picker.component';
@@ -12,6 +13,7 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
   template: ` <section class="company-panel">
     <h2>{{ superadmin ? 'Empresas y sucursales' : 'Sucursales de tu empresa' }}</h2>
     <p>Cada empresa mantiene separados sus pacientes, cobros, planes y reportes.</p>
+    <button type="button" (click)="load()" [disabled]="busy()">Actualizar lista de empresas</button>
     @if (error()) {
       <p role="alert">{{ error() }}</p>
     }
@@ -111,7 +113,7 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
               !company.initial_municipality_code
             "
           >
-            Crear empresa y asignar administrador
+            {{ busy() ? 'Procesando…' : 'Crear empresa y asignar administrador' }}
           </button>
         </form>
       </details>
@@ -349,29 +351,80 @@ export class CompanyManagerComponent implements OnInit {
   fail(e: any) {
     this.busy.set(false);
     this.error.set(
-      typeof e?.error?.detail === 'string'
-        ? e.error.detail
-        : 'No se pudo guardar. Revisa los datos e intenta otra vez.',
+      e?.name === 'TimeoutError'
+        ? 'El servidor no respondió a tiempo. No se pudo confirmar la creación. Actualiza la lista antes de reintentar para comprobar si se guardó.'
+        : e?.status === 0
+          ? 'No se pudo conectar con el servidor. Comprueba la conexión y actualiza la lista antes de reintentar.'
+          : Array.isArray(e?.error?.errors)
+            ? e.error.errors.map((item: any) => `${item.field}: ${item.message}`).join('. ')
+            : typeof e?.error?.detail === 'string'
+              ? e.error.detail
+              : 'No se pudo guardar. Revisa los datos e intenta otra vez.',
     );
   }
   createAdmin() {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set('');
-    this.http.post<any>(`${this.api}/tenants/administrator-candidates`, this.admin).subscribe({
-      next: (a) => {
-        this.busy.set(false);
-        this.candidates.update((rows) => [...rows, a]);
-        this.company.administrator_id = a.id;
-        this.admin = { full_name: '', email: '', password: '' };
-        this.message.set('Cuenta preparada. Selecciónala al crear la empresa.');
-      },
-      error: (e) => this.fail(e),
-    });
+    this.http
+      .post<any>(`${this.api}/tenants/administrator-candidates`, this.admin)
+      .pipe(
+        timeout(30000),
+        finalize(() => this.busy.set(false)),
+      )
+      .subscribe({
+        next: (a) => {
+          this.busy.set(false);
+          this.candidates.update((rows) => [...rows, a]);
+          this.company.administrator_id = a.id;
+          this.admin = { full_name: '', email: '', password: '' };
+          this.message.set('Cuenta preparada. Selecciónala al crear la empresa.');
+        },
+        error: (e) => this.fail(e),
+      });
   }
   createCompany() {
     if (this.busy()) return;
     this.companyError.set('');
+    this.message.set('');
+    const normalize = (value: string) => value.trim().replace(/\s+/g, ' ');
+    const payload = {
+      ...this.company,
+      name: normalize(this.company.name),
+      code: this.company.code.trim().toUpperCase(),
+      initial_branch_name: normalize(this.company.initial_branch_name),
+      initial_branch_code: this.company.initial_branch_code.trim().toUpperCase(),
+    };
+    if (
+      payload.name.length < 2 ||
+      payload.name.length > 250 ||
+      payload.initial_branch_name.length < 2 ||
+      payload.initial_branch_name.length > 250
+    ) {
+      this.companyError.set(
+        'El nombre de empresa y de sucursal debe tener entre 2 y 250 caracteres, sin espacios vacíos.',
+      );
+      return;
+    }
+    if (
+      !/^[A-Z0-9_-]{2,50}$/.test(payload.code) ||
+      !/^[A-Z0-9_-]{2,50}$/.test(payload.initial_branch_code)
+    ) {
+      this.companyError.set(
+        'Los códigos requieren entre 2 y 50 letras, números, guiones o guiones bajos, sin espacios.',
+      );
+      return;
+    }
+    if (
+      this.companies().some(
+        (row) =>
+          normalize(row.name || '').toLocaleLowerCase() === payload.name.toLocaleLowerCase() ||
+          (row.code || '').trim().toUpperCase() === payload.code,
+      )
+    ) {
+      this.companyError.set('Ya existe una empresa con ese nombre o código.');
+      return;
+    }
     if (!this.company.name.trim() || !this.company.code.trim() || !this.company.administrator_id) {
       this.companyError.set(
         'Completa nombre, código y administrador responsable. Si no hay cuentas disponibles, prepara una cuenta de administrador primero.',
@@ -388,34 +441,40 @@ export class CompanyManagerComponent implements OnInit {
     }
     this.busy.set(true);
     this.error.set('');
-    this.http.post<any>(`${this.api}/tenants`, this.company).subscribe({
-      next: (c) => {
-        this.busy.set(false);
-        ++this.listVersion;
-        this.companies.update((rows) => [c, ...rows.filter((row) => row.id !== c.id)]);
-        this.candidates.update((rows) =>
-          rows.filter((row) => row.id !== this.company.administrator_id),
-        );
-        this.selected = c.id;
-        this.company = {
-          name: '',
-          code: '',
-          administrator_id: '',
-          initial_branch_name: 'Sucursal principal',
-          initial_branch_code: 'PRINCIPAL',
-          department_code: '',
-          initial_province_code: '',
-          initial_municipality_code: '',
-        };
-        this.message.set('Empresa creada con su administrador y primera sucursal.');
-        this.loadBranches();
-        this.changed.emit(c);
-      },
-      error: (e) => {
-        this.fail(e);
-        this.companyError.set(this.error());
-      },
-    });
+    this.http
+      .post<any>(`${this.api}/tenants`, payload)
+      .pipe(
+        timeout(30000),
+        finalize(() => this.busy.set(false)),
+      )
+      .subscribe({
+        next: (c) => {
+          this.busy.set(false);
+          ++this.listVersion;
+          this.companies.update((rows) => [c, ...rows.filter((row) => row.id !== c.id)]);
+          this.candidates.update((rows) =>
+            rows.filter((row) => row.id !== this.company.administrator_id),
+          );
+          this.selected = c.id;
+          this.company = {
+            name: '',
+            code: '',
+            administrator_id: '',
+            initial_branch_name: 'Sucursal principal',
+            initial_branch_code: 'PRINCIPAL',
+            department_code: '',
+            initial_province_code: '',
+            initial_municipality_code: '',
+          };
+          this.message.set('Empresa creada con su administrador y primera sucursal.');
+          this.loadBranches();
+          this.changed.emit(c);
+        },
+        error: (e) => {
+          this.fail(e);
+          this.companyError.set(this.error());
+        },
+      });
   }
   loadBranches() {
     this.resetBranch();

@@ -105,4 +105,51 @@ describe('Bolivia company and branch locations', () => {
     fixture.destroy();
     http.verify();
   });
+  it('rejects empty and duplicate values and unlocks after a server timeout', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CompanyManagerComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CompanyManagerComponent);
+    const c = fixture.componentInstance;
+    c.superadmin = true;
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((r) => r.url.endsWith('/tenants'))
+      .flush([{ id: 'old', name: 'Mi Clínica', code: 'OLD' }]);
+    http.expectOne((r) => r.url.endsWith('/branches')).flush([]);
+    http.expectOne((r) => r.url.endsWith('/administrator-candidates')).flush([{ id: 'admin' }]);
+    Object.assign(c.company, {
+      name: '   ',
+      code: 'NEW',
+      administrator_id: 'admin',
+      department_code: '01',
+      initial_province_code: '0101',
+      initial_municipality_code: '010101',
+    });
+    c.createCompany();
+    expect(c.companyError()).toContain('nombre');
+    expect(c.busy()).toBe(false);
+    c.company.name = '  MI   clínica ';
+    c.createCompany();
+    expect(c.companyError()).toContain('Ya existe');
+    http.expectNone((r) => r.method === 'POST');
+    c.company.name = 'Empresa nueva';
+    vi.useFakeTimers();
+    try {
+      c.createCompany();
+      const pending = http.expectOne((r) => r.method === 'POST' && r.url.endsWith('/tenants'));
+      expect(c.busy()).toBe(true);
+      vi.advanceTimersByTime(30001);
+      expect(c.busy()).toBe(false);
+      expect(pending.cancelled).toBe(true);
+      expect(c.companyError()).toContain('no respondió a tiempo');
+      expect(c.company.name).toBe('Empresa nueva');
+    } finally {
+      vi.useRealTimers();
+      fixture.destroy();
+      http.verify();
+    }
+  });
 });
