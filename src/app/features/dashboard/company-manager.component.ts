@@ -98,6 +98,7 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
             <input
               name="name"
               [(ngModel)]="company.name"
+              (ngModelChange)="onCompanyNameChange($event)"
               (blur)="companyTouched.name = true"
               required
               minlength="2"
@@ -110,21 +111,15 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
             }
           </label>
           <label
-            >Código único *
+            >Código multitenant (automático)
             <input
               name="code"
               [(ngModel)]="company.code"
-              (blur)="companyTouched.code = true"
-              required
-              minlength="2"
-              placeholder="Ej: NUTRISALUD"
+              readonly
+              class="readonly-code-input"
+              placeholder="Se genera al escribir el nombre"
             />
-            @if ((companyTouched.code || companySubmitted()) && !isValidCode(company.code)) {
-              <small class="field-error"
-                >El código no puede quedar vacío (2 a 50 letras, números, guiones o guiones bajos, sin
-                espacios).</small
-              >
-            }
+            <small class="field-hint">Generado automáticamente a partir del nombre.</small>
           </label>
           <div>
             <app-location-picker
@@ -310,6 +305,7 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
           <input
             name="branchName"
             [(ngModel)]="branch.name"
+            (ngModelChange)="onBranchNameChange($event)"
             (blur)="branchTouched.name = true"
             required
             minlength="2"
@@ -322,21 +318,15 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
           }
         </label>
         <label
-          >Código *
+          >Código (automático)
           <input
             name="branchCode"
             [(ngModel)]="branch.code"
-            (blur)="branchTouched.code = true"
-            required
-            minlength="2"
-            placeholder="Ej: SUC-NORTE"
+            readonly
+            class="readonly-code-input"
+            placeholder="Se genera al escribir el nombre"
           />
-          @if ((branchTouched.code || branchSubmitted()) && !isValidCode(branch.code)) {
-            <small class="field-error"
-              >El código no puede quedar vacío (2 a 50 letras, números, guiones o guiones bajos, sin
-              espacios).</small
-            >
-          }
+          <small class="field-hint">Generado automáticamente.</small>
         </label>
         <label
           >Dirección
@@ -470,6 +460,18 @@ import { LocationPickerComponent } from '../../shared/ui/location-picker.compone
         font-size: 12px;
         font-weight: 500;
         line-height: 1.35;
+      }
+      .field-hint {
+        color: #526970;
+        font-size: 11.5px;
+        font-weight: 400;
+        line-height: 1.3;
+      }
+      .readonly-code-input {
+        background: #f2f7f7;
+        color: #087f77;
+        font-weight: 600;
+        cursor: default;
       }
       .company-feedback,
       .alert-error-box {
@@ -662,6 +664,49 @@ export class CompanyManagerComponent implements OnInit {
   isValidCode(value: string) {
     return /^[A-Z0-9_-]{2,50}$/.test((value || '').trim().toUpperCase());
   }
+  private slugifyCode(raw: string, prefix = 'EMP'): string {
+    const clean = (raw || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 42);
+    if (!clean) return '';
+    return clean.length < 2 ? `${prefix}-${clean}` : clean;
+  }
+  generateCompanyCode(name: string): string {
+    const base = this.slugifyCode(name, 'EMP');
+    if (!base) return '';
+    const existing = new Set(
+      this.companies().map((r) => (r.code || '').trim().toUpperCase()),
+    );
+    if (!existing.has(base)) return base;
+    let index = 2;
+    while (existing.has(`${base}-${index}`)) index++;
+    return `${base}-${index}`;
+  }
+  generateBranchCode(name: string): string {
+    const base = this.slugifyCode(name, 'SUC');
+    if (!base) return '';
+    const existing = new Set(
+      this.branches()
+        .filter((b) => b.id !== this.editingBranch)
+        .map((b) => (b.code || '').trim().toUpperCase()),
+    );
+    if (!existing.has(base)) return base;
+    let index = 2;
+    while (existing.has(`${base}-${index}`)) index++;
+    return `${base}-${index}`;
+  }
+  onCompanyNameChange(name: string) {
+    this.company.code = this.generateCompanyCode(name);
+  }
+  onBranchNameChange(name: string) {
+    if (!this.editingBranch) {
+      this.branch.code = this.generateBranchCode(name);
+    }
+  }
   isValidEmail(value: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || '').trim());
   }
@@ -819,6 +864,9 @@ export class CompanyManagerComponent implements OnInit {
     this.companyError.set('');
     this.message.set('');
     const normalize = (value: string) => value.trim().replace(/\s+/g, ' ');
+    if (!this.company.code.trim() && normalize(this.company.name).length >= 2) {
+      this.company.code = this.generateCompanyCode(this.company.name);
+    }
     const code = this.company.code.trim().toUpperCase();
     const rawBranchCode = (this.company.initial_branch_code || '').trim().toUpperCase();
     const branchCode =
@@ -939,6 +987,9 @@ export class CompanyManagerComponent implements OnInit {
     this.branchError.set('');
     this.error.set('');
     const cleanName = (this.branch.name || '').trim();
+    if (!this.branch.code.trim() && cleanName.length >= 2) {
+      this.branch.code = this.generateBranchCode(cleanName);
+    }
     const cleanCode = (this.branch.code || '').trim().toUpperCase();
     if (cleanName.length < 2) {
       this.branchError.set('El nombre de la sucursal no puede quedar vacío (mínimo 2 caracteres).');
