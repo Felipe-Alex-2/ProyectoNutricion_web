@@ -880,6 +880,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ++this.tenantListVersion;
     this.tenants.update((rows) => [company, ...rows.filter((row) => row.id !== company.id)]);
     this.isLoadingTenants.set(false);
+    this.loadTenants();
   }
 
   loadTenants(): void {
