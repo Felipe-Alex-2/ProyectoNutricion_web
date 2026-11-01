@@ -725,6 +725,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.isProcessingVoice.set(false);
       this.cancelVoiceActivity();
     }
+    if (tab !== 'suscripcion' && this.consultationToPay()) this.clearConsultationPayment();
     this.activeTab.set(tab);
     this.updateSuccess.set(null);
     this.updateError.set(null);
@@ -1992,13 +1993,56 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   setQuickConcept(concept: string, defaultPrice: number): void {
+    if (this.consultationToPay()) return;
     this.paymentForm.patchValue({
       concept: concept,
       amount: defaultPrice,
     });
   }
 
+  consultationToPay = signal<Appointment | null>(null);
+
+  prepareAppointmentPayment(appointment: Appointment): void {
+    this.setActiveTab('pagos');
+    this.consultationToPay.set(appointment);
+    this.selectedPaymentTenantId.set(appointment.tenant_id || '');
+    this.selectedPaymentBranchId.set(appointment.branch_id || '');
+    this.paymentForm.patchValue({ customer_name: appointment.patient_name || '',
+      customer_email: appointment.patient_email || '', concept: 'Consulta general', amount: 5,
+      payment_method: 'EFECTIVO', notes: '' });
+  }
+
+  clearConsultationPayment(): void {
+    this.consultationToPay.set(null);
+    this.paymentForm.reset({payment_method: 'EFECTIVO'});
+  }
+
+  private submitConsultationPayment(): void {
+    const appointment = this.consultationToPay();
+    if (!appointment || this.isCreatingPayment()) return;
+    this.isCreatingPayment.set(true);
+    this.paymentError.set(null);
+    this.appointmentService.payAppointment(appointment.id, this.paymentForm.value.payment_method || 'EFECTIVO').subscribe({
+      next: (result) => {
+        this.isCreatingPayment.set(false);
+        if (result.approval_url) { window.location.href = result.approval_url; return; }
+        if (result.status !== 'COMPLETED') {
+          this.paymentError.set('Existe una orden PayPal. Verifica el pago desde el historial.'); return;
+        }
+        this.paymentSuccess.set('Consulta general de USD 5 pagada. Cita confirmada.');
+        this.clearConsultationPayment();
+        this.loadPaymentData();
+        this.loadAppointments();
+      },
+      error: (err) => {
+        this.isCreatingPayment.set(false);
+        this.paymentError.set(err?.error?.detail || 'No se pudo registrar el pago.');
+      },
+    });
+  }
+
   onSubmitPayment(): void {
+    if (this.consultationToPay()) { this.submitConsultationPayment(); return; }
     if (this.paymentForm.invalid) {
       this.paymentForm.markAllAsTouched();
       this.paymentError.set(
@@ -2117,6 +2161,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onResumePayment(payment: Payment): void {
+    if (payment.appointment_id && !payment.paypal_order_id) {
+      const appointment = this.appointments().find(a => a.id === payment.appointment_id);
+      if (appointment) { this.prepareAppointmentPayment(appointment); return; }
+      this.appointmentService.getAppointments('ALL', payment.tenant_id).subscribe({
+        next: rows => { const a = rows.find(row => row.id === payment.appointment_id); if (a) this.prepareAppointmentPayment(a); },
+        error: () => this.paymentError.set('No se pudo cargar la cita del cobro.'),
+      });
+      return;
+    }
     if (!payment.paypal_order_id) {
       alert('Esta orden no cuenta con un identificador de PayPal asociado.');
       return;
@@ -2187,7 +2240,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getPaymentMethodBadgeLabel(method?: string): string {
     const m = (method || 'PAYPAL').toUpperCase();
-    return m === 'EFECTIVO' ? 'Efectivo' : 'PayPal';
+    return m === 'WALLET' ? 'Wallet' : m === 'PENDING' ? 'Por elegir' : m === 'EFECTIVO' ? 'Efectivo' : 'PayPal';
   }
 
   // ==========================================
@@ -2341,7 +2394,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const timeFormatted = this.formatDateTime(appointment.scheduled_at);
     if (
       !confirm(
-        `¿Deseas confirmar la cita con ${appointment.patient_name || 'el paciente'} para el ${timeFormatted}?`,
+        `¿Deseas aceptar la cita y habilitar el pago de USD 5 de ${appointment.patient_name || 'el paciente'} para el ${timeFormatted}?`,
       )
     ) {
       return;
@@ -2376,7 +2429,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.appointmentService.confirmAppointment(appointment.id).subscribe({
       next: (updated) => {
         this.appointmentSuccess.set(
-          `¡Cita confirmada con éxito! Se ha notificado a ${updated.patient_name || 'el paciente'}.`,
+          `Cita aceptada. Se habilitó el pago de consulta general de USD 5 para ${updated.patient_name || 'el paciente'}.`,
         );
         this.loadAppointments();
         this.loadNotificationCount();
@@ -2473,6 +2526,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getAppointmentBadgeClass(status: string): string {
     switch (status) {
       case 'PENDING':
+      case 'ACCEPTED':
         return 'badge-appt-pending';
       case 'CONFIRMED':
         return 'badge-appt-confirmed';
@@ -2487,8 +2541,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     switch (status) {
       case 'PENDING':
         return 'Pendiente';
+      case 'ACCEPTED':
+        return 'Aceptada · pago pendiente';
       case 'CONFIRMED':
-        return 'Confirmada';
+        return '✓ Confirmada';
       case 'COMPLETED':
         return 'Atendida';
       case 'CANCELLED':

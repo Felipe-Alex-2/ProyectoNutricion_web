@@ -103,6 +103,22 @@ describe('Exclusive staff navigation', () => {
       'Notificaciones',
     );
   });
+  it('opens an accepted consultation in checkout and pays through its appointment', () => {
+    const component = fixture.componentInstance;
+    const appointment: any = {id:'visit', patient_id:'p',patient_name:'Ana Paciente',patient_email:'patient@example.test',tenant_id:'clinic',branch_id:'branch',status:'ACCEPTED'};
+    component.prepareAppointmentPayment(appointment);
+    flushRequests();
+    expect(component.activeTab()).toBe('suscripcion');
+    expect(component.paymentForm.value.amount).toBe(5);
+    expect(component.paymentForm.value.customer_email).toBe('patient@example.test');
+    component.onSubmitPayment();
+    const request=http.expectOne(r=>r.url.endsWith('/appointments/visit/pay'));
+    expect(request.request.body).toEqual({method:'EFECTIVO'});
+    request.flush({status:'COMPLETED',payment_id:'charge'});
+    expect(component.consultationToPay()).toBeNull();
+    expect(component.paymentSuccess()).toContain('Cita confirmada');
+    expect(component.isCreatingPayment()).toBe(false);
+  });
   it('shows profile as a single page and removes it on every other module', () => {
     const component = fixture.componentInstance;
     const tabs = staffPackagesForRole('SUPERADMIN').flatMap((p) => p.items.map((i) => i.tab));

@@ -1,6 +1,7 @@
 export interface Appointment {
   id: string;
   tenant_id?: string | null;
+  branch_id?: string | null;
   tenant_name?: string | null;
   patient_id: string;
   patient_name?: string | null;
@@ -9,7 +10,7 @@ export interface Appointment {
   nutritionist_name?: string | null;
   scheduled_at: string;
   reason?: string | null;
-  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+  status: 'PENDING' | 'ACCEPTED' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   cancellation_reason?: string | null;
   created_at: string;
   updated_at: string;

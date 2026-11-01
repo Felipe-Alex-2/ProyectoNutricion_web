@@ -39,6 +39,10 @@ export class AppointmentService {
     return this.http.post<Appointment>(`${this.apiUrl}/${id}/confirm`, {});
   }
 
+  payAppointment(id: string, method: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/pay`, { method });
+  }
+
   completeAppointment(id: string): Observable<Appointment> { return this.http.post<Appointment>(`${this.apiUrl}/${id}/complete`, {}); }
 
   cancelAppointment(id: string, reason?: string): Observable<Appointment> {

@@ -1,4 +1,7 @@
 export interface Payment {
+  appointment_id?: string | null;
+  patient_id?: string | null;
+  purpose?: string;
   id: string;
   tenant_id: string;
   branch_id?: string;

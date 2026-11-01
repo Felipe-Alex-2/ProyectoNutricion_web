@@ -790,6 +790,14 @@
             </div>
 
             <form [formGroup]="paymentForm" (ngSubmit)="onSubmitPayment()" class="pos-form">
+                  @if (consultationToPay()) {
+                    <div role="status" class="alert alert-info">
+                      Consulta general · USD 5 para {{ consultationToPay()?.patient_name }}.
+                      Los datos y el monto se validan con la cita en el servidor.
+                      <button type="button" (click)="clearConsultationPayment()">Salir del cobro de cita</button>
+                    </div>
+                  }
+
               <label for="payment-branch">Sucursal del cobro</label>
               <p id="payment-branch">
                 {{
@@ -805,7 +813,7 @@
                 <input
                   type="text"
                   class="form-control"
-                  formControlName="customer_name"
+                  formControlName="customer_name" [readOnly]="!!consultationToPay()"
                   placeholder="Ej. María Gonzales López"
                 />
                 @if (
@@ -823,7 +831,7 @@
                 <input
                   type="email"
                   class="form-control"
-                  formControlName="customer_email"
+                  formControlName="customer_email" [readOnly]="!!consultationToPay()"
                   placeholder="cliente@ejemplo.com"
                 />
                 @if (
@@ -847,9 +855,9 @@
                   <label class="pos-field-label" style="margin: 0"
                     >Concepto / Detalle del Cobro <span class="text-danger">*</span></label
                   >
-                  <span class="quick-chips-label">Plantillas rápidas:</span>
+                  <span class="quick-chips-label" [hidden]="!!consultationToPay()">Plantillas rápidas:</span>
                 </div>
-                <div class="quick-chips-row">
+                <div class="quick-chips-row" [hidden]="!!consultationToPay()">
                   <button
                     type="button"
                     class="quick-chip"
@@ -882,7 +890,7 @@
                 <input
                   type="text"
                   class="form-control"
-                  formControlName="concept"
+                  formControlName="concept" [readOnly]="!!consultationToPay()"
                   placeholder="Ej. Consulta Nutricional, Suplementos, Control"
                 />
                 @if (paymentForm.get('concept')?.touched && paymentForm.get('concept')?.invalid) {
@@ -904,7 +912,7 @@
                     step="0.01"
                     min="0.01"
                     class="form-control amount-input"
-                    formControlName="amount"
+                    formControlName="amount" [readOnly]="!!consultationToPay()"
                     placeholder="0.00"
                   />
                   <span class="currency-code">USD</span>
@@ -1308,7 +1316,7 @@
                             <button
                               (click)="onResumePayment(p)"
                               class="btn-icon-pay"
-                              title="Continuar / Pagar con PayPal Sandbox"
+                              [title]="p.appointment_id && !p.paypal_order_id ? 'Cobrar consulta general' : 'Continuar con PayPal Sandbox'"
                             >
                               <svg
                                 class="paypal-logo-svg"
@@ -1324,7 +1332,7 @@
                               </svg>
                             </button>
                             <button
-                              (click)="copyPaymentLink(p.paypal_order_id)"
+                              (click)="copyPaymentLink(p.paypal_order_id)" [disabled]="!p.paypal_order_id"
                               class="btn-icon-copy"
                               title="Copiar enlace para abrir en Ventana de Incógnito"
                             >
@@ -1346,7 +1354,7 @@
                               </svg>
                             </button>
                             <button
-                              (click)="onCancelPaymentOrder(p.id)"
+                              (click)="onCancelPaymentOrder(p.id)" [disabled]="p.purpose === 'CONSULTATION' || p.purpose === 'WALLET_TOPUP'"
                               class="btn-icon-cancel"
                               title="Cancelar orden de cobro"
                             >
@@ -3225,6 +3233,7 @@
           >
             Pendientes ({{ pendingAppointmentsCount }})
           </button>
+          <button class="filter-pill pill-pending" [class.active]="selectedAppointmentStatus() === 'ACCEPTED'" (click)="setAppointmentStatusFilter('ACCEPTED')">Aceptadas · pago pendiente</button>
           <button
             class="filter-pill pill-confirmed"
             [class.active]="selectedAppointmentStatus() === 'CONFIRMED'"
@@ -3371,7 +3380,7 @@
                             <button
                               (click)="confirmAppointment(appt)"
                               class="btn-action-confirm"
-                              title="Confirmar cita y notificar al paciente"
+                              title="Aceptar cita y habilitar pago de USD 5"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -3386,7 +3395,7 @@
                               >
                                 <polyline points="20 6 9 17 4 12"></polyline>
                               </svg>
-                              Confirmar
+                              Aceptar
                             </button>
                             <button
                               (click)="openCancelAppointmentModal(appt)"
@@ -3409,6 +3418,9 @@
                               </svg>
                               Cancelar
                             </button>
+                          } @else if (appt.status === 'ACCEPTED') {
+                            <button class="btn-primary" (click)="prepareAppointmentPayment(appt)">Cobrar USD 5</button>
+                            <button class="btn-action-cancel" (click)="openCancelAppointmentModal(appt)">Cancelar</button>
                           } @else if (appt.status === 'CONFIRMED') {
                             @if (canCompleteAppointment(appt)) {
                               <button class="btn-primary" (click)="completeAppointment(appt)">
