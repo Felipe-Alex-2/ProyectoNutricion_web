@@ -2240,7 +2240,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getPaymentMethodBadgeLabel(method?: string): string {
     const m = (method || 'PAYPAL').toUpperCase();
-    return m === 'WALLET' ? 'Wallet' : m === 'PENDING' ? 'Por elegir' : m === 'EFECTIVO' ? 'Efectivo' : 'PayPal';
+    return m === 'PRESENCIAL' ? 'Presencial · pendiente' : m === 'ONLINE' ? 'Online · pendiente' : m === 'WALLET' ? 'Wallet' : m === 'PENDING' ? 'Por elegir' : m === 'EFECTIVO' ? 'Efectivo' : 'PayPal';
   }
 
   // ==========================================

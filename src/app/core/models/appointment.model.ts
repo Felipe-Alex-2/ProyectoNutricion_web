@@ -1,5 +1,9 @@
 export interface Appointment {
   id: string;
+  payment_status?: 'PAID' | 'UNPAID' | 'UNRECORDED';
+  payment_preference?: 'ONLINE' | 'PRESENCIAL' | null;
+  payment_method?: string | null;
+  payment_id?: string | null;
   tenant_id?: string | null;
   branch_id?: string | null;
   tenant_name?: string | null;

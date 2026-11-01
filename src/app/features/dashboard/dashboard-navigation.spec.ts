@@ -119,6 +119,21 @@ describe('Exclusive staff navigation', () => {
     expect(component.paymentSuccess()).toContain('Cita confirmada');
     expect(component.isCreatingPayment()).toBe(false);
   });
+  it('shows payment status and the customer choice as a read-only appointment column', () => {
+    const c=fixture.componentInstance;
+    c.setActiveTab('citas',false);
+    flushRequests();
+    c.appointments.set([
+      {id:'unpaid',patient_id:'p1',nutritionist_id:'n',patient_name:'Pendiente presencial',scheduled_at:'2026-12-01T12:00:00Z',status:'ACCEPTED',payment_status:'UNPAID',payment_preference:'PRESENCIAL',created_at:'2026-10-31',updated_at:'2026-10-31'},
+      {id:'paid',patient_id:'p2',nutritionist_id:'n',patient_name:'Cliente pagado',scheduled_at:'2026-12-01T13:00:00Z',status:'CONFIRMED',payment_status:'PAID',payment_preference:'ONLINE',payment_method:'WALLET',created_at:'2026-10-31',updated_at:'2026-10-31'},
+    ]);
+    fixture.detectChanges();
+    const cells=Array.from(fixture.nativeElement.querySelectorAll('.appointment-payment-cell')) as HTMLElement[];
+    expect(cells.length).toBe(2);
+    expect(cells.some(cell=>cell.textContent?.includes('No pagado') && cell.textContent?.includes('Presencial'))).toBe(true);
+    expect(cells.some(cell=>cell.textContent?.includes('Pagado') && cell.textContent?.includes('Wallet'))).toBe(true);
+    expect(fixture.nativeElement.textContent).not.toContain('Cobrar USD 5');
+  });
   it('shows profile as a single page and removes it on every other module', () => {
     const component = fixture.componentInstance;
     const tabs = staffPackagesForRole('SUPERADMIN').flatMap((p) => p.items.map((i) => i.tab));

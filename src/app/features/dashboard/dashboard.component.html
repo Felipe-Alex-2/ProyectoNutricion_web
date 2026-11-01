@@ -3313,6 +3313,7 @@
                     <th>Especialista</th>
                     <th>Motivo de Consulta</th>
                     <th>Estado</th>
+                    <th>Pago</th>
                     <th style="text-align: right">Acciones</th>
                   </tr>
                 </thead>
@@ -3374,6 +3375,14 @@
                           {{ getAppointmentBadgeLabel(appt.status) }}
                         </span>
                       </td>
+                      <td class="appointment-payment-cell">
+                        <span class="badge" [ngClass]="appt.payment_status === 'PAID' ? 'badge-appt-confirmed' : 'badge-appt-pending'">
+                          {{ appt.payment_status === 'PAID' ? 'Pagado' : appt.payment_status === 'UNPAID' ? 'No pagado' : 'Sin pago registrado' }}
+                        </span>
+                        @if (appt.payment_preference) {
+                          <div class="text-xs text-secondary">{{ appt.payment_preference === 'PRESENCIAL' ? 'Presencial' : 'Online' }}{{ appt.payment_method === 'WALLET' ? ' · Wallet' : appt.payment_method === 'PAYPAL' ? ' · PayPal' : appt.payment_method === 'EFECTIVO' ? ' · Efectivo' : '' }}</div>
+                        }
+                      </td>
                       <td style="text-align: right">
                         <div class="action-buttons-group">
                           @if (appt.status === 'PENDING') {
@@ -3419,7 +3428,6 @@
                               Cancelar
                             </button>
                           } @else if (appt.status === 'ACCEPTED') {
-                            <button class="btn-primary" (click)="prepareAppointmentPayment(appt)">Cobrar USD 5</button>
                             <button class="btn-action-cancel" (click)="openCancelAppointmentModal(appt)">Cancelar</button>
                           } @else if (appt.status === 'CONFIRMED') {
                             @if (canCompleteAppointment(appt)) {
