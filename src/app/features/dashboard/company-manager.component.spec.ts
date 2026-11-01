@@ -1,3 +1,5 @@
+import { signal } from '@angular/core';
+import { AuthService } from '../../core/services/auth.service';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
@@ -151,5 +153,40 @@ describe('Bolivia company and branch locations', () => {
       fixture.destroy();
       http.verify();
     }
+  });
+  it('uses the profile company for staff and keeps generated codes free of spaces', async () => {
+    const user = signal({ tenant_id: 'first', active_tenant_id: 'second' });
+    await TestBed.configureTestingModule({
+      imports: [CompanyManagerComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { currentUser: user } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CompanyManagerComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((r) => r.url.endsWith('/tenants'))
+      .flush([
+        { id: 'first', name: 'Primera', code: 'CLINICA' },
+        { id: 'second', name: 'Segunda', code: 'CLINICA-2' },
+      ]);
+    http.expectOne((r) => r.url.endsWith('/branches')).flush([]);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.selected).toBe('second');
+    expect(fixture.nativeElement.querySelector('select[name="selectedCompany"]')).toBeNull();
+    expect(c.generateCompanyCode('Clínica')).toBe('CLINICA-3');
+    expect(c.generateCompanyCode('A')).toBe('EMP-A');
+    user.set({ tenant_id: 'first', active_tenant_id: 'first' });
+    fixture.detectChanges();
+    const branches = http.expectOne((r) => r.url.endsWith('/branches'));
+    expect(branches.request.params.get('tenant_id')).toBe('first');
+    branches.flush([]);
+    expect(c.selected).toBe('first');
+    fixture.destroy();
+    http.verify();
   });
 });
