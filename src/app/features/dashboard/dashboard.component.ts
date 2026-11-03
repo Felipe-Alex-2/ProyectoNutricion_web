@@ -2745,6 +2745,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   pollPendingAppointmentsAndNotifications(): void {
     this.loadNotificationCount();
+    if (this.activeTab() === 'suscripcion') this.loadPaymentData();
     const tenantId = this.isOrgAdmin()
       ? this.authService.currentUser()?.tenant_id || undefined
       : this.isSaasAdmin() && this.appointmentFilterTenant()

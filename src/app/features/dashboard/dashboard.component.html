@@ -3428,6 +3428,11 @@
                               Cancelar
                             </button>
                           } @else if (appt.status === 'ACCEPTED') {
+                            @if (appt.payment_preference === 'PRESENCIAL' && appt.payment_status === 'UNPAID') {
+                              <button class="btn-primary" (click)="prepareAppointmentPayment(appt)" title="Ir a pagos con los datos del cliente y USD 5">
+                                Cobrar USD 5 en caja
+                              </button>
+                            }
                             <button class="btn-action-cancel" (click)="openCancelAppointmentModal(appt)">Cancelar</button>
                           } @else if (appt.status === 'CONFIRMED') {
                             @if (canCompleteAppointment(appt)) {

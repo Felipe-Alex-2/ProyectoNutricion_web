@@ -119,7 +119,7 @@ describe('Exclusive staff navigation', () => {
     expect(component.paymentSuccess()).toContain('Cita confirmada');
     expect(component.isCreatingPayment()).toBe(false);
   });
-  it('shows payment status and the customer choice as a read-only appointment column', () => {
+  it('shows payment status and opens in-person checkout with customer data', () => {
     const c=fixture.componentInstance;
     c.setActiveTab('citas',false);
     flushRequests();
@@ -132,7 +132,15 @@ describe('Exclusive staff navigation', () => {
     expect(cells.length).toBe(2);
     expect(cells.some(cell=>cell.textContent?.includes('No pagado') && cell.textContent?.includes('Presencial'))).toBe(true);
     expect(cells.some(cell=>cell.textContent?.includes('Pagado') && cell.textContent?.includes('Wallet'))).toBe(true);
-    expect(fixture.nativeElement.textContent).not.toContain('Cobrar USD 5');
+    const collect = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) => b.textContent.includes('Cobrar USD 5')) as HTMLButtonElement;
+    expect(collect).toBeTruthy();
+    collect.click();
+    flushRequests();
+    expect(c.activeTab()).toBe('suscripcion');
+    expect(c.consultationToPay()?.id).toBe('unpaid');
+    expect(c.paymentForm.value.customer_name).toBe('Pendiente presencial');
+    expect(c.paymentForm.value.amount).toBe(5);
+    expect(c.paymentForm.value.payment_method).toBe('EFECTIVO');
   });
   it('shows profile as a single page and removes it on every other module', () => {
     const component = fixture.componentInstance;
