@@ -134,6 +134,7 @@
 
     <!-- Main Workspace -->
     <main class="main-workspace" id="staff-content">
+      <ns-offline-panel />
       <header class="staff-header">
         <div class="staff-header-left">
           <button
@@ -953,7 +954,7 @@
                     </div>
                     <div class="method-btn-content">
                       <span class="method-title">Efectivo</span>
-                      <span class="method-subtitle">Registro inmediato en caja</span>
+                      <span class="method-subtitle">{{ offline.store.offline() ? 'Se guardará pendiente de sincronizar' : 'Registro inmediato en caja' }}</span>
                     </div>
                   </button>
 
@@ -961,6 +962,7 @@
                     type="button"
                     class="method-toggle-btn"
                     [class.active]="paymentForm.get('payment_method')?.value === 'PAYPAL'"
+                    [disabled]="offline.store.offline()"
                     (click)="setPaymentMethod('PAYPAL')"
                   >
                     <div class="method-btn-icon paypal">
@@ -1017,7 +1019,7 @@
                       >
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
-                      <span>Registrar Cobro en Efectivo</span>
+                      <span>{{ offline.store.offline() ? 'Guardar cobro pendiente' : 'Registrar Cobro en Efectivo' }}</span>
                     }
                   </button>
                 } @else {
@@ -2523,6 +2525,7 @@
                 </div>
                 <div class="recipe-body">
                   <h3 class="recipe-title">{{ recipe.title }}</h3>
+                  @if (recipe.offline_pending) { <p role="status">Pendiente de sincronizar</p> }
                   <p class="recipe-desc">
                     {{
                       recipe.description ||
@@ -2587,7 +2590,7 @@
 
                   @if (canAccessSprint1()) {
                     <div class="recipe-actions">
-                      <button class="btn-action-edit" (click)="openRecipeModal(recipe)">
+                      <button class="btn-action-edit" [disabled]="recipe.offline_pending || offline.store.offline()" (click)="openRecipeModal(recipe)">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="14"
@@ -2608,6 +2611,7 @@
                       </button>
                       <button
                         class="btn-action-delete"
+                        [disabled]="recipe.offline_pending || offline.store.offline()"
                         (click)="deleteRecipe(recipe.id, recipe.title)"
                       >
                         <svg

@@ -1,3 +1,5 @@
+import { OfflinePanelComponent } from '../../shared/ui/offline-panel.component';
+import { OfflineService } from '../../core/services/offline.service';
 import { StaffNavigationComponent } from './staff-navigation.component';
 import { canOpenStaffTab } from './staff-navigation.model';
 import { IconComponent } from '../../shared/ui/icon.component';
@@ -12,6 +14,7 @@ import {
   OnDestroy,
   signal,
   computed,
+  effect,
   DestroyRef,
   inject,
   QueryList,
@@ -91,6 +94,7 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    OfflinePanelComponent,
     UserAvatarComponent,
     AvatarPickerComponent,
     CompanyManagerComponent,
@@ -118,6 +122,16 @@ import { ModalRestaurarBackupComponent } from '../copias-seguridad/modal-restaur
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   @ViewChildren(CompanyManagerComponent) companyManagers!: QueryList<CompanyManagerComponent>;
+  readonly offline = inject(OfflineService);
+  private offlineCashOnly = effect(() => {
+    if (this.offline.store.offline()) this.paymentForm?.patchValue({payment_method: 'EFECTIVO'});
+  });
+  private offlineRefresh = effect(() => {
+    if (this.offline.revision() > 0) {
+      this.loadPaymentData();
+      this.loadRecipes();
+    }
+  });
   readonly boliviaDepartments = BOLIVIA_LOCATIONS;
   workspaceLabel(): string {
     const user = this.authService.currentUser();
@@ -1678,7 +1692,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
     } else {
       this.recipeService.createRecipe(formData).subscribe({
-        next: () => {
+        next: (recipe) => {
+          if (recipe.offline_pending) {
+            this.closeRecipeModal();
+            this.recipeSuccess.set(`Receta '${formData.title}' guardada como pendiente. Se enviará al recuperar internet.`);
+            return;
+          }
           this.recipeSuccess.set(`Receta '${formData.title}' creada con éxito.`);
           this.closeRecipeModal();
           this.activityLogService.recordActivity(
@@ -2088,6 +2107,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.paymentService.createPayment(payload).subscribe({
       next: (res) => {
         this.isCreatingPayment.set(false);
+        if (res.offline_pending) {
+          this.lastCreatedApprovalUrl.set(null);
+          this.paymentSuccess.set(`Cobro en efectivo de $${res.amount} USD guardado como pendiente. Se registrará al recuperar internet; el comprobante estará disponible después de sincronizar.`);
+          this.paymentForm.patchValue({customer_name: '', customer_email: '', concept: '', amount: null, notes: ''});
+          this.paymentForm.markAsPristine();
+          this.paymentForm.markAsUntouched();
+          return;
+        }
         this.activityLogService.recordActivity(
           'COBRO_CREADO',
           `Cobro de $${res.amount} USD a ${res.customer_name} por "${res.concept}" (${paymentMethod})`,

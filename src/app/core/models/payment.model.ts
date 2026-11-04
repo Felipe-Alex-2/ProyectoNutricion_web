@@ -35,6 +35,7 @@ export interface PaymentCreate {
 }
 
 export interface PaymentOrderCreated {
+  offline_pending?: boolean;
   payment_id: string;
   paypal_order_id?: string | null;
   approval_url?: string | null;

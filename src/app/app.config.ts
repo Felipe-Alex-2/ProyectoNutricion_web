@@ -1,3 +1,4 @@
+import { offlineInterceptor } from './core/interceptors/offline.interceptor';
 import { provideServiceWorker } from '@angular/service-worker';
 import { environment } from '../environments/environment';
 import { registerLocaleData } from '@angular/common';
@@ -23,6 +24,6 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding(),
       withInMemoryScrolling({ anchorScrolling: 'enabled' }),
     ),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, offlineInterceptor])),
   ],
 };

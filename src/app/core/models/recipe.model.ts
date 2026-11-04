@@ -1,4 +1,5 @@
 export interface Recipe {
+  offline_pending?: boolean;
   id: string;
   tenant_id?: string | null;
   created_by: string;
