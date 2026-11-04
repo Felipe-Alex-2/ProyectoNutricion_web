@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, effect, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom, timeout } from 'rxjs';
+import { firstValueFrom, timeout, TimeoutError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { WorkspaceContextService } from './workspace-context.service';
@@ -43,7 +43,6 @@ export class OfflineService {
     });
     const onOffline = () => this.store.offline.set(true);
     const onOnline = () => {
-      this.store.offline.set(false);
       void this.reconnect();
     };
     const onVisibility = () => {
@@ -61,8 +60,8 @@ export class OfflineService {
     // Retry temporary server failures while the application is open.
     const retryTimer = setInterval(() => {
       if (navigator.onLine && this.activeScope && !this.copying()) {
-        this.store.offline.set(false);
-        void this.sync();
+        if (this.store.offline()) void this.reconnect();
+        else void this.sync();
       }
     }, 30000);
     inject(DestroyRef).onDestroy(() => {
@@ -101,7 +100,6 @@ export class OfflineService {
     }
     this.copying.set(true);
     this.message.set('');
-    this.store.offline.set(false);
     const headers = { ...this.workspace.headers(), 'X-Offline-Copy': '1' };
     const get = async (path: string) => {
       if (version !== this.generation || scope !== this.store.scope(this.workspace.headers()))
@@ -144,7 +142,13 @@ export class OfflineService {
       const date = new Date().toISOString();
       await this.store.put(`last-copy:${scope}`, date);
       if (version === this.generation) this.lastCopy.set(date);
-    } catch {
+    } catch (error) {
+      if (
+        version === this.generation &&
+        (error instanceof TimeoutError ||
+          (error instanceof HttpErrorResponse && error.status === 0))
+      )
+        this.store.offline.set(true);
       if (version === this.generation)
         this.message.set(
           'Copia incompleta. Se conserva lo descargado. Reintenta cuando vuelva la conexión.',
@@ -183,6 +187,7 @@ export class OfflineService {
             if (version === this.generation) this.revision.update((x) => x + 1);
           } catch (error) {
             const status = error instanceof HttpErrorResponse ? error.status : 0;
+            if (status === 0 && version === this.generation) this.store.offline.set(true);
             if (status === 401 || status === 0) break;
             entry.error =
               error instanceof HttpErrorResponse

@@ -6,10 +6,14 @@ import { OfflineService } from '../../core/services/offline.service';
   selector: 'ns-offline-panel',
   standalone: true,
   imports: [DatePipe],
-  template: ` <section class="offline-panel" aria-label="Copia sin conexión">
-    <div class="status" role="status" aria-live="polite">
+  template: ` <section
+    class="offline-panel"
+    [class.is-offline]="offline.store.offline()"
+    aria-label="Copia sin conexión"
+  >
+    <div class="status" role="status" aria-live="polite" aria-atomic="true">
       <strong>{{
-        offline.store.offline() ? 'Modo sin conexión' : 'Copia para usar sin conexión'
+        offline.store.offline() ? 'Modo offline · Sin conexión' : 'Copia para usar sin conexión'
       }}</strong>
       <span>{{ offline.store.pending().length }} operaciones pendientes</span>
       <span
@@ -41,7 +45,7 @@ import { OfflineService } from '../../core/services/offline.service';
       </p>
     }
     @if (offline.store.pending().length) {
-      <details>
+      <details [open]="offline.store.offline() || offline.store.pending().length > 0">
         <summary>Ver operaciones pendientes</summary>
         <ol>
           @for (entry of offline.store.pending(); track entry.id) {
@@ -70,13 +74,25 @@ import { OfflineService } from '../../core/services/offline.service';
       :host {
         display: block;
         margin: 12px 0;
+        position: sticky;
+        top: 0;
+        z-index: 20;
       }
       .offline-panel {
-        background: var(--surface, #eef6f1);
+        background: var(--bg-card, #eef6f1);
         color: var(--text-primary, #19392b);
         border: 1px solid #a8cbb8;
         border-radius: 14px;
         padding: 14px;
+        max-height: 45vh;
+        overflow-y: auto;
+      }
+      .is-offline {
+        border-width: 2px;
+        border-color: #a85b00;
+      }
+      .is-offline strong {
+        text-decoration: underline;
       }
       .status,
       .actions {
@@ -103,6 +119,10 @@ import { OfflineService } from '../../core/services/offline.service';
       button:disabled {
         opacity: 0.55;
         cursor: default;
+      }
+      ol {
+        list-style: decimal;
+        padding-left: 24px;
       }
       li {
         padding: 8px 0;

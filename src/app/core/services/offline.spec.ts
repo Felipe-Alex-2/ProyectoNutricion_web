@@ -249,4 +249,39 @@ describe('Offline storage and replay boundaries', () => {
     expect(catalog[0].offline_pending).toBe(true);
     expect(catalog[0].ingredients).toBe('Arroz y verduras');
   });
+
+  it('keeps the offline banner active while retrying with Wi-Fi but no internet', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    TestBed.inject(WorkspaceContextService).headers.set(scopeHeaders);
+    (TestBed.inject(AuthService).currentUser as any).set({
+      id: 'user-a',
+      role_id: 'NUTRICIONISTA',
+    });
+    const offline = TestBed.inject(OfflineService);
+    TestBed.tick();
+    let failed = false;
+    for (let i = 0; i < 100 && !failed; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      for (const request of backend.match(environment.apiUrl + '/users/me')) {
+        request.error(new ProgressEvent('error'));
+        failed = true;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(store.offline()).toBe(true);
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(store.offline()).toBe(true);
+    for (let i = 0; i < 100; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const requests = backend.match(environment.apiUrl + '/users/me');
+      if (requests.length) {
+        requests[0].error(new ProgressEvent('error'));
+        break;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(store.offline()).toBe(true);
+    expect(offline.lastCopy()).toBeNull();
+  });
 });

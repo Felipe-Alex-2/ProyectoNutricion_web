@@ -2,6 +2,8 @@
 
 Al iniciar sesión con una cuenta del equipo se descarga una copia por usuario, empresa y sucursal. El panel superior del área de trabajo muestra **Última copia**, **Copiar ahora**, **Sincronizar pendientes** y una lista numerada de las operaciones guardadas.
 
+El aviso **Modo offline · Sin conexión** permanece visible al desplazarse; la lista numerada se abre automáticamente al haber pendientes. Con Wi-Fi conectado pero sin acceso al servidor, los reintentos mantienen el aviso hasta recuperar una respuesta real.
+
 La copia incluye pacientes accesibles, anamnesis, registros y evaluación nutricional disponible, planes, recetas, citas e información de caja y sucursales. Los pacientes se descargan por páginas, no solo los primeros 50. Las consultas de pacientes por búsqueda y estado funcionan sobre esa colección descargada. Los datos de lectura caducan a los 30 días.
 
 Sin conexión se permite:
