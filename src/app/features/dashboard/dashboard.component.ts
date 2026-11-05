@@ -336,7 +336,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   recipeForm: FormGroup;
 
   // Historial Clínico y Anamnesis
-  selectedPatient = signal<User | null>(null);
+  selectedPatient = signal<PatientListItem | null>(null);
   clinicalSuccess = signal<string | null>(null);
   clinicalError = signal<string | null>(null);
   clinicalForm: FormGroup;
@@ -1735,7 +1735,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // --- MÉTODOS DE HISTORIAL CLÍNICO Y ANAMNESIS (WEB) ---
-  selectPatientForClinical(patient: User): void {
+  selectPatientForClinical(patient: PatientListItem): void {
     this.selectedPatient.set(patient);
     this.clinicalService.loadFoodHistory(patient.id);
     this.clinicalSuccess.set(null);

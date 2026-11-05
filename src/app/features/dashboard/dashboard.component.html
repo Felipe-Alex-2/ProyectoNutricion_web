@@ -2662,9 +2662,10 @@
           <div class="card patients-sidebar-card">
             <h3 class="card-title text-sm mb-3">Pacientes de la Clínica</h3>
             <div class="patients-list">
-              @for (user of orgUsers(); track user.id) {
-                @if (user.role_id === 'CLIENTE') {
-                  <button
+              @if (patientService.isLoading()) { <p role="status">Cargando pacientes…</p> }
+              @if (patientService.errorMessage()) { <p role="alert">{{ patientService.errorMessage() }}</p> }
+              @for (user of patientService.patients(); track user.id) {
+                  <button type="button"
                     class="patient-list-item"
                     [class.active]="selectedPatient()?.id === user.id"
                     (click)="selectPatientForClinical(user)"
@@ -2675,8 +2676,15 @@
                       <span class="patient-email">{{ user.email }}</span>
                     </div>
                   </button>
-                }
+              } @empty {
+                @if (!patientService.isLoading() && !patientService.errorMessage()) { <p>No hay pacientes en este espacio o con los filtros actuales.</p> }
               }
+              <button type="button" class="btn-outline" (click)="loadPatients()" [disabled]="patientService.isLoading()">Actualizar pacientes</button>
+              <nav aria-label="Páginas de pacientes para evaluación">
+                <button type="button" (click)="previousPatientPage()" [disabled]="patientPageOffset() === 0 || patientService.isLoading()">Anterior</button>
+                <span>Página {{ patientPageOffset() / patientPageSize + 1 }}</span>
+                <button type="button" (click)="nextPatientPage()" [disabled]="patientService.patients().length < patientPageSize || patientService.isLoading()">Siguiente</button>
+              </nav>
             </div>
           </div>
 

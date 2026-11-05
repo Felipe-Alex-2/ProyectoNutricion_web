@@ -384,4 +384,22 @@ describe('Exclusive staff navigation', () => {
     list.flush({ rows: [], columns: [], total_rows: 0 });
     expect(component.isReportSummary()).toBe(false);
   });
+  it('uses the patient management list for clinical evaluation and loads mobile data', () => {
+    const component = fixture.componentInstance;
+    component.orgUsers.set([]);
+    component.setActiveTab('historial-clinico');
+    const patients = http.expectOne(req => req.url.endsWith('/users/patients'));
+    patients.flush([{id:'pedrito', full_name:'Pedrito vinculado', email:'pedrito@example.test', is_active:true, linked_status:'LINKED', created_at:'2026-11-01', updated_at:'2026-11-01'}]);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('.patient-list-item') as HTMLButtonElement;
+    expect(button.textContent).toContain('Pedrito vinculado');
+    button.click();
+    http.expectOne(req => req.url.endsWith('/food/history') && req.params.get('patient_id') === 'pedrito').flush([{id:'food', details:{description:'Pollo con arroz'}, confidence:'high', created_at:'2026-11-04', estimated_calories:400, estimated_protein:30, estimated_carbs:40, estimated_fats:10}]);
+    http.expectOne(req => req.url.endsWith('/clinical/patients/pedrito/anamnesis')).flush({allergies:'Alergia de prueba', goal:'Mejorar hábitos'});
+    http.expectOne(req => req.url.endsWith('/clinical/patients/pedrito/records')).flush([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Alergia de prueba');
+    expect(fixture.nativeElement.textContent).toContain('Pollo con arroz');
+  });
+
 });
