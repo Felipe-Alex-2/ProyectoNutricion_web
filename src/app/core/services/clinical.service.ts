@@ -10,6 +10,21 @@ import { PatientAnamnesis, ClinicalRecord, ClinicalRecordCreate } from '../model
 export class ClinicalService {
   private apiUrl = `${environment.apiUrl}/clinical`;
 
+  foodRecords = signal<any[]>([]);
+  foodLoading = signal(false);
+  foodError = signal<string | null>(null);
+  private foodRequest = 0;
+  loadFoodHistory(patientId: string): void {
+    const request = ++this.foodRequest;
+    this.foodRecords.set([]);
+    this.foodError.set(null);
+    this.foodLoading.set(true);
+    this.http.get<any[]>(`${environment.apiUrl}/food/history`, {params: {patient_id: patientId}}).subscribe({
+      next: rows => { if (request === this.foodRequest) { this.foodRecords.set(rows); this.foodLoading.set(false); } },
+      error: err => { if (request === this.foodRequest) { this.foodError.set(err?.error?.detail || 'No se pudo cargar la alimentación.'); this.foodLoading.set(false); } }
+    });
+  }
+
   currentAnamnesis = signal<PatientAnamnesis | null>(null);
   clinicalRecords = signal<ClinicalRecord[]>([]);
   isLoading = signal<boolean>(false);

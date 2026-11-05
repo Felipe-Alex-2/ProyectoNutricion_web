@@ -134,7 +134,9 @@
 
     <!-- Main Workspace -->
     <main class="main-workspace" id="staff-content">
-      <ns-offline-panel />
+      @if (activeTab() !== 'perfil' && offline.store.offline()) {
+        <div role="status">Modo offline · Sin conexión · {{ offline.store.pending().length }} operaciones pendientes</div>
+      }
       <header class="staff-header">
         <div class="staff-header-left">
           <button
@@ -225,6 +227,7 @@
 
       <!-- Profile Edit Form (if active) -->
       @if (activeTab() === 'perfil') {
+        <ns-offline-panel />
         <div class="card edit-profile-card">
           <h2 class="card-title">Editar Información Personal</h2>
           <app-workspace-selector (saved)="workspaceChanged()" />
@@ -2703,6 +2706,20 @@
                 </p>
               </div>
             } @else {
+              <section class="card mb-4" aria-label="Alimentación del paciente">
+                <h3 class="card-title">Alimentación y fotos IA</h3>
+                <p>Registros enviados desde mobile. Los nutrientes de fotos IA son estimaciones.</p>
+                @if (clinicalService.foodLoading()) { <p role="status">Cargando alimentación…</p> }
+                @if (clinicalService.foodError()) { <p role="alert">{{ clinicalService.foodError() }}</p> }
+                @for (food of clinicalService.foodRecords(); track food.id) {
+                  <article class="anamnesis-box mt-3">
+                    <strong>{{ food.details?.description || food.notes || 'Análisis de alimento' }}</strong>
+                    <p>{{ food.created_at | date:'dd/MM/yyyy HH:mm' }} · {{ food.confidence === 'manual' ? 'Registro manual' : 'Foto IA' }}</p>
+                    <p>{{ food.estimated_calories }} kcal · Proteínas: {{ food.estimated_protein }} g · Carbohidratos: {{ food.estimated_carbs }} g · Grasas: {{ food.estimated_fats }} g</p>
+                    @for (item of food.details?.foods || []; track $index) { <p>{{ item.name }} · {{ item.estimated_grams }} g</p> }
+                  </article>
+                } @empty { @if (!clinicalService.foodLoading() && !clinicalService.foodError()) { <p>Sin registros de alimentación.</p> } }
+              </section>
               <!-- Ficha de Anamnesis completada desde Móvil -->
 
               <div class="card anamnesis-card mb-4">

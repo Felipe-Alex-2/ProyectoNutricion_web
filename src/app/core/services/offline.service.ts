@@ -137,6 +137,7 @@ export class OfflineService {
           }
         }
         await get(`/plans/patient/${patient.id}`);
+        await get(`/food/history?patient_id=${patient.id}`);
       }
       if (version !== this.generation) return;
       const date = new Date().toISOString();

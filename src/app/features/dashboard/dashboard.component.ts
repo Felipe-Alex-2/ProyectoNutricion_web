@@ -1737,6 +1737,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // --- MÉTODOS DE HISTORIAL CLÍNICO Y ANAMNESIS (WEB) ---
   selectPatientForClinical(patient: User): void {
     this.selectedPatient.set(patient);
+    this.clinicalService.loadFoodHistory(patient.id);
     this.clinicalSuccess.set(null);
     this.clinicalError.set(null);
     this.clinicalForm.reset({
